@@ -1,0 +1,17 @@
+# 데이터 파일 (드라이브에서 관리됨)
+*.xlsx
+
+# 서비스 계정 키 등 비밀값 (절대 커밋 금지)
+*.json
+!package.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / 에디터
+.DS_Store
+Thumbs.db
+.ipynb_checkpoints/

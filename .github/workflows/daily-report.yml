@@ -1,0 +1,31 @@
+name: Daily Report Summary
+
+on:
+  schedule:
+    # UTC 00:00 = 한국시간(KST) 오전 9:00
+    # (GitHub Actions 부하에 따라 몇 분~십여 분 지연될 수 있습니다)
+    - cron: "0 0 * * *"
+  workflow_dispatch: {} # 깃허브에서 수동 실행 버튼 제공
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ubuntu-latest 러너에는 google-chrome 이 기본 설치되어 있어
+      # Selenium 4의 Selenium Manager가 드라이버를 자동 처리합니다.
+      - name: Run crawler
+        env:
+          GDRIVE_SA_KEY: ${{ secrets.GDRIVE_SA_KEY }}
+          GDRIVE_FILE_ID: ${{ secrets.GDRIVE_FILE_ID }}
+        run: python report_summary.py

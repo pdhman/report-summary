@@ -1,0 +1,7 @@
+pandas
+lxml
+openpyxl
+pytz
+selenium
+google-api-python-client
+google-auth
