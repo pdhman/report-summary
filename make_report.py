@@ -12,6 +12,7 @@ import glob
 import re
 import datetime
 import pandas as pd
+import site_nav
 
 XLSX = "종목탐색_TOP30.xlsx"
 OUT_DIR = "reports"
@@ -146,6 +147,7 @@ def main():
     <p class="muted">본 리포트는 자동 생성된 참고 자료이며 투자 권유가 아닙니다. · RS: 상대강도(백분위) · 거래대금 단위: 백만원</p>
   </footer>
 </div>
+{site_nav.nav_html("report")}
 
 <style>
   :root {{
@@ -199,7 +201,7 @@ def main():
   footer {{ margin-top:30px; }}
   .muted {{ color:var(--muted); font-size:12px; }}
   @media (max-width:640px) {{ .cards {{ grid-template-columns:repeat(2,1fr); }} .bar-row {{ grid-template-columns:110px 1fr 34px; }} }}
-</style>"""
+</style>""" + site_nav.NAV_CSS
 
     os.makedirs(OUT_DIR, exist_ok=True)
     stamp = latest.strftime("%Y%m%d") if pd.notna(latest) else datetime.datetime.now().strftime("%Y%m%d")
@@ -251,55 +253,72 @@ def build_index():
         except Exception:
             pass
 
-    items = []
-    for ds in dates:
-        pretty = f"{ds[:4]}-{ds[4:6]}-{ds[6:]}"
-        cnt = counts.get(ds)
-        cnt_html = f'<span class="cnt">{cnt}종목</span>' if cnt is not None else ""
-        items.append(
-            f'<li><a href="report_{ds}.html"><span class="d">{pretty}</span>{cnt_html}'
-            f'<span class="go">리포트 보기 →</span></a></li>'
-        )
-
-    # 리포트 인사이트 페이지(가장 최근)로 가는 배너 링크
+    # 최신 인사이트 / 시황 파일명 파악 (featured 카드 + 하단 내비 링크)
     insight_files = glob.glob(os.path.join(OUT_DIR, "insights_*.html"))
-    insight_html = ""
-    if insight_files:
-        latest_ins = sorted(insight_files, reverse=True)[0]
-        ins_name = os.path.basename(latest_ins)
-        insight_html = (
-            f'<a class="feature" href="{ins_name}">'
-            f'<span class="ftag">인사이트</span>'
-            f'<span class="ftxt"><b>리포트 인사이트</b>오늘자 가격괴리 TOP5 · 이번달 실제 상승률 TOP10</span>'
-            f'<span class="go">보기 →</span></a>'
+    ins_name = os.path.basename(sorted(insight_files, reverse=True)[0]) if insight_files else ""
+    brief_files = glob.glob(os.path.join(OUT_DIR, "brief_*.html"))
+    if brief_files:
+        latest_bf = os.path.basename(sorted(brief_files, reverse=True)[0])
+        m = re.search(r"brief_(\d{8})\.html$", latest_bf)
+        bf_date = f"{m.group(1)[:4]}-{m.group(1)[4:6]}-{m.group(1)[6:]}" if m else ""
+    else:
+        latest_bf, bf_date = "", ""
+
+    # 상단 featured 카드 (오늘의 시황 / 인사이트)
+    fcards = []
+    if latest_bf:
+        fcards.append(
+            f'<a class="fcard" href="{latest_bf}"><span class="ftag">시황</span>'
+            f'<b>시황 브리핑</b><span class="fdesc">{bf_date} 글로벌 매크로 시장 요약</span></a>'
+        )
+    if ins_name:
+        fcards.append(
+            f'<a class="fcard" href="{ins_name}"><span class="ftag">인사이트</span>'
+            f'<b>리포트 인사이트</b><span class="fdesc">오늘자 가격괴리 TOP5 · 이번달 실제 상승률 TOP10</span></a>'
+        )
+    featured_html = f'<div class="featured">{"".join(fcards)}</div>' if fcards else ""
+
+    # 리포트 아카이브: 월별 그룹 → 최근 달만 펼침(open), 각 달은 2열 그리드
+    months = {}
+    for ds in dates:                     # dates 는 최신순 정렬됨
+        months.setdefault(ds[:6], []).append(ds)
+    month_blocks = []
+    for mi, (ym, ds_list) in enumerate(months.items()):
+        label = f"{ym[:4]}년 {int(ym[4:6])}월"
+        cards = []
+        for ds in ds_list:
+            pretty = f"{ds[:4]}-{ds[4:6]}-{ds[6:]}"
+            cnt = counts.get(ds)
+            cnt_html = f'<span class="cnt">{cnt}종목</span>' if cnt is not None else ""
+            cards.append(
+                f'<a class="daycard" href="report_{ds}.html">'
+                f'<span class="dc-date">{pretty}</span>{cnt_html}'
+                f'<span class="dc-go">보기 →</span></a>'
+            )
+        open_attr = " open" if mi == 0 else ""
+        month_blocks.append(
+            f'<details class="month"{open_attr}><summary>'
+            f'<span class="m-name">{label}</span><span class="m-cnt">{len(ds_list)}일</span>'
+            f'</summary><div class="grid">{"".join(cards)}</div></details>'
         )
 
-    # 시황 브리핑(가장 최근)으로 가는 배너 링크
-    brief_files = glob.glob(os.path.join(OUT_DIR, "brief_*.html"))
-    brief_html = ""
-    if brief_files:
-        latest_bf = sorted(brief_files, reverse=True)[0]
-        m = re.search(r"brief_(\d{8})\.html$", os.path.basename(latest_bf))
-        bf_date = f"{m.group(1)[:4]}-{m.group(1)[4:6]}-{m.group(1)[6:]}" if m else ""
-        brief_html = (
-            f'<a class="feature" href="{os.path.basename(latest_bf)}">'
-            f'<span class="ftag">시황</span>'
-            f'<span class="ftxt"><b>시황 브리핑</b>{bf_date} 시장 요약 · 지난 시황은 아카이브에서</span>'
-            f'<span class="go">보기 →</span></a>'
-        )
+    # 하단 고정 내비게이션 바 (공용 모듈)
+    import site_nav
+    nav_bar = site_nav.nav_html("report")
 
     gen = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     body = f"""<div class="wrap">
   <header>
     <div class="eyebrow">주도섹터 리포트 · 아카이브</div>
-    <h1>일별 리포트 목록</h1>
+    <h1>일별 리포트</h1>
     <div class="date">총 {len(dates)}일치 · 최종 갱신 {gen}</div>
   </header>
-  {brief_html}
-  {insight_html}
-  <ul class="list">{''.join(items)}</ul>
-  <footer><p class="muted">가장 최근 날짜가 맨 위에 표시됩니다. 자동 생성됨.</p></footer>
+  {featured_html}
+  <h2 class="sec">리포트 아카이브</h2>
+  <div class="months">{''.join(month_blocks)}</div>
+  <footer><p class="muted">최근 달은 펼쳐져 있고, 지난 달은 제목을 눌러 펼칠 수 있습니다. 자동 생성됨.</p></footer>
 </div>
+{nav_bar}
 <style>
   :root {{ --bg:#f6f7f9; --panel:#fff; --ink:#1a1d21; --muted:#6b7280; --line:#e6e8eb; --accent:#3b5bdb; }}
   @media (prefers-color-scheme:dark) {{ :root {{ --bg:#0f1216; --panel:#171b21; --ink:#e8eaed; --muted:#9aa2ad; --line:#252b33; --accent:#748ffc; }} }}
@@ -307,29 +326,40 @@ def build_index():
   :root[data-theme="light"] {{ --bg:#f6f7f9; --panel:#fff; --ink:#1a1d21; --muted:#6b7280; --line:#e6e8eb; --accent:#3b5bdb; }}
   * {{ box-sizing:border-box; }}
   body {{ margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,"Segoe UI","Malgun Gothic",sans-serif; }}
-  .wrap {{ max-width:720px; margin:0 auto; padding:32px 20px 60px; }}
+  .wrap {{ max-width:760px; margin:0 auto; padding:32px 20px 40px; }}
   header {{ border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:20px; }}
   .eyebrow {{ color:var(--accent); font-weight:600; font-size:13px; }}
   h1 {{ margin:6px 0 4px; font-size:26px; }}
   .date {{ color:var(--muted); font-size:14px; }}
-  .feature {{ display:flex; align-items:center; gap:14px; text-decoration:none; color:var(--ink);
-    background:color-mix(in srgb,var(--accent) 8%,var(--panel)); border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));
-    border-radius:12px; padding:16px 18px; margin-bottom:18px; transition:border-color .15s; }}
-  .feature:hover {{ border-color:var(--accent); }}
-  .ftag {{ background:var(--accent); color:#fff; font-size:11px; font-weight:700; padding:4px 9px; border-radius:20px; white-space:nowrap; }}
-  .ftxt {{ font-size:13px; color:var(--muted); line-height:1.35; }}
-  .ftxt b {{ display:block; color:var(--ink); font-size:15px; margin-bottom:1px; }}
-  .list {{ list-style:none; margin:0; padding:0; }}
-  .list li {{ margin-bottom:10px; }}
-  .list a {{ display:flex; align-items:center; gap:14px; text-decoration:none; color:var(--ink);
-    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; transition:border-color .15s; }}
-  .list a:hover {{ border-color:var(--accent); }}
-  .d {{ font-weight:700; font-size:16px; font-variant-numeric:tabular-nums; }}
-  .cnt {{ color:var(--muted); font-size:13px; }}
-  .go {{ margin-left:auto; color:var(--accent); font-weight:600; font-size:14px; }}
+  .sec {{ font-size:14px; font-weight:600; color:var(--muted); margin:6px 0 10px; }}
+  /* 상단 featured 카드 */
+  .featured {{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:26px; }}
+  .fcard {{ display:block; text-decoration:none; color:var(--ink);
+    background:color-mix(in srgb,var(--accent) 7%,var(--panel)); border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));
+    border-radius:12px; padding:16px; transition:border-color .15s; }}
+  .fcard:hover {{ border-color:var(--accent); }}
+  .fcard .ftag {{ display:inline-block; background:var(--accent); color:#fff; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; }}
+  .fcard b {{ display:block; font-size:16px; margin:8px 0 3px; }}
+  .fcard .fdesc {{ color:var(--muted); font-size:12.5px; line-height:1.4; }}
+  /* 월별 접기 그룹 */
+  .month {{ border:1px solid var(--line); border-radius:12px; background:var(--panel); margin-bottom:12px; overflow:hidden; }}
+  .month > summary {{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; padding:14px 16px; font-weight:700; }}
+  .month > summary::-webkit-details-marker {{ display:none; }}
+  .month > summary::before {{ content:"▸"; color:var(--muted); font-size:12px; transition:transform .15s; }}
+  .month[open] > summary::before {{ transform:rotate(90deg); }}
+  .m-name {{ font-size:15px; }}
+  .m-cnt {{ margin-left:auto; color:var(--muted); font-size:13px; font-weight:500; }}
+  .grid {{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; padding:0 14px 16px; }}
+  .daycard {{ display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--ink);
+    background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:13px 14px; transition:border-color .15s; }}
+  .daycard:hover {{ border-color:var(--accent); }}
+  .dc-date {{ font-weight:700; font-size:14.5px; font-variant-numeric:tabular-nums; }}
+  .cnt {{ color:var(--muted); font-size:12.5px; }}
+  .dc-go {{ margin-left:auto; color:var(--accent); font-weight:600; font-size:12.5px; white-space:nowrap; }}
   footer {{ margin-top:24px; }}
   .muted {{ color:var(--muted); font-size:12px; }}
-</style>"""
+  @media (max-width:560px) {{ .featured {{ grid-template-columns:1fr; }} .grid {{ grid-template-columns:1fr; }} }}
+</style>""" + site_nav.NAV_CSS
     full = ("<!doctype html><html lang='ko'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
             "<title>주도섹터 리포트 아카이브</title></head><body>" + body + "</body></html>")

@@ -14,8 +14,10 @@
 """
 import os
 import re
+import glob
 import datetime
 import pandas as pd
+import site_nav
 
 XLSX = "리포트서머리.xlsx"
 OUT_DIR = "reports"
@@ -177,6 +179,7 @@ def build():
     <p class="muted">본 리포트는 증권사 리포트를 집계·가공한 참고 자료이며 투자 권유가 아닙니다. · 데이터: 리포트서머리.xlsx + FinanceDataReader</p>
   </footer>
 </div>
+{site_nav.nav_html("insight")}
 
 <style>
   :root {{
@@ -227,7 +230,7 @@ def build():
   footer {{ margin-top:30px; }}
   .muted {{ color:var(--muted); font-size:12px; }}
   @media (max-width:640px) {{ .cards {{ grid-template-columns:repeat(2,1fr); }} }}
-</style>"""
+</style>""" + site_nav.NAV_CSS
 
     os.makedirs(OUT_DIR, exist_ok=True)
     out_path = os.path.join(OUT_DIR, f"insights_{latest_ymd}.html")
@@ -238,6 +241,65 @@ def build():
         f.write(full)
     print(f"[인사이트] 생성 완료: {out_path}")
     print(f"REPORT_PATH={os.path.abspath(out_path)}")
+
+    _build_insights_index()
+
+
+def _build_insights_index():
+    """insights_YYYYMMDD.html 들을 모아 insights.html(목록) 생성 — 하단 내비 '인사이트' 링크 대상."""
+    files = glob.glob(os.path.join(OUT_DIR, "insights_*.html"))
+    dates = []
+    for f in files:
+        m = re.search(r"insights_(\d{8})\.html$", os.path.basename(f))
+        if m:
+            dates.append(m.group(1))
+    dates = sorted(set(dates), reverse=True)
+    if not dates:
+        return
+    items = []
+    for ymd in dates:
+        pretty = f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:]}"
+        items.append(f'<li><a href="insights_{ymd}.html"><span class="d">{pretty}</span>'
+                     f'<span class="go">인사이트 보기 →</span></a></li>')
+    gen = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    body = f"""<div class="wrap">
+  <header>
+    <div class="eyebrow">리포트 인사이트 · 아카이브</div>
+    <h1>인사이트 목록</h1>
+    <div class="date">총 {len(dates)}건 · 최종 갱신 {gen}</div>
+  </header>
+  <ul class="list">{''.join(items)}</ul>
+  <footer><p class="muted">가장 최근 날짜가 맨 위에 표시됩니다. 자동 생성됨.</p></footer>
+</div>
+{site_nav.nav_html("insight")}
+<style>
+  :root {{ --bg:#f6f7f9; --panel:#fff; --ink:#1a1d21; --muted:#6b7280; --line:#e6e8eb; --accent:#3b5bdb; }}
+  @media (prefers-color-scheme:dark) {{ :root {{ --bg:#0f1216; --panel:#171b21; --ink:#e8eaed; --muted:#9aa2ad; --line:#252b33; --accent:#748ffc; }} }}
+  :root[data-theme="dark"] {{ --bg:#0f1216; --panel:#171b21; --ink:#e8eaed; --muted:#9aa2ad; --line:#252b33; --accent:#748ffc; }}
+  :root[data-theme="light"] {{ --bg:#f6f7f9; --panel:#fff; --ink:#1a1d21; --muted:#6b7280; --line:#e6e8eb; --accent:#3b5bdb; }}
+  * {{ box-sizing:border-box; }}
+  body {{ margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,"Segoe UI","Malgun Gothic",sans-serif; }}
+  .wrap {{ max-width:720px; margin:0 auto; padding:32px 20px 40px; }}
+  header {{ border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:20px; }}
+  .eyebrow {{ color:var(--accent); font-weight:600; font-size:13px; }}
+  h1 {{ margin:6px 0 4px; font-size:26px; }}
+  .date {{ color:var(--muted); font-size:14px; }}
+  .list {{ list-style:none; margin:0; padding:0; }}
+  .list li {{ margin-bottom:10px; }}
+  .list a {{ display:flex; align-items:center; gap:14px; text-decoration:none; color:var(--ink);
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; transition:border-color .15s; }}
+  .list a:hover {{ border-color:var(--accent); }}
+  .d {{ font-weight:700; font-size:16px; font-variant-numeric:tabular-nums; }}
+  .go {{ margin-left:auto; color:var(--accent); font-weight:600; font-size:14px; }}
+  footer {{ margin-top:24px; }}
+  .muted {{ color:var(--muted); font-size:12px; }}
+</style>""" + site_nav.NAV_CSS
+    full = ("<!doctype html><html lang='ko'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            "<title>리포트 인사이트 아카이브</title></head><body>" + body + "</body></html>")
+    with open(os.path.join(OUT_DIR, "insights.html"), "w", encoding="utf-8") as f:
+        f.write(full)
+    print(f"[인사이트] 목록 갱신: insights.html ({len(dates)}건)")
 
 
 if __name__ == "__main__":

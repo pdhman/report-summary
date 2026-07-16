@@ -14,6 +14,7 @@ import re
 import glob
 import datetime
 import markdown as md
+import site_nav
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 BRIEF_DIR = os.path.join(BASE, "briefs")
@@ -97,7 +98,8 @@ def _clean(text):
 def _wrap(title, body):
     return ("<!doctype html><html lang='ko'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-            f"<title>{title}</title></head><body>{body}{_SHARED_STYLE}</body></html>")
+            f"<title>{title}</title></head><body>{body}"
+            f"{site_nav.nav_html('brief')}{_SHARED_STYLE}{site_nav.NAV_CSS}</body></html>")
 
 
 def build():
