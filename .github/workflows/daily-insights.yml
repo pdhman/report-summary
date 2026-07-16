@@ -15,6 +15,7 @@ on:
       - ".github/workflows/daily-insights.yml"
       - "briefs/**" # 시황 브리핑 붙여넣고 푸시하면 자동 배포
       - "reports/**" # 로컬 스크리너가 리포트를 push 하면 사이트 재배포 (봇 커밋은 [skip ci]로 제외)
+      - "blog/**" # 블로그(투자전략) 본문 갱신 시 재배포
 
 # 생성된 HTML 커밋(contents) + GitHub Pages 배포(pages, id-token)
 permissions:

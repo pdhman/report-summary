@@ -109,6 +109,13 @@ def run():
     except Exception as e:
         print(f"[경고] 시황 브리핑 생성 건너뜀: {e}")
 
+    # 투자전략(blog/*.html → reports/blog_*.html + index.html 허브) 생성
+    try:
+        import make_blog
+        make_blog.build()
+    except Exception as e:
+        print(f"[경고] 투자전략 생성 건너뜀: {e}")
+
     # 아카이브 목록(index.html)의 배너/목록 갱신
     try:
         import make_report

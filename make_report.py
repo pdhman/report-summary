@@ -126,8 +126,8 @@ def _write_report(today, date_str):
 
     html = f"""<div class="wrap">
   <header>
-    <div class="eyebrow">주도섹터 필터링</div>
-    <h1>주도섹터 리포트</h1>
+    <div class="eyebrow">주도섹터 필터링 · 자동 스크리너</div>
+    <h1>종목분석</h1>
     <div class="date">{date_str} <span class="gen">(생성 {gen_str})</span></div>
   </header>
 
@@ -160,7 +160,7 @@ def _write_report(today, date_str):
     <p class="muted">본 리포트는 자동 생성된 참고 자료이며 투자 권유가 아닙니다. · RS: 상대강도(백분위) · 거래대금 단위: 백만원</p>
   </footer>
 </div>
-{site_nav.nav_html("report")}
+{site_nav.nav_html("stock")}
 
 <style>
   :root {{
@@ -222,7 +222,7 @@ def _write_report(today, date_str):
     out_path = os.path.join(OUT_DIR, f"report_{stamp}.html")
     full = "<!doctype html><html lang='ko'><head><meta charset='utf-8'>" \
            "<meta name='viewport' content='width=device-width,initial-scale=1'>" \
-           f"<title>주도섹터 리포트 {date_str}</title></head><body>{html}</body></html>"
+           f"<title>종목분석 {date_str}</title></head><body>{html}</body></html>"
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(full)
     print(f"[보고서] 생성 완료: {out_path}")
@@ -231,9 +231,9 @@ def _write_report(today, date_str):
 
 
 def build_index():
-    """리포트 허브(index.html): 상단 날짜 바 + 최신 리포트 본문, 날짜 클릭 시 전환."""
+    """종목분석 허브(screener.html): 상단 날짜 바 + 최신 스크리너 본문, 날짜 클릭 시 전환."""
     site_nav.build_hub(
-        os.path.join(OUT_DIR, "index.html"), "주도섹터 리포트", "report",
+        os.path.join(OUT_DIR, "screener.html"), "종목분석", "stock",
         "report_*.html", r"report_(\d{8})\.html$",
     )
 
