@@ -2,9 +2,9 @@ name: Daily Report Summary
 
 on:
   schedule:
-    # UTC 00:00 = 한국시간(KST) 오전 9:00
-    # (GitHub Actions 부하에 따라 몇 분~십여 분 지연될 수 있습니다)
-    - cron: "0 0 * * *"
+    # UTC 00:23 = 한국시간(KST) 오전 9:23
+    # 정각(00:00 UTC)은 예약 작업이 몰려 지연·누락되기 쉬워 23분으로 비껴둠
+    - cron: "23 0 * * *"
   workflow_dispatch: {} # 깃허브에서 수동 실행 버튼 제공
 
 jobs:
