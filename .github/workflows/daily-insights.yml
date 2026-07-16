@@ -6,6 +6,13 @@ on:
     # 크롤러(daily-report.yml, 09:23 KST)가 드라이브를 갱신한 뒤 실행된다.
     - cron: "0 1 * * *"
   workflow_dispatch: {} # 깃허브에서 수동 실행 버튼 제공
+  push:
+    branches: [main]
+    # 소스/코드 변경 시에만 재배포. 봇이 만드는 reports/ 커밋은 제외해 무한루프 방지.
+    paths:
+      - "**.py"
+      - "requirements.txt"
+      - ".github/workflows/daily-insights.yml"
 
 # 생성된 HTML 커밋(contents) + GitHub Pages 배포(pages, id-token)
 permissions:
