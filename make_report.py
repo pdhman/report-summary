@@ -144,7 +144,7 @@ def _write_report(today, date_str):
       <table>
         <thead><tr>
           <th>#</th><th>종목</th><th class="num">거래대금(백만)</th><th class="num">등락률</th>
-          <th class="num">RS</th><th class="num">252일수익</th><th class="num">종가</th><th>산업</th><th>등장</th>
+          <th class="num">RS</th><th class="num">1년 수익률</th><th class="num">종가</th><th>산업</th><th>등장</th>
         </tr></thead>
         <tbody>{''.join(rows_html)}</tbody>
       </table>
