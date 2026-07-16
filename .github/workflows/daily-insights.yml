@@ -14,6 +14,7 @@ on:
       - "requirements.txt"
       - ".github/workflows/daily-insights.yml"
       - "briefs/**" # 시황 브리핑 붙여넣고 푸시하면 자동 배포
+      - "reports/**" # 로컬 스크리너가 리포트를 push 하면 사이트 재배포 (봇 커밋은 [skip ci]로 제외)
 
 # 생성된 HTML 커밋(contents) + GitHub Pages 배포(pages, id-token)
 permissions:
@@ -57,7 +58,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "변경 없음 — 커밋 건너뜀"
           else
-            git commit -m "insights: $(date -u +%Y-%m-%d) 자동 생성"
+            git commit -m "insights: $(date -u +%Y-%m-%d) 자동 생성 [skip ci]"
             git push
           fi
 
