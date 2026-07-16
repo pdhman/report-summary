@@ -7,9 +7,11 @@ on:
     - cron: "0 1 * * *"
   workflow_dispatch: {} # 깃허브에서 수동 실행 버튼 제공
 
-# 생성된 HTML 을 저장소에 커밋하기 위해 쓰기 권한 필요
+# 생성된 HTML 커밋(contents) + GitHub Pages 배포(pages, id-token)
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: daily-insights
@@ -50,3 +52,19 @@ jobs:
             git commit -m "insights: $(date -u +%Y-%m-%d) 자동 생성"
             git push
           fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: reports # index.html 이 랜딩 페이지
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
