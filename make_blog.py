@@ -19,14 +19,18 @@ BLOG_DIR = os.path.join(BASE, "blog")
 OUT_DIR = os.path.join(BASE, "reports")
 
 _EXTRA = """<style>
-  .bhead { border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:20px; }
-  .bhead h1 { font-size:22px; line-height:1.35; margin:6px 0 6px; }
+  .bhead { border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:22px; }
+  .bhead h1 { font-size:23px; font-weight:800; line-height:1.4; margin:6px 0 6px; }
   .bhead .date { color:var(--muted); font-size:14px; }
   .bhead .date a { color:var(--accent); text-decoration:none; }
-  .prose .bimg { text-align:center; margin:16px 0; }
+  .prose { font-size:15.5px; }
+  .prose p { margin:14px 0; line-height:1.8; }
+  .prose strong { font-weight:700; }
+  .prose mark { background:#fef08a; color:#27272a; font-weight:600;
+    padding:2px 5px; border-radius:4px; box-decoration-break:clone; -webkit-box-decoration-break:clone; }
+  .prose .sp { height:12px; margin:0; padding:0; }
+  .prose .bimg { text-align:center; margin:20px 0; }
   .prose .bimg img { max-width:100%; height:auto; border-radius:8px; border:1px solid var(--line); }
-  .prose .sp { height:6px; margin:0; padding:0; }
-  .prose p { margin:9px 0; }
 </style>"""
 
 _STYLE = _SHARED_STYLE + _EXTRA

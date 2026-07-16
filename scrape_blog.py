@@ -85,6 +85,27 @@ def _download_image(url, date, idx):
     return f"blogimg/{name}"
 
 
+def _render_para(inner):
+    """문단 inner HTML → 굵게(<strong>)·형광펜(<mark>)만 보존한 안전한 HTML."""
+    spans = re.findall(r"<span([^>]*)>(.*?)</span>", inner, re.S)
+    if not spans:
+        t = html.unescape(re.sub(r"<[^>]+>", "", inner)).replace("​", "").strip()
+        return html.escape(t)
+    out = []
+    for attrs, content in spans:
+        c = re.sub(r"<(?:b|strong)(?:\s[^>]*)?>", "\x01B\x01", content, flags=re.I)
+        c = re.sub(r"</(?:b|strong)>", "\x01b\x01", c, flags=re.I)
+        c = re.sub(r"<[^>]+>", "", c)                 # 남은 태그 제거
+        c = html.unescape(c).replace("​", "")
+        if not c.strip():
+            continue
+        c = html.escape(c).replace("\x01B\x01", "<strong>").replace("\x01b\x01", "</strong>")
+        if re.search(r"background-color\s*:\s*#?[0-9a-fA-F]{3,}", attrs) and "transparent" not in attrs:
+            c = f"<mark>{c}</mark>"
+        out.append(c)
+    return "".join(out)
+
+
 def _extract_body(post_html, date):
     """se-main-container 의 se-component 들을 순서대로 → HTML 조각(텍스트/이미지)."""
     s = post_html.find('<div class="se-main-container">')
@@ -115,9 +136,9 @@ def _extract_body(post_html, date):
                     parts.append(f'<p class="bimg"><img src="{local}" loading="lazy" alt=""></p>')
         elif "se-text" in cls:
             for p in re.findall(r'<p class="se-text-paragraph[^"]*"[^>]*>(.*?)</p>', chunk, re.S):
-                txt = html.unescape(re.sub(r"<[^>]+>", "", p)).replace("​", "").strip()
-                if txt:
-                    parts.append(f"<p>{html.escape(txt)}</p>")
+                rendered = _render_para(p)
+                if rendered.strip():
+                    parts.append(f"<p>{rendered}</p>")
                 else:
                     parts.append('<p class="sp"></p>')  # 빈 줄
         i += 2
