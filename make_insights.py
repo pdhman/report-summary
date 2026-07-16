@@ -150,7 +150,7 @@ def build():
     <div class="tablewrap">
       <table>
         <thead><tr>
-          <th>#</th><th>종목</th><th class="num">리포트주가</th><th class="num">목표주가</th>
+          <th>#</th><th>종목</th><th class="num">전일종가</th><th class="num">목표주가</th>
           <th class="num">괴리율</th><th>투자의견</th>
         </tr></thead>
         <tbody>{''.join(gap_rows)}</tbody>
