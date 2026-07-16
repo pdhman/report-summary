@@ -1,14 +1,21 @@
 # -*- coding: utf-8 -*-
 """
-모든 페이지 하단에 고정으로 들어가는 공용 내비게이션 바.
+모든 페이지 공용 요소.
 
-- nav_html(active): 하단 고정 바 HTML. active 는 'report' | 'insight' | 'brief'.
-- NAV_CSS: 바 스타일(<style> 블록). 각 페이지 <body> 끝에 nav_html 과 함께 붙인다.
+1) 하단 고정 내비게이션 바
+   - nav_html(active): active 는 'report' | 'insight' | 'brief'.
+   - NAV_CSS: 바 스타일.
 
-링크는 항상 존재하는 '섹션 목록' 페이지로 고정한다(생성 순서에 따른 깨진 링크 방지):
-  리포트 → index.html · 인사이트 → insights.html · 시황 → briefs.html
-색상 변수(--panel/--line/--accent/--muted)는 각 페이지가 정의한 값을 사용한다.
+2) 섹션 '허브' 페이지 (index.html / insights.html / briefs.html)
+   - 상단 가로 스크롤 날짜 바 + 최신 본문을 바로 표시, 날짜 클릭 시 아래 본문 전환.
+   - build_hub(...) 이 각 섹션의 날짜별 페이지(report_*/insights_*/brief_*.html)를
+     읽어 본문(.wrap 안쪽)을 모아 하나의 허브 페이지로 만든다.
+
+링크는 항상 존재하는 허브로 고정: 리포트 → index.html · 인사이트 → insights.html · 시황 → briefs.html
 """
+import os
+import re
+import glob
 
 _ITEMS = [
     ("report",  "📄", "리포트",  "index.html"),
@@ -38,3 +45,109 @@ NAV_CSS = """<style>
   .bottomnav .nl { font-size:11px; font-weight:600; }
   body { padding-bottom:92px; }
 </style>"""
+
+
+# ---- 허브(날짜 바 + 본문 전환) ----------------------------------------------
+
+def _datebar(dates, active):
+    chips = []
+    for ymd in dates:
+        cls = "chip active" if ymd == active else "chip"
+        chips.append(
+            f'<a class="{cls}" data-ymd="{ymd}" href="#{ymd}" onclick="return _showDay(this)">'
+            f'<span class="cy">{ymd[2:4]}.</span>{ymd[4:6]}·{ymd[6:]}</a>'
+        )
+    return f'<div class="datebar">{"".join(chips)}</div>'
+
+
+DATEBAR_CSS = """<style>
+  .datebar { display:flex; gap:8px; overflow-x:auto; padding:2px 2px 14px; margin-bottom:6px;
+    scrollbar-width:thin; -webkit-overflow-scrolling:touch; }
+  .datebar::-webkit-scrollbar { height:6px; }
+  .datebar::-webkit-scrollbar-thumb { background:var(--line); border-radius:6px; }
+  .datebar .chip { flex:0 0 auto; text-decoration:none; color:var(--muted);
+    border:1px solid var(--line); background:var(--panel); border-radius:20px; padding:8px 14px;
+    font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;
+    transition:color .15s,background .15s,border-color .15s; }
+  .datebar .chip .cy { opacity:.55; font-size:11px; font-weight:600; }
+  .datebar .chip:hover { border-color:var(--accent); color:var(--accent); }
+  .datebar .chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .datebar .chip.active .cy { opacity:.8; }
+  #view > .day { animation:fadein .18s ease; }
+  @keyframes fadein { from { opacity:0; } to { opacity:1; } }
+</style>"""
+
+HUB_JS = """<script>
+  function _showDay(el){
+    document.querySelectorAll('.datebar .chip').forEach(function(c){ c.classList.remove('active'); });
+    el.classList.add('active');
+    var ymd = el.dataset.ymd;
+    document.querySelectorAll('#view > .day').forEach(function(d){
+      d.style.display = (d.id === 'day-' + ymd) ? '' : 'none';
+    });
+    history.replaceState(null, '', '#' + ymd);
+    el.scrollIntoView({ block:'nearest', inline:'center' });
+    return false;
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    var h = location.hash.slice(1);
+    if(h){ var el = document.querySelector('.datebar .chip[data-ymd="' + h + '"]'); if(el){ _showDay(el); } }
+  });
+</script>"""
+
+
+def extract_wrap_inner(html):
+    """페이지 HTML에서 <div class="wrap"> 안쪽 내용만 추출(하단 nav 앞까지)."""
+    key = '<div class="wrap">'
+    s = html.find(key)
+    if s == -1:
+        return ""
+    s += len(key)
+    nav = html.find('<nav class="bottomnav"', s)
+    seg = (html[s:nav] if nav != -1 else html[s:]).rstrip()
+    if seg.endswith("</div>"):
+        seg = seg[:-len("</div>")]
+    return seg
+
+
+def extract_style(html):
+    """페이지의 첫 <style> 블록(본문 스타일) 추출."""
+    s = html.find("<style>")
+    if s == -1:
+        return ""
+    e = html.find("</style>", s)
+    return html[s:e + len("</style>")] if e != -1 else ""
+
+
+def build_hub(out_path, title, section, glob_name, id_regex, fallback_style=""):
+    """날짜별 페이지들을 모아 허브(날짜 바 + 본문 전환) 페이지 생성."""
+    d = os.path.dirname(out_path) or "."
+    entries = []
+    for f in glob.glob(os.path.join(d, glob_name)):
+        m = re.search(id_regex, os.path.basename(f))
+        if m:
+            entries.append((m.group(1), f))
+    entries.sort(key=lambda x: x[0], reverse=True)   # 최신 먼저
+    if not entries:
+        return
+
+    style = fallback_style
+    panels = []
+    for i, (ymd, f) in enumerate(entries):
+        with open(f, encoding="utf-8") as fh:
+            html = fh.read()
+        if i == 0 and not style:
+            style = extract_style(html)
+        hide = "" if i == 0 else ' style="display:none"'
+        panels.append(f'<div class="day" id="day-{ymd}"{hide}>{extract_wrap_inner(html)}</div>')
+
+    dates = [ymd for ymd, _ in entries]
+    body = (f'<div class="wrap">{_datebar(dates, dates[0])}'
+            f'<div id="view">{"".join(panels)}</div></div>\n{nav_html(section)}')
+    full = ("<!doctype html><html lang='ko'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            f"<title>{title}</title></head><body>{body}"
+            f"{style}{NAV_CSS}{DATEBAR_CSS}{HUB_JS}</body></html>")
+    with open(out_path, "w", encoding="utf-8") as fh:
+        fh.write(full)
+    print(f"[허브] {os.path.basename(out_path)} 갱신 ({len(entries)}건, 최신 {dates[0]})")

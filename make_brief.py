@@ -126,7 +126,6 @@ def build():
     <div class="eyebrow">데일리 · 시황 브리핑</div>
     <h1>시황 브리핑</h1>
     <div class="date">{pretty} <span class="gen">(Gemini 정리)</span></div>
-    <nav class="topnav"><a href="index.html">← 아카이브 목록</a> · <a href="briefs.html">지난 시황 →</a></nav>
   </header>
   <article class="prose">{body_html}</article>
   <footer><p class="muted">본 시황은 외부 생성(Gemini) 정리글을 게시한 참고 자료이며 투자 권유가 아닙니다.</p></footer>
@@ -141,25 +140,12 @@ def build():
         print("[시황] 생성할 브리핑 없음")
         return
 
-    # 시황 아카이브 목록(briefs.html)
-    items = []
-    for ymd in briefs:
-        pretty = f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:]}"
-        items.append(f'<li><a href="brief_{ymd}.html"><span class="d">{pretty}</span>'
-                     f'<span class="go">시황 보기 →</span></a></li>')
-    gen = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    body = f"""<div class="wrap">
-  <header>
-    <div class="eyebrow">시황 브리핑 · 아카이브</div>
-    <h1>지난 시황 목록</h1>
-    <div class="date">총 {len(briefs)}건 · 최종 갱신 {gen}</div>
-    <nav class="topnav"><a href="index.html">← 리포트 아카이브</a></nav>
-  </header>
-  <ul class="list">{''.join(items)}</ul>
-  <footer><p class="muted">가장 최근 날짜가 맨 위에 표시됩니다. 자동 생성됨.</p></footer>
-</div>"""
-    with open(os.path.join(OUT_DIR, "briefs.html"), "w", encoding="utf-8") as fh:
-        fh.write(_wrap("시황 브리핑 아카이브", body))
+    # 시황 허브(briefs.html): 상단 날짜 바 + 최신 시황 본문, 날짜 클릭 시 전환.
+    site_nav.build_hub(
+        os.path.join(OUT_DIR, "briefs.html"), "시황 브리핑", "brief",
+        "brief_*.html", r"brief_(\d{8})\.html$",
+        fallback_style=_SHARED_STYLE,
+    )
     print(f"[시황] 생성 완료: {len(briefs)}건 (최신 {briefs[0]})")
 
 
