@@ -73,6 +73,27 @@ def _parse_date(name):
     return "".join(m.groups()) if m else None
 
 
+# 개인 호칭 등 게시 전 제거할 문구(정확 일치, 콤마/공백 변형 포함)
+_STRIP_PHRASES = ["박동현 님, ", "박동현 님,", "박동현 님 ", "박동현 님"]
+
+
+def _clean(text):
+    """게시 전 자동 정리:
+    1) '데일리 브리핑' 제목 줄 이전의 서두(인삿말·머리말)를 제거.
+       (해당 문구가 없으면 원문 유지 — 안전 장치)
+    2) 개인 호칭('박동현 님') 제거.
+    """
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        if "데일리 브리핑" in line:
+            lines = lines[i:]
+            break
+    text = "\n".join(lines)
+    for p in _STRIP_PHRASES:
+        text = text.replace(p, "")
+    return text.strip()
+
+
 def _wrap(title, body):
     return ("<!doctype html><html lang='ko'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
@@ -95,6 +116,7 @@ def build():
             text = fh.read().strip()
         if not text:
             continue
+        text = _clean(text)
         body_html = md.markdown(text, extensions=["extra", "sane_lists", "nl2br"])
         pretty = f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:]}"
         page = f"""<div class="wrap">
