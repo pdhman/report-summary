@@ -113,7 +113,7 @@ def main():
 
     html = f"""<div class="wrap">
   <header>
-    <div class="eyebrow">주도섹터 필터링 · 미너비니 트렌드 템플릿</div>
+    <div class="eyebrow">주도섹터 필터링</div>
     <h1>주도섹터 리포트</h1>
     <div class="date">{date_str} <span class="gen">(생성 {gen_str})</span></div>
   </header>
