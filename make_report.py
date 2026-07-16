@@ -65,13 +65,24 @@ def main():
         streaks[tk] = s
     today["streak"] = today["ticker"].map(streaks)
 
-    # 요약 통계
-    n = len(today)
-    n_new = int((today["streak"] == 1).sum())
-    avg_rs = today["rs_score"].mean() if "rs_score" in today else float("nan")
-    ind_counts = today["Industry"].value_counts() if "Industry" in today else pd.Series(dtype=int)
-
     date_str = latest.strftime("%Y-%m-%d") if pd.notna(latest) else "-"
+    _write_report(today, date_str)
+
+
+def build_empty(date_str):
+    """선정 종목 0개인 날의 빈 리포트 생성(날짜 공백 방지용)."""
+    cols = ["ticker", "name", "amount", "change_ratio", "rs_score",
+            "return_252d", "close", "Industry", "streak"]
+    _write_report(pd.DataFrame(columns=cols), date_str)
+
+
+def _write_report(today, date_str):
+    """today(DataFrame; 비어 있을 수 있음) → reports/report_YYYYMMDD.html 생성."""
+    # 요약 통계 (0종목이어도 안전하게)
+    n = len(today)
+    n_new = int((today["streak"] == 1).sum()) if (n and "streak" in today.columns) else 0
+    avg_rs = today["rs_score"].mean() if (n and "rs_score" in today.columns) else float("nan")
+    ind_counts = today["Industry"].value_counts() if (n and "Industry" in today.columns) else pd.Series(dtype=int)
     gen_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     # ---- 종목 테이블 행 ----
@@ -97,6 +108,8 @@ def main():
         <td class="ind">{esc(r.get('Industry','-'))}</td>
         <td class="st">{streak_badge}</td>
       </tr>""")
+    if not rows_html:
+        rows_html = ['<tr><td colspan="9" class="empty">이 날은 조건을 통과한 선정 종목이 없습니다.</td></tr>']
 
     # ---- 산업 분포 막대 ----
     ind_html = []
@@ -183,6 +196,7 @@ def main():
   tbody tr:last-child td {{ border-bottom:none; }}
   .num {{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }}
   .rank {{ color:var(--muted); width:28px; }}
+  .empty {{ text-align:center; color:var(--muted); padding:28px 12px; font-size:14px; }}
   .name .nm {{ font-weight:600; }}
   .name .code {{ display:block; color:var(--muted); font-size:12px; }}
   .strong {{ font-weight:700; }}
@@ -204,7 +218,7 @@ def main():
 </style>""" + site_nav.NAV_CSS
 
     os.makedirs(OUT_DIR, exist_ok=True)
-    stamp = latest.strftime("%Y%m%d") if pd.notna(latest) else datetime.datetime.now().strftime("%Y%m%d")
+    stamp = date_str.replace("-", "")
     out_path = os.path.join(OUT_DIR, f"report_{stamp}.html")
     full = "<!doctype html><html lang='ko'><head><meta charset='utf-8'>" \
            "<meta name='viewport' content='width=device-width,initial-scale=1'>" \
@@ -225,5 +239,8 @@ def build_index():
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) >= 3 and sys.argv[1] == "--empty":
+        build_empty(sys.argv[2])   # 예: python make_report.py --empty 2026-07-16
+    else:
+        main()
     build_index()
