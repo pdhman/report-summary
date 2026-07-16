@@ -1,14 +1,15 @@
 <!doctype html><html lang='ko'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>주도섹터 리포트 아카이브</title></head><body><div class="wrap">
   <header>
     <div class="eyebrow">주도섹터 리포트 · 아카이브</div>
-    <h1>일별 리포트 목록</h1>
-    <div class="date">총 1일치 · 최종 갱신 2026-07-16 04:58</div>
+    <h1>일별 리포트</h1>
+    <div class="date">총 1일치 · 최종 갱신 2026-07-16 05:30</div>
   </header>
-  <a class="feature" href="brief_20260716.html"><span class="ftag">시황</span><span class="ftxt"><b>시황 브리핑</b>2026-07-16 시장 요약 · 지난 시황은 아카이브에서</span><span class="go">보기 →</span></a>
-  <a class="feature" href="insights_20260716.html"><span class="ftag">인사이트</span><span class="ftxt"><b>리포트 인사이트</b>오늘자 가격괴리 TOP5 · 이번달 실제 상승률 TOP10</span><span class="go">보기 →</span></a>
-  <ul class="list"><li><a href="report_20260715.html"><span class="d">2026-07-15</span><span class="cnt">7종목</span><span class="go">리포트 보기 →</span></a></li></ul>
-  <footer><p class="muted">가장 최근 날짜가 맨 위에 표시됩니다. 자동 생성됨.</p></footer>
+  <div class="featured"><a class="fcard" href="brief_20260716.html"><span class="ftag">시황</span><b>시황 브리핑</b><span class="fdesc">2026-07-16 글로벌 매크로 시장 요약</span></a><a class="fcard" href="insights_20260716.html"><span class="ftag">인사이트</span><b>리포트 인사이트</b><span class="fdesc">오늘자 가격괴리 TOP5 · 이번달 실제 상승률 TOP10</span></a></div>
+  <h2 class="sec">리포트 아카이브</h2>
+  <div class="months"><details class="month" open><summary><span class="m-name">2026년 7월</span><span class="m-cnt">1일</span></summary><div class="grid"><a class="daycard" href="report_20260715.html"><span class="dc-date">2026-07-15</span><span class="cnt">7종목</span><span class="dc-go">보기 →</span></a></div></details></div>
+  <footer><p class="muted">최근 달은 펼쳐져 있고, 지난 달은 제목을 눌러 펼칠 수 있습니다. 자동 생성됨.</p></footer>
 </div>
+<nav class="bottomnav"><a class="nav-cell active" href="index.html"><span class="ni">📄</span><span class="nl">리포트</span></a><a class="nav-cell" href="insights.html"><span class="ni">📊</span><span class="nl">인사이트</span></a><a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">시황</span></a></nav>
 <style>
   :root { --bg:#f6f7f9; --panel:#fff; --ink:#1a1d21; --muted:#6b7280; --line:#e6e8eb; --accent:#3b5bdb; }
   @media (prefers-color-scheme:dark) { :root { --bg:#0f1216; --panel:#171b21; --ink:#e8eaed; --muted:#9aa2ad; --line:#252b33; --accent:#748ffc; } }
@@ -16,26 +17,48 @@
   :root[data-theme="light"] { --bg:#f6f7f9; --panel:#fff; --ink:#1a1d21; --muted:#6b7280; --line:#e6e8eb; --accent:#3b5bdb; }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,"Segoe UI","Malgun Gothic",sans-serif; }
-  .wrap { max-width:720px; margin:0 auto; padding:32px 20px 60px; }
+  .wrap { max-width:760px; margin:0 auto; padding:32px 20px 40px; }
   header { border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:20px; }
   .eyebrow { color:var(--accent); font-weight:600; font-size:13px; }
   h1 { margin:6px 0 4px; font-size:26px; }
   .date { color:var(--muted); font-size:14px; }
-  .feature { display:flex; align-items:center; gap:14px; text-decoration:none; color:var(--ink);
-    background:color-mix(in srgb,var(--accent) 8%,var(--panel)); border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));
-    border-radius:12px; padding:16px 18px; margin-bottom:18px; transition:border-color .15s; }
-  .feature:hover { border-color:var(--accent); }
-  .ftag { background:var(--accent); color:#fff; font-size:11px; font-weight:700; padding:4px 9px; border-radius:20px; white-space:nowrap; }
-  .ftxt { font-size:13px; color:var(--muted); line-height:1.35; }
-  .ftxt b { display:block; color:var(--ink); font-size:15px; margin-bottom:1px; }
-  .list { list-style:none; margin:0; padding:0; }
-  .list li { margin-bottom:10px; }
-  .list a { display:flex; align-items:center; gap:14px; text-decoration:none; color:var(--ink);
-    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; transition:border-color .15s; }
-  .list a:hover { border-color:var(--accent); }
-  .d { font-weight:700; font-size:16px; font-variant-numeric:tabular-nums; }
-  .cnt { color:var(--muted); font-size:13px; }
-  .go { margin-left:auto; color:var(--accent); font-weight:600; font-size:14px; }
+  .sec { font-size:14px; font-weight:600; color:var(--muted); margin:6px 0 10px; }
+  /* 상단 featured 카드 */
+  .featured { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:26px; }
+  .fcard { display:block; text-decoration:none; color:var(--ink);
+    background:color-mix(in srgb,var(--accent) 7%,var(--panel)); border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));
+    border-radius:12px; padding:16px; transition:border-color .15s; }
+  .fcard:hover { border-color:var(--accent); }
+  .fcard .ftag { display:inline-block; background:var(--accent); color:#fff; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; }
+  .fcard b { display:block; font-size:16px; margin:8px 0 3px; }
+  .fcard .fdesc { color:var(--muted); font-size:12.5px; line-height:1.4; }
+  /* 월별 접기 그룹 */
+  .month { border:1px solid var(--line); border-radius:12px; background:var(--panel); margin-bottom:12px; overflow:hidden; }
+  .month > summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; padding:14px 16px; font-weight:700; }
+  .month > summary::-webkit-details-marker { display:none; }
+  .month > summary::before { content:"▸"; color:var(--muted); font-size:12px; transition:transform .15s; }
+  .month[open] > summary::before { transform:rotate(90deg); }
+  .m-name { font-size:15px; }
+  .m-cnt { margin-left:auto; color:var(--muted); font-size:13px; font-weight:500; }
+  .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; padding:0 14px 16px; }
+  .daycard { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--ink);
+    background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:13px 14px; transition:border-color .15s; }
+  .daycard:hover { border-color:var(--accent); }
+  .dc-date { font-weight:700; font-size:14.5px; font-variant-numeric:tabular-nums; }
+  .cnt { color:var(--muted); font-size:12.5px; }
+  .dc-go { margin-left:auto; color:var(--accent); font-weight:600; font-size:12.5px; white-space:nowrap; }
   footer { margin-top:24px; }
   .muted { color:var(--muted); font-size:12px; }
+  @media (max-width:560px) { .featured { grid-template-columns:1fr; } .grid { grid-template-columns:1fr; } }
+</style><style>
+  .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:6px;
+    background:color-mix(in srgb,var(--panel) 92%,transparent); backdrop-filter:blur(10px);
+    border-top:1px solid var(--line); padding:8px 10px calc(8px + env(safe-area-inset-bottom)); }
+  .bottomnav .nav-cell { display:flex; flex-direction:column; align-items:center; gap:3px; text-decoration:none; color:var(--muted);
+    padding:6px 16px; border-radius:12px; min-width:70px; transition:color .15s,background .15s; }
+  .bottomnav .nav-cell:hover { color:var(--accent); }
+  .bottomnav .nav-cell.active { color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  .bottomnav .ni { font-size:20px; line-height:1; }
+  .bottomnav .nl { font-size:11px; font-weight:600; }
+  body { padding-bottom:92px; }
 </style></body></html>

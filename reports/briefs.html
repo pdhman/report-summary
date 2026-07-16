@@ -2,12 +2,12 @@
   <header>
     <div class="eyebrow">시황 브리핑 · 아카이브</div>
     <h1>지난 시황 목록</h1>
-    <div class="date">총 2건 · 최종 갱신 2026-07-16 04:58</div>
+    <div class="date">총 2건 · 최종 갱신 2026-07-16 05:30</div>
     <nav class="topnav"><a href="index.html">← 리포트 아카이브</a></nav>
   </header>
   <ul class="list"><li><a href="brief_20260716.html"><span class="d">2026-07-16</span><span class="go">시황 보기 →</span></a></li><li><a href="brief_20260715.html"><span class="d">2026-07-15</span><span class="go">시황 보기 →</span></a></li></ul>
   <footer><p class="muted">가장 최근 날짜가 맨 위에 표시됩니다. 자동 생성됨.</p></footer>
-</div>
+</div><nav class="bottomnav"><a class="nav-cell" href="index.html"><span class="ni">📄</span><span class="nl">리포트</span></a><a class="nav-cell" href="insights.html"><span class="ni">📊</span><span class="nl">인사이트</span></a><a class="nav-cell active" href="briefs.html"><span class="ni">📰</span><span class="nl">시황</span></a></nav>
 <style>
   :root { --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d21; --muted:#6b7280;
     --line:#e6e8eb; --accent:#3b5bdb; --up:#e03131; --down:#1971c2; }
@@ -53,4 +53,15 @@
   footer { margin-top:30px; }
   .muted { color:var(--muted); font-size:12px; }
 </style>
-</body></html>
+<style>
+  .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:6px;
+    background:color-mix(in srgb,var(--panel) 92%,transparent); backdrop-filter:blur(10px);
+    border-top:1px solid var(--line); padding:8px 10px calc(8px + env(safe-area-inset-bottom)); }
+  .bottomnav .nav-cell { display:flex; flex-direction:column; align-items:center; gap:3px; text-decoration:none; color:var(--muted);
+    padding:6px 16px; border-radius:12px; min-width:70px; transition:color .15s,background .15s; }
+  .bottomnav .nav-cell:hover { color:var(--accent); }
+  .bottomnav .nav-cell.active { color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  .bottomnav .ni { font-size:20px; line-height:1; }
+  .bottomnav .nl { font-size:11px; font-weight:600; }
+  body { padding-bottom:92px; }
+</style></body></html>
