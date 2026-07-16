@@ -1,0 +1,52 @@
+name: Daily Report Insights
+
+on:
+  schedule:
+    # UTC 01:00 = 한국시간(KST) 오전 10:00
+    # 크롤러(daily-report.yml, 09:23 KST)가 드라이브를 갱신한 뒤 실행된다.
+    - cron: "0 1 * * *"
+  workflow_dispatch: {} # 깃허브에서 수동 실행 버튼 제공
+
+# 생성된 HTML 을 저장소에 커밋하기 위해 쓰기 권한 필요
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-insights
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build insights (드라이브 xlsx → HTML)
+        env:
+          GDRIVE_SA_KEY: ${{ secrets.GDRIVE_SA_KEY }}
+          GDRIVE_FILE_ID: ${{ secrets.GDRIVE_FILE_ID }}
+          PYTHONUTF8: "1"
+          MPLBACKEND: Agg
+        run: python sync_report_summary.py
+
+      - name: Commit generated reports
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add reports/
+          if git diff --staged --quiet; then
+            echo "변경 없음 — 커밋 건너뜀"
+          else
+            git commit -m "insights: $(date -u +%Y-%m-%d) 자동 생성"
+            git push
+          fi

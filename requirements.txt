@@ -5,3 +5,4 @@ pytz
 selenium
 google-api-python-client
 google-auth
+finance-datareader
