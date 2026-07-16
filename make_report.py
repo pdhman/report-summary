@@ -274,6 +274,20 @@ def build_index():
             f'<span class="go">보기 →</span></a>'
         )
 
+    # 시황 브리핑(가장 최근)으로 가는 배너 링크
+    brief_files = glob.glob(os.path.join(OUT_DIR, "brief_*.html"))
+    brief_html = ""
+    if brief_files:
+        latest_bf = sorted(brief_files, reverse=True)[0]
+        m = re.search(r"brief_(\d{8})\.html$", os.path.basename(latest_bf))
+        bf_date = f"{m.group(1)[:4]}-{m.group(1)[4:6]}-{m.group(1)[6:]}" if m else ""
+        brief_html = (
+            f'<a class="feature" href="{os.path.basename(latest_bf)}">'
+            f'<span class="ftag">시황</span>'
+            f'<span class="ftxt"><b>시황 브리핑</b>{bf_date} 시장 요약 · 지난 시황은 아카이브에서</span>'
+            f'<span class="go">보기 →</span></a>'
+        )
+
     gen = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     body = f"""<div class="wrap">
   <header>
@@ -281,6 +295,7 @@ def build_index():
     <h1>일별 리포트 목록</h1>
     <div class="date">총 {len(dates)}일치 · 최종 갱신 {gen}</div>
   </header>
+  {brief_html}
   {insight_html}
   <ul class="list">{''.join(items)}</ul>
   <footer><p class="muted">가장 최근 날짜가 맨 위에 표시됩니다. 자동 생성됨.</p></footer>

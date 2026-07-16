@@ -102,7 +102,14 @@ def run():
     import make_insights
     make_insights.build()
 
-    # 아카이브 목록(index.html)의 인사이트 배너 갱신
+    # 시황 브리핑(briefs/*.md → reports/brief_*.html) 생성
+    try:
+        import make_brief
+        make_brief.build()
+    except Exception as e:
+        print(f"[경고] 시황 브리핑 생성 건너뜀: {e}")
+
+    # 아카이브 목록(index.html)의 배너/목록 갱신
     try:
         import make_report
         make_report.build_index()

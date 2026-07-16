@@ -13,6 +13,7 @@ on:
       - "**.py"
       - "requirements.txt"
       - ".github/workflows/daily-insights.yml"
+      - "briefs/**" # 시황 브리핑 붙여넣고 푸시하면 자동 배포
 
 # 생성된 HTML 커밋(contents) + GitHub Pages 배포(pages, id-token)
 permissions:
