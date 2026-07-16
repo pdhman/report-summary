@@ -113,7 +113,7 @@ def main():
     html = f"""<div class="wrap">
   <header>
     <div class="eyebrow">주도섹터 필터링 · 미너비니 트렌드 템플릿</div>
-    <h1>종목 스크리닝 리포트</h1>
+    <h1>주도섹터 리포트</h1>
     <div class="date">{date_str} <span class="gen">(생성 {gen_str})</span></div>
   </header>
 
@@ -206,7 +206,7 @@ def main():
     out_path = os.path.join(OUT_DIR, f"report_{stamp}.html")
     full = "<!doctype html><html lang='ko'><head><meta charset='utf-8'>" \
            "<meta name='viewport' content='width=device-width,initial-scale=1'>" \
-           f"<title>종목 스크리닝 리포트 {date_str}</title></head><body>{html}</body></html>"
+           f"<title>주도섹터 리포트 {date_str}</title></head><body>{html}</body></html>"
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(full)
     print(f"[보고서] 생성 완료: {out_path}")
@@ -226,14 +226,28 @@ def build_index():
     if not dates:
         return
 
-    # 날짜별 선정 종목 수 (엑셀에서)
+    # 날짜별 선정 종목 수.
+    # 종목탐색_TOP30.xlsx 는 로컬에만 있고(*.xlsx는 gitignore) 클라우드에는 없으므로,
+    # 집계 결과를 reports/counts.json 사이드카에 커밋해 두고 클라우드에서도 재사용한다.
+    import json
+    counts_path = os.path.join(OUT_DIR, "counts.json")
     counts = {}
+    # 1) 커밋된 사이드카 우선 로드 (클라우드에서 개수 표시용)
+    if os.path.exists(counts_path):
+        try:
+            with open(counts_path, encoding="utf-8") as f:
+                counts = {str(k): int(v) for k, v in json.load(f).items()}
+        except Exception:
+            counts = {}
+    # 2) 로컬에 엑셀이 있으면 최신 집계로 갱신하고 사이드카에 반영
     if os.path.exists(XLSX):
         try:
             d = pd.read_excel(XLSX)
             d["Date"] = pd.to_datetime(d["Date"], errors="coerce")
             for k, g in d.groupby(d["Date"].dt.strftime("%Y%m%d")):
-                counts[k] = int(g["ticker"].nunique())
+                counts[str(k)] = int(g["ticker"].nunique())
+            with open(counts_path, "w", encoding="utf-8") as f:
+                json.dump(counts, f, ensure_ascii=False, indent=0)
         except Exception:
             pass
 
@@ -263,7 +277,7 @@ def build_index():
     gen = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     body = f"""<div class="wrap">
   <header>
-    <div class="eyebrow">주도섹터 필터링 · 아카이브</div>
+    <div class="eyebrow">주도섹터 리포트 · 아카이브</div>
     <h1>일별 리포트 목록</h1>
     <div class="date">총 {len(dates)}일치 · 최종 갱신 {gen}</div>
   </header>

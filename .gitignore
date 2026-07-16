@@ -2,6 +2,7 @@
 gdrive_sa.json
 *.json
 !package.json
+!reports/counts.json
 
 # 데이터 파일 (드라이브에서 관리됨)
 *.xlsx
