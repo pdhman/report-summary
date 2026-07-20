@@ -73,7 +73,7 @@
 </blockquote>
 <hr /></article>
   <footer><p class="muted">본 시황은 외부 생성(Gemini) 정리글을 게시한 참고 자료이며 투자 권유가 아닙니다.</p></footer>
-</div><nav class="bottomnav"><a class="nav-cell" href="index.html"><span class="ni">📝</span><span class="nl">투자전략</span></a><a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a><a class="nav-cell" href="insights.html"><span class="ni">📊</span><span class="nl">인사이트</span></a><a class="nav-cell active" href="briefs.html"><span class="ni">📰</span><span class="nl">시황</span></a></nav>
+</div><nav class="bottomnav"><a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a><a class="nav-cell" href="strategy.html"><span class="ni">📝</span><span class="nl">투자전략</span></a><a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a><a class="nav-cell" href="insights.html"><span class="ni">📊</span><span class="nl">인사이트</span></a><a class="nav-cell active" href="briefs.html"><span class="ni">📰</span><span class="nl">시황</span></a></nav>
 <style>
   :root { --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d21; --muted:#6b7280;
     --line:#e6e8eb; --accent:#3b5bdb; --up:#e03131; --down:#1971c2; }
@@ -120,11 +120,11 @@
   .muted { color:var(--muted); font-size:12px; }
 </style>
 <style>
-  .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:6px;
+  .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:2px;
     background:color-mix(in srgb,var(--panel) 92%,transparent); backdrop-filter:blur(10px);
-    border-top:1px solid var(--line); padding:8px 10px calc(8px + env(safe-area-inset-bottom)); }
+    border-top:1px solid var(--line); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); }
   .bottomnav .nav-cell { display:flex; flex-direction:column; align-items:center; gap:3px; text-decoration:none; color:var(--muted);
-    padding:6px 16px; border-radius:12px; min-width:70px; transition:color .15s,background .15s; }
+    padding:6px 4px; border-radius:12px; flex:1 1 0; max-width:96px; transition:color .15s,background .15s; }
   .bottomnav .nav-cell:hover { color:var(--accent); }
   .bottomnav .nav-cell.active { color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .bottomnav .ni { font-size:20px; line-height:1; }

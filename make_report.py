@@ -329,3 +329,9 @@ if __name__ == "__main__":
     else:
         main()
     build_index()
+    try:
+        import make_summary
+        make_summary.build()
+    except Exception as e:
+        print(f"[경고] 요약 페이지 생성 건너뜀: {e}")
+

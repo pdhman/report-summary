@@ -123,6 +123,12 @@ def run():
     except Exception as e:
         print(f"[경고] index 갱신 건너뜀: {e}")
 
+    try:
+        import make_summary
+        make_summary.build()
+    except Exception as e:
+        print(f"[경고] 요약 페이지 생성 건너뜀: {e}")
+
     print("===== 동기화 완료 =====")
 
 

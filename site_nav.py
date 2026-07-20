@@ -18,7 +18,8 @@ import re
 import glob
 
 _ITEMS = [
-    ("strategy", "📝", "투자전략", "index.html"),     # 블로그 일간 주도섹터 리포트
+    ("home",     "🏠", "홈",      "index.html"),      # 오늘의 요약 대시보드
+    ("strategy", "📝", "투자전략", "strategy.html"),   # 블로그 일간 주도섹터 리포트
     ("stock",    "🔎", "종목탐색", "screener.html"),  # 자동 스크리너
     ("insight",  "📊", "인사이트", "insights.html"),
     ("brief",    "📰", "시황",    "briefs.html"),
@@ -35,11 +36,11 @@ def nav_html(active):
 
 
 NAV_CSS = """<style>
-  .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:6px;
+  .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:2px;
     background:color-mix(in srgb,var(--panel) 92%,transparent); backdrop-filter:blur(10px);
-    border-top:1px solid var(--line); padding:8px 10px calc(8px + env(safe-area-inset-bottom)); }
+    border-top:1px solid var(--line); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); }
   .bottomnav .nav-cell { display:flex; flex-direction:column; align-items:center; gap:3px; text-decoration:none; color:var(--muted);
-    padding:6px 16px; border-radius:12px; min-width:70px; transition:color .15s,background .15s; }
+    padding:6px 4px; border-radius:12px; flex:1 1 0; max-width:96px; transition:color .15s,background .15s; }
   .bottomnav .nav-cell:hover { color:var(--accent); }
   .bottomnav .nav-cell.active { color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .bottomnav .ni { font-size:20px; line-height:1; }
