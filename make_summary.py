@@ -63,6 +63,8 @@ def card_brief():
     # 마크다운 표식 제거
     excerpt = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", excerpt)
     excerpt = re.sub(r"[*_`>#]", "", excerpt).strip()
+    # 서두의 '○○○ 님,' 같은 호칭 제거 (요약 카드에는 불필요)
+    excerpt = re.sub(r"^[가-힣A-Za-z]{2,6}\s*님[,，.]?\s*", "", excerpt)
     return {"date": date, "excerpt": excerpt}
 
 
@@ -219,7 +221,8 @@ def build():
                      f'<span class="k-val">{esc(c["adjust"])}</span></div>')
         cards.append(_card("strategy.html", "📝", "오늘의 주도섹터", c["date"], body))
 
-    today = datetime.datetime.now()
+    import pytz
+    today = datetime.datetime.now(pytz.timezone("Asia/Seoul"))   # 러너(UTC)에서도 KST 표기
     body_html = f"""<div class="wrap">
   <header>
     <div class="eyebrow">데일리 대시보드</div>

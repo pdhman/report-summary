@@ -43,9 +43,10 @@ if ($report) { Start-Process $report.FullName }
 & cmd /c "`"$py`" git_archive.py >> `"$out`" 2>&1"
 
 # --- GitHub(report_summary origin/main)에 리포트 게시 ---
-# report_*.html + index.html 만 push. push 되면 GitHub Actions(daily-insights)가
+# report_*.html + 허브/요약 + 스크리너 xlsx push. push 되면 GitHub Actions(daily-insights)가
 # reports/** 트리거로 사이트를 재배포한다. (봇 커밋은 [skip ci]라 루프 없음)
-& git -C $proj add "reports/report_*.html" "reports/index.html" 2>&1 | Out-File $out -Append -Encoding utf8
+# xlsx 는 러너의 요약 대시보드(주도주 카드) 생성에 필요하다.
+& git -C $proj add "reports/report_*.html" "reports/index.html" "reports/screener.html" "종목탐색_TOP30.xlsx" 2>&1 | Out-File $out -Append -Encoding utf8
 & git -C $proj diff --staged --quiet
 if ($LASTEXITCODE -ne 0) {
     & git -C $proj checkout -- reports/ 2>&1 | Out-File $out -Append -Encoding utf8
