@@ -44,7 +44,38 @@
 <p>물론 이 변신이 하루아침에 인정받진 않을 겁니다. 2027~2028년에 삼성·SK·마이크론의 공격적인 증설이 실제 공급 증가로 이어지면 다시 &#x27;고점 우려&#x27;가 고개를 들 수 있고, 늘어나는 설비투자와 감가상각 부담도 변수예요. <mark>그래서 메모리 재평가는 단기 이벤트가 아니라 앞으로 2~3년에 걸쳐 천천히 진행될 가능성이 높습니다.</mark> 그럼에도 이번 마이크론 실적은 그 변신의 &#x27;첫 번째 증거&#x27;를 시장에 보여줬다는 점에서, 단순한 어닝 서프라이즈 이상의 의미를 갖습니다.</p>
 <p class="sp"></p>
 <p>오늘 하루도 수고하셨습니다:)</p></article></div>
-<nav class="bottomnav"><a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a><a class="nav-cell active" href="strategy.html"><span class="ni">📝</span><span class="nl">투자전략</span></a><a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a><a class="nav-cell" href="insights.html"><span class="ni">📊</span><span class="nl">인사이트</span></a><a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">시황</span></a></nav>
+<nav class="bottomnav"><a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a><a class="nav-cell active" href="strategy.html"><span class="ni">📝</span><span class="nl">투자전략</span></a><a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a><a class="nav-cell" href="insights.html"><span class="ni">📊</span><span class="nl">인사이트</span></a><a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">시황</span></a></nav><button id="theme-toggle" aria-label="테마 전환" onclick="_tgTheme()">🌓</button>
+<script>
+function _tgCur(){
+  var t = document.documentElement.dataset.theme;
+  if(t) return t;
+  return (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+function _tgSync(){
+  var b = document.getElementById('theme-toggle');
+  if(b) b.textContent = _tgCur() === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19';
+}
+function _tgTheme(){
+  var next = _tgCur() === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('theme', next); } catch(e) {}
+  _tgSync();
+}
+(function(){
+  try {
+    var t = localStorage.getItem('theme');
+    if(t){ document.documentElement.dataset.theme = t; }
+  } catch(e) {}
+  _tgSync();
+})();
+</script>
+<style>
+  #theme-toggle { position:fixed; top:14px; right:14px; z-index:60; width:38px; height:38px;
+    border-radius:50%; border:1px solid var(--line); background:var(--panel); font-size:16px;
+    line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.12); transition:border-color .15s; padding:0; }
+  #theme-toggle:hover { border-color:var(--accent); }
+</style>
 <style>
   :root { --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d21; --muted:#6b7280;
     --line:#e6e8eb; --accent:#3b5bdb; --up:#e03131; --down:#1971c2; }

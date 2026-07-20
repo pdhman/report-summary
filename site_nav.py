@@ -26,13 +26,48 @@ _ITEMS = [
 ]
 
 
+# 다크 ↔ 라이트 테마 토글 버튼 (모든 페이지 공통, localStorage 로 선택 유지)
+_THEME_TOGGLE = """<button id="theme-toggle" aria-label="테마 전환" onclick="_tgTheme()">🌓</button>
+<script>
+function _tgCur(){
+  var t = document.documentElement.dataset.theme;
+  if(t) return t;
+  return (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+function _tgSync(){
+  var b = document.getElementById('theme-toggle');
+  if(b) b.textContent = _tgCur() === 'dark' ? '\\u2600\\uFE0F' : '\\uD83C\\uDF19';
+}
+function _tgTheme(){
+  var next = _tgCur() === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('theme', next); } catch(e) {}
+  _tgSync();
+}
+(function(){
+  try {
+    var t = localStorage.getItem('theme');
+    if(t){ document.documentElement.dataset.theme = t; }
+  } catch(e) {}
+  _tgSync();
+})();
+</script>
+<style>
+  #theme-toggle { position:fixed; top:14px; right:14px; z-index:60; width:38px; height:38px;
+    border-radius:50%; border:1px solid var(--line); background:var(--panel); font-size:16px;
+    line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.12); transition:border-color .15s; padding:0; }
+  #theme-toggle:hover { border-color:var(--accent); }
+</style>"""
+
+
 def nav_html(active):
     cells = "".join(
         f'<a class="nav-cell{" active" if key == active else ""}" href="{href}">'
         f'<span class="ni">{icon}</span><span class="nl">{label}</span></a>'
         for key, icon, label, href in _ITEMS
     )
-    return f'<nav class="bottomnav">{cells}</nav>'
+    return f'<nav class="bottomnav">{cells}</nav>{_THEME_TOGGLE}'
 
 
 NAV_CSS = """<style>
