@@ -58,14 +58,25 @@ def _datebar(dates, active):
             f'<a class="{cls}" data-ymd="{ymd}" href="#{ymd}" onclick="return _showDay(this)">'
             f'<span class="cy">{ymd[2:4]}.</span>{ymd[4:6]}·{ymd[6:]}</a>'
         )
-    return f'<div class="datebar">{"".join(chips)}</div>'
+    return ('<div class="datewrap">'
+            '<button class="dnav" data-dir="-1" aria-label="이전 날짜" onclick="_scrollDates(this)">&#8249;</button>'
+            f'<div class="datebar">{"".join(chips)}</div>'
+            '<button class="dnav" data-dir="1" aria-label="다음 날짜" onclick="_scrollDates(this)">&#8250;</button>'
+            '</div>')
 
 
 DATEBAR_CSS = """<style>
-  .datebar { display:flex; gap:8px; overflow-x:auto; padding:2px 2px 14px; margin-bottom:6px;
-    scrollbar-width:thin; -webkit-overflow-scrolling:touch; }
-  .datebar::-webkit-scrollbar { height:6px; }
-  .datebar::-webkit-scrollbar-thumb { background:var(--line); border-radius:6px; }
+  .datewrap { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+  .datewrap.noscroll .dnav { display:none; }
+  .dnav { flex:0 0 auto; width:32px; height:32px; border-radius:50%; border:1px solid var(--line);
+    background:var(--panel); color:var(--muted); font-size:18px; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; padding:0 0 2px; font-family:inherit;
+    transition:color .15s,border-color .15s,opacity .15s; }
+  .dnav:hover { color:var(--accent); border-color:var(--accent); }
+  .dnav.edge { opacity:.25; pointer-events:none; }
+  .datebar { flex:1 1 auto; display:flex; gap:8px; overflow-x:auto; padding:2px;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .datebar::-webkit-scrollbar { display:none; }
   .datebar .chip { flex:0 0 auto; text-decoration:none; color:var(--muted);
     border:1px solid var(--line); background:var(--panel); border-radius:20px; padding:8px 14px;
     font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;
@@ -90,9 +101,26 @@ HUB_JS = """<script>
     el.scrollIntoView({ block:'nearest', inline:'center' });
     return false;
   }
+  function _scrollDates(btn){
+    var bar = btn.parentElement.querySelector('.datebar');
+    if(bar){ bar.scrollBy({ left:(+btn.dataset.dir) * Math.round(bar.clientWidth * 0.6), behavior:'smooth' }); }
+  }
+  function _updateDnav(){
+    document.querySelectorAll('.datewrap').forEach(function(w){
+      var bar = w.querySelector('.datebar'), btns = w.querySelectorAll('.dnav');
+      if(!bar || btns.length < 2) return;
+      var max = bar.scrollWidth - bar.clientWidth;
+      w.classList.toggle('noscroll', max <= 2);
+      btns[0].classList.toggle('edge', bar.scrollLeft <= 2);
+      btns[1].classList.toggle('edge', bar.scrollLeft >= max - 2);
+    });
+  }
   document.addEventListener('DOMContentLoaded', function(){
     var h = location.hash.slice(1);
     if(h){ var el = document.querySelector('.datebar .chip[data-ymd="' + h + '"]'); if(el){ _showDay(el); } }
+    document.querySelectorAll('.datebar').forEach(function(b){ b.addEventListener('scroll', _updateDnav, { passive:true }); });
+    window.addEventListener('resize', _updateDnav);
+    _updateDnav();
   });
 </script>"""
 
