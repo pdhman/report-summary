@@ -129,6 +129,15 @@ def save_to_drive(final_df):
 
     existing = download_existing_sheets(service, file_id)
 
+    # 휴장일 가드 2: 직전 시트와 내용이 같으면 사이트가 갱신되지 않은 것(주말·공휴일)
+    if existing:
+        latest_name = next(iter(existing))
+        prev = existing[latest_name].drop(columns=["수집일자"], errors="ignore").reset_index(drop=True)
+        cur = final_df.drop(columns=["수집일자"], errors="ignore").reset_index(drop=True)
+        if prev.astype(str).equals(cur.astype(str)):
+            print(f"⏭️ {latest_name} 시트와 내용 동일 — 새 리포트 없음(휴장일), 저장 건너뜀")
+            return
+
     # 새 시트를 맨 앞에, 같은 이름 시트는 덮어쓰기 (노트북과 동일한 규칙)
     ordered = OrderedDict()
     ordered[sheet_name] = final_df
@@ -149,10 +158,23 @@ def save_to_drive(final_df):
 
 # ----------------------------------------------------------------------------
 def main():
+    # 주말(토·일 KST)은 휴장일이므로 크롤링·저장을 모두 건너뛴다
+    kst = pytz.timezone("Asia/Seoul")
+    today = datetime.datetime.now(kst)
+    if today.weekday() >= 5:
+        print(f"⏭️ {today:%Y-%m-%d}({'토일'[today.weekday() - 5]}) — 주말 휴장일, 실행 건너뜀")
+        return
+
     final_df = scrape_wisereport_selenium()
     if final_df is None or final_df.empty:
         raise RuntimeError("크롤링 결과가 비어있습니다.")
     print(f"수집 완료: {len(final_df)} 행")
+
+    # 휴장일 가드 1: 정상 거래일은 리포트가 수십 건 — 10행 미만이면 공휴일로 판단
+    if len(final_df) < 10:
+        print(f"⏭️ 수집 {len(final_df)}행뿐 — 휴장일(공휴일)로 판단, 저장 건너뜀")
+        return
+
     print_top5(final_df)
     save_to_drive(final_df)
 
