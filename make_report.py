@@ -109,7 +109,7 @@ def _write_report(today, date_str):
         <td class="st">{streak_badge}</td>
       </tr>""")
     if not rows_html:
-        rows_html = ['<tr><td colspan="9" class="empty">이 날은 조건을 통과한 선정 종목이 없습니다.</td></tr>']
+        rows_html = ['<tr><td colspan="9" class="empty">오늘은 조건을 통과한 종목이 없습니다.</td></tr>']
 
     # ---- 산업 분포 막대 ----
     ind_html = []
