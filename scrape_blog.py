@@ -100,7 +100,8 @@ def _render_para(inner):
         if not c.strip():
             continue
         c = html.escape(c).replace("\x01B\x01", "<strong>").replace("\x01b\x01", "</strong>")
-        if re.search(r"background-color\s*:\s*#?[0-9a-fA-F]{3,}", attrs) and "transparent" not in attrs:
+        mm = re.search(r"background-color\s*:\s*(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)", attrs)
+        if mm and mm.group(1).lower().lstrip("#") not in ("transparent", "white", "fff", "ffffff"):
             c = f"<mark>{c}</mark>"
         out.append(c)
     return "".join(out)
