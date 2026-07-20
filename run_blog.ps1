@@ -1,6 +1,6 @@
 # =====================================================================
 # Daily blog (investment strategy) sync for Windows Task Scheduler
-#  - Every day 18:00 KST: scrape new posts from the Naver blog,
+#  - Every day 17:30 KST: scrape new posts from the Naver blog,
 #    rebuild the strategy pages/hub, then commit & push.
 #  - The push triggers the daily-insights workflow (paths: blog/**,
 #    reports/**), which redeploys the GitHub Pages site.
