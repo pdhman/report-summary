@@ -29,6 +29,72 @@ def esc(s):
     return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
+def _pie_chart(ind_counts):
+    """산업 분포 도넛 차트(SVG) + 범례. ind_counts: 산업명→종목수 Series(내림차순)."""
+    import math
+    total = int(ind_counts.sum())
+    items = list(ind_counts.items())
+    if len(items) > 7:                              # 8색 팔레트: 7개 + '기타'로 접기
+        items = items[:7] + [("기타", sum(int(c) for _, c in items[7:]))]
+
+    cx = cy = 110
+    R, r = 100, 55                                  # 도넛 외경/내경
+    parts, legend = [], []
+    ang = -90.0                                     # 12시 방향부터 시계 방향
+    for i, (name, cnt) in enumerate(items):
+        frac = int(cnt) / total
+        a0, a1 = math.radians(ang), math.radians(ang + frac * 360)
+        ang += frac * 360
+        large = 1 if frac > 0.5 else 0
+        x0, y0 = cx + R * math.cos(a0), cy + R * math.sin(a0)
+        x1, y1 = cx + R * math.cos(a1), cy + R * math.sin(a1)
+        xi1, yi1 = cx + r * math.cos(a1), cy + r * math.sin(a1)
+        xi0, yi0 = cx + r * math.cos(a0), cy + r * math.sin(a0)
+        pct = frac * 100
+        tip = f"{name} · {int(cnt)}개 ({pct:.1f}%)"
+        if frac >= 0.999:                           # 산업이 1개뿐이면 완전한 도넛
+            parts.append(
+                f'<circle cx="{cx}" cy="{cy}" r="{(R + r) / 2}" fill="none" stroke="var(--vz{i + 1})" '
+                f'stroke-width="{R - r}"><title>{esc(tip)}</title></circle>')
+        else:
+            d = (f"M{x0:.2f} {y0:.2f} A{R} {R} 0 {large} 1 {x1:.2f} {y1:.2f} "
+                 f"L{xi1:.2f} {yi1:.2f} A{r} {r} 0 {large} 0 {xi0:.2f} {yi0:.2f} Z")
+            parts.append(f'<path d="{d}" fill="var(--vz{i + 1})" stroke="var(--panel)" '
+                         f'stroke-width="2"><title>{esc(tip)}</title></path>')
+        if pct >= 8:                                # 큰 조각에만 % 직접 표기
+            am = (a0 + a1) / 2
+            lx, ly = cx + (R + r) / 2 * math.cos(am), cy + (R + r) / 2 * math.sin(am)
+            parts.append(f'<text x="{lx:.1f}" y="{ly:.1f}" class="pie-pct">{pct:.0f}%</text>')
+        legend.append(
+            f'<div class="lg-row"><span class="lg-swatch" style="background:var(--vz{i + 1})"></span>'
+            f'<span class="lg-name">{esc(name)}</span>'
+            f'<span class="lg-val">{int(cnt)}개 · {pct:.1f}%</span></div>')
+
+    svg = (f'<svg viewBox="0 0 220 220" role="img" aria-label="산업 분포 도넛 차트">'
+           f'{"".join(parts)}</svg>')
+    return f'<div class="pie-box">{svg}<div class="pie-legend">{"".join(legend)}</div></div>'
+
+
+def _streak_chart(today):
+    """연속 등장(2일 이상) 종목 가로 막대 차트. 없으면 None."""
+    if today.empty or "streak" not in today.columns:
+        return None
+    d = today[today["streak"] >= 2].sort_values(["streak", "amount"], ascending=False).head(10)
+    if d.empty:
+        return None
+    mx = int(d["streak"].max())
+    rows = []
+    for _, r in d.iterrows():
+        s = int(r["streak"])
+        rows.append(f"""
+        <div class="bar-row" title="{esc(r.get('name', '-'))} · {s}일 연속">
+          <div class="bar-label">{esc(r.get('name', '-'))}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:{s / mx * 100:.0f}%"></div></div>
+          <div class="bar-val">{s}일</div>
+        </div>""")
+    return "".join(rows)
+
+
 def main():
     if not os.path.exists(XLSX):
         print(f"[보고서] {XLSX} 없음 — 보고서 생성 건너뜀")
@@ -111,18 +177,9 @@ def _write_report(today, date_str):
     if not rows_html:
         rows_html = ['<tr><td colspan="9" class="empty">오늘은 조건을 통과한 종목이 없습니다.</td></tr>']
 
-    # ---- 산업 분포 막대 ----
-    ind_html = []
-    if not ind_counts.empty:
-        mx = int(ind_counts.max())
-        for name, cnt in ind_counts.items():
-            pct = int(cnt) / mx * 100
-            ind_html.append(f"""
-        <div class="bar-row">
-          <div class="bar-label">{esc(name)}</div>
-          <div class="bar-track"><div class="bar-fill" style="width:{pct:.0f}%"></div></div>
-          <div class="bar-val">{int(cnt)}</div>
-        </div>""")
+    # ---- 하단 차트: 산업 분포(도넛) + 연속 등장 종목(가로 막대) ----
+    pie_html = _pie_chart(ind_counts) if not ind_counts.empty else None
+    streak_html = _streak_chart(today)
 
     html = f"""<div class="wrap">
   <header>
@@ -153,7 +210,12 @@ def _write_report(today, date_str):
 
   <section>
     <h2>산업 분포</h2>
-    <div class="bars">{''.join(ind_html) if ind_html else '<p class="muted">데이터 없음</p>'}</div>
+    <div class="chart-card">{pie_html if pie_html else '<p class="muted">데이터 없음</p>'}</div>
+  </section>
+
+  <section>
+    <h2>연속 등장 종목 <span class="h2sub">(2일 이상)</span></h2>
+    <div class="chart-card">{streak_html if streak_html else '<p class="muted">2일 이상 연속 등장한 종목이 없습니다.</p>'}</div>
   </section>
 
   <footer>
@@ -206,11 +268,34 @@ def _write_report(today, date_str):
   .badge {{ display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap; }}
   .badge.new {{ background:color-mix(in srgb,var(--accent) 18%,transparent); color:var(--accent); }}
   .badge.streak {{ background:color-mix(in srgb,var(--up) 16%,transparent); color:var(--up); }}
-  .bars {{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; }}
-  .bar-row {{ display:grid; grid-template-columns:160px 1fr 40px; align-items:center; gap:12px; padding:6px 0; }}
-  .bar-label {{ font-size:13px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
-  .bar-track {{ background:color-mix(in srgb,var(--line) 60%,transparent); border-radius:6px; height:10px; }}
-  .bar-fill {{ background:var(--accent); height:10px; border-radius:6px; }}
+  /* ---- 하단 차트 공통 ---- */
+  :root {{ --vz1:#2a78d6; --vz2:#008300; --vz3:#e87ba4; --vz4:#eda100;
+    --vz5:#1baf7a; --vz6:#eb6834; --vz7:#4a3aa7; --vz8:#e34948; }}
+  @media (prefers-color-scheme: dark) {{
+    :root {{ --vz1:#3987e5; --vz2:#008300; --vz3:#d55181; --vz4:#c98500;
+      --vz5:#199e70; --vz6:#d95926; --vz7:#9085e9; --vz8:#e66767; }}
+  }}
+  :root[data-theme="dark"] {{ --vz1:#3987e5; --vz2:#008300; --vz3:#d55181; --vz4:#c98500;
+    --vz5:#199e70; --vz6:#d95926; --vz7:#9085e9; --vz8:#e66767; }}
+  :root[data-theme="light"] {{ --vz1:#2a78d6; --vz2:#008300; --vz3:#e87ba4; --vz4:#eda100;
+    --vz5:#1baf7a; --vz6:#eb6834; --vz7:#4a3aa7; --vz8:#e34948; }}
+  .h2sub {{ color:var(--muted); font-weight:500; font-size:13px; }}
+  .chart-card {{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px; }}
+  /* 도넛 + 범례 */
+  .pie-box {{ display:flex; align-items:center; gap:26px; flex-wrap:wrap; }}
+  .pie-box svg {{ width:220px; height:220px; flex:0 0 auto; }}
+  .pie-pct {{ font-size:13px; font-weight:700; fill:#fff; text-anchor:middle; dominant-baseline:middle;
+    paint-order:stroke; stroke:rgba(0,0,0,.45); stroke-width:2px; }}
+  .pie-legend {{ flex:1 1 220px; min-width:220px; }}
+  .lg-row {{ display:flex; align-items:center; gap:10px; padding:5px 0; font-size:13.5px; }}
+  .lg-swatch {{ width:12px; height:12px; border-radius:3px; flex:0 0 auto; }}
+  .lg-name {{ color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1 1 auto; }}
+  .lg-val {{ color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; }}
+  /* 연속 등장 가로 막대 */
+  .bar-row {{ display:grid; grid-template-columns:150px 1fr 44px; align-items:center; gap:12px; padding:7px 0; }}
+  .bar-label {{ font-size:13.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+  .bar-track {{ background:color-mix(in srgb,var(--line) 60%,transparent); border-radius:6px; height:12px; }}
+  .bar-fill {{ background:var(--vz1); height:12px; border-radius:0 4px 4px 0; }}
   .bar-val {{ text-align:right; font-variant-numeric:tabular-nums; color:var(--muted); font-size:13px; }}
   footer {{ margin-top:30px; }}
   .muted {{ color:var(--muted); font-size:12px; }}
