@@ -2,7 +2,7 @@
   <header>
     <div class="eyebrow">리포트서머리 · 애널리스트 리포트 분석</div>
     <h1>리포트 인사이트</h1>
-    <div class="date">2026-07-20 기준 <span class="gen">(생성 2026-07-20 08:51)</span></div>
+    <div class="date">2026-07-20 기준 <span class="gen">(생성 2026-07-20 17:54)</span></div>
   </header>
 
   <section class="cards">
@@ -577,11 +577,54 @@ function _tgTheme(){
     box-shadow:0 2px 8px rgba(0,0,0,.12); transition:border-color .15s; padding:0; }
   #theme-toggle:hover { border-color:var(--accent); }
 </style><style>
-  #theme-toggle { position:fixed; top:14px; right:14px; z-index:60; width:38px; height:38px;
-    border-radius:50%; border:1px solid var(--line); background:var(--panel); font-size:16px;
-    line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
-    box-shadow:0 2px 8px rgba(0,0,0,.12); transition:border-color .15s; padding:0; }
-  #theme-toggle:hover { border-color:var(--accent); }
+  :root {
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d21; --muted:#6b7280;
+    --line:#e6e8eb; --accent:#3b5bdb; --up:#e03131; --down:#1971c2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1216; --panel:#171b21; --ink:#e8eaed; --muted:#9aa2ad;
+      --line:#252b33; --accent:#748ffc; --up:#ff6b6b; --down:#4dabf7; }
+  }
+  :root[data-theme="dark"] { --bg:#0f1216; --panel:#171b21; --ink:#e8eaed; --muted:#9aa2ad; --line:#252b33; --accent:#748ffc; --up:#ff6b6b; --down:#4dabf7; }
+  :root[data-theme="light"] { --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d21; --muted:#6b7280; --line:#e6e8eb; --accent:#3b5bdb; --up:#e03131; --down:#1971c2; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"Segoe UI","Malgun Gothic",sans-serif; line-height:1.5; }
+  .wrap { max-width:960px; margin:0 auto; padding:32px 20px 60px; }
+  header { border-bottom:1px solid var(--line); padding-bottom:20px; margin-bottom:24px; }
+  .eyebrow { color:var(--accent); font-weight:600; font-size:13px; letter-spacing:.02em; }
+  h1 { margin:6px 0 4px; font-size:28px; letter-spacing:-.01em; }
+  .date { color:var(--muted); font-size:15px; font-weight:500; }
+  .gen { font-size:12px; }
+  .topnav { margin-top:10px; }
+  .topnav a { color:var(--accent); text-decoration:none; font-size:13px; font-weight:600; }
+  .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .card .k { color:var(--muted); font-size:13px; margin-bottom:6px; }
+  .card .v { font-size:26px; font-weight:700; }
+  .card .v span { font-size:14px; font-weight:500; color:var(--muted); margin-left:2px; }
+  .card .v.up { color:var(--up); } .card .v.down { color:var(--down); }
+  h2 { font-size:17px; margin:26px 0 12px; }
+  h2 .sub { font-size:13px; font-weight:500; color:var(--muted); margin-left:6px; }
+  .tablewrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+  table { width:100%; border-collapse:collapse; font-size:14px; min-width:560px; }
+  thead th { text-align:left; color:var(--muted); font-weight:600; font-size:12px;
+    padding:12px 12px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  tbody td { padding:12px 12px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tbody tr:last-child td { border-bottom:none; }
+  .num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .rank { color:var(--muted); width:28px; }
+  .name .nm { font-weight:600; }
+  .name .code { display:block; color:var(--muted); font-size:12px; }
+  .strong { font-weight:700; }
+  .up { color:var(--up); font-weight:600; }
+  .down { color:var(--down); font-weight:600; }
+  .op { color:var(--muted); font-size:13px; }
+  .muted-c { color:var(--muted); }
+  .note { color:var(--muted); font-size:12px; margin:10px 2px 0; }
+  footer { margin-top:30px; }
+  .muted { color:var(--muted); font-size:12px; }
+  @media (max-width:640px) { .cards { grid-template-columns:repeat(2,1fr); } }
 </style><style>
   .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:2px;
     background:color-mix(in srgb,var(--panel) 92%,transparent); backdrop-filter:blur(10px);

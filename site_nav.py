@@ -179,12 +179,14 @@ def extract_wrap_inner(html):
 
 
 def extract_style(html):
-    """페이지의 첫 <style> 블록(본문 스타일) 추출."""
-    s = html.find("<style>")
-    if s == -1:
-        return ""
-    e = html.find("</style>", s)
-    return html[s:e + len("</style>")] if e != -1 else ""
+    """페이지의 본문 스타일 <style> 블록 추출.
+
+    페이지에는 토글·내비 등 작은 style 블록이 여러 개 있으므로,
+    가장 큰 블록(=본문 스타일)을 고른다. (첫 블록을 집으면 토글 CSS 만
+    가져와 허브가 무스타일이 되는 버그가 있었음)
+    """
+    blocks = re.findall(r"<style>.*?</style>", html, re.S)
+    return max(blocks, key=len) if blocks else ""
 
 
 def build_hub(out_path, title, section, glob_name, id_regex, fallback_style=""):

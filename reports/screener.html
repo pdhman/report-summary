@@ -281,11 +281,81 @@ function _tgTheme(){
     box-shadow:0 2px 8px rgba(0,0,0,.12); transition:border-color .15s; padding:0; }
   #theme-toggle:hover { border-color:var(--accent); }
 </style><style>
-  #theme-toggle { position:fixed; top:14px; right:14px; z-index:60; width:38px; height:38px;
-    border-radius:50%; border:1px solid var(--line); background:var(--panel); font-size:16px;
-    line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
-    box-shadow:0 2px 8px rgba(0,0,0,.12); transition:border-color .15s; padding:0; }
-  #theme-toggle:hover { border-color:var(--accent); }
+  :root {
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d21; --muted:#6b7280;
+    --line:#e6e8eb; --accent:#3b5bdb; --up:#e03131; --down:#1971c2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1216; --panel:#171b21; --ink:#e8eaed; --muted:#9aa2ad;
+      --line:#252b33; --accent:#748ffc; --up:#ff6b6b; --down:#4dabf7; }
+  }
+  :root[data-theme="dark"] { --bg:#0f1216; --panel:#171b21; --ink:#e8eaed; --muted:#9aa2ad; --line:#252b33; --accent:#748ffc; --up:#ff6b6b; --down:#4dabf7; }
+  :root[data-theme="light"] { --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d21; --muted:#6b7280; --line:#e6e8eb; --accent:#3b5bdb; --up:#e03131; --down:#1971c2; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"Segoe UI","Malgun Gothic",sans-serif; line-height:1.5; }
+  .wrap { max-width:960px; margin:0 auto; padding:32px 20px 60px; }
+  header { border-bottom:1px solid var(--line); padding-bottom:20px; margin-bottom:24px; }
+  .eyebrow { color:var(--accent); font-weight:600; font-size:13px; letter-spacing:.02em; }
+  h1 { margin:6px 0 4px; font-size:28px; letter-spacing:-.01em; }
+  .date { color:var(--muted); font-size:15px; font-weight:500; }
+  .gen { font-size:12px; }
+  .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .card .k { color:var(--muted); font-size:13px; margin-bottom:6px; }
+  .card .v { font-size:26px; font-weight:700; }
+  .card .v span { font-size:14px; font-weight:500; color:var(--muted); margin-left:2px; }
+  h2 { font-size:17px; margin:26px 0 12px; }
+  .tablewrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+  table { width:100%; border-collapse:collapse; font-size:14px; min-width:720px; }
+  thead th { text-align:left; color:var(--muted); font-weight:600; font-size:12px;
+    padding:12px 12px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  tbody td { padding:12px 12px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tbody tr:last-child td { border-bottom:none; }
+  .num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .rank { color:var(--muted); width:28px; }
+  .empty { text-align:center; color:var(--muted); padding:28px 12px; font-size:14px; }
+  .name .nm { font-weight:600; }
+  .name .code { display:block; color:var(--muted); font-size:12px; }
+  .strong { font-weight:700; }
+  .up { color:var(--up); font-weight:600; }
+  .down { color:var(--down); font-weight:600; }
+  .ind { color:var(--muted); font-size:13px; }
+  .badge { display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap; }
+  .badge.new { background:color-mix(in srgb,var(--accent) 18%,transparent); color:var(--accent); }
+  .badge.streak { background:color-mix(in srgb,var(--up) 16%,transparent); color:var(--up); }
+  /* ---- 하단 차트 공통 ---- */
+  :root { --vz1:#2a78d6; --vz2:#008300; --vz3:#e87ba4; --vz4:#eda100;
+    --vz5:#1baf7a; --vz6:#eb6834; --vz7:#4a3aa7; --vz8:#e34948; }
+  @media (prefers-color-scheme: dark) {
+    :root { --vz1:#3987e5; --vz2:#008300; --vz3:#d55181; --vz4:#c98500;
+      --vz5:#199e70; --vz6:#d95926; --vz7:#9085e9; --vz8:#e66767; }
+  }
+  :root[data-theme="dark"] { --vz1:#3987e5; --vz2:#008300; --vz3:#d55181; --vz4:#c98500;
+    --vz5:#199e70; --vz6:#d95926; --vz7:#9085e9; --vz8:#e66767; }
+  :root[data-theme="light"] { --vz1:#2a78d6; --vz2:#008300; --vz3:#e87ba4; --vz4:#eda100;
+    --vz5:#1baf7a; --vz6:#eb6834; --vz7:#4a3aa7; --vz8:#e34948; }
+  .h2sub { color:var(--muted); font-weight:500; font-size:13px; }
+  .chart-card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px; }
+  /* 도넛 + 범례 */
+  .pie-box { display:flex; align-items:center; gap:26px; flex-wrap:wrap; }
+  .pie-box svg { width:220px; height:220px; flex:0 0 auto; }
+  .pie-pct { font-size:13px; font-weight:700; fill:#fff; text-anchor:middle; dominant-baseline:middle;
+    paint-order:stroke; stroke:rgba(0,0,0,.45); stroke-width:2px; }
+  .pie-legend { flex:1 1 220px; min-width:220px; }
+  .lg-row { display:flex; align-items:center; gap:10px; padding:5px 0; font-size:13.5px; }
+  .lg-swatch { width:12px; height:12px; border-radius:3px; flex:0 0 auto; }
+  .lg-name { color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1 1 auto; }
+  .lg-val { color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  /* 연속 등장 가로 막대 */
+  .bar-row { display:grid; grid-template-columns:150px 1fr 44px; align-items:center; gap:12px; padding:7px 0; }
+  .bar-label { font-size:13.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bar-track { background:color-mix(in srgb,var(--line) 60%,transparent); border-radius:6px; height:12px; }
+  .bar-fill { background:var(--vz1); height:12px; border-radius:0 4px 4px 0; }
+  .bar-val { text-align:right; font-variant-numeric:tabular-nums; color:var(--muted); font-size:13px; }
+  footer { margin-top:30px; }
+  .muted { color:var(--muted); font-size:12px; }
+  @media (max-width:640px) { .cards { grid-template-columns:repeat(2,1fr); } .bar-row { grid-template-columns:110px 1fr 34px; } }
 </style><style>
   .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:2px;
     background:color-mix(in srgb,var(--panel) 92%,transparent); backdrop-filter:blur(10px);
