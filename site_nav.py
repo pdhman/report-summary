@@ -26,9 +26,11 @@ _ITEMS = [
 ]
 
 
-# 다크 ↔ 라이트 테마 토글 버튼 (모든 페이지 공통, localStorage 로 선택 유지)
-_THEME_TOGGLE = """<button id="theme-toggle" aria-label="테마 전환" onclick="_tgTheme()">🌓</button>
-<script>
+# 다크 ↔ 라이트 테마: 버튼은 홈에만(다른 페이지는 날짜 바 화살표와 겹침),
+# 저장된 선택을 적용하는 스크립트는 모든 페이지에 포함해 테마가 유지되게 한다.
+_THEME_BTN = '<button id="theme-toggle" aria-label="테마 전환" onclick="_tgTheme()">🌓</button>'
+
+_THEME_SCRIPT = """<script>
 function _tgCur(){
   var t = document.documentElement.dataset.theme;
   if(t) return t;
@@ -67,7 +69,8 @@ def nav_html(active):
         f'<span class="ni">{icon}</span><span class="nl">{label}</span></a>'
         for key, icon, label, href in _ITEMS
     )
-    return f'<nav class="bottomnav">{cells}</nav>{_THEME_TOGGLE}'
+    btn = _THEME_BTN if active == "home" else ""
+    return f'<nav class="bottomnav">{cells}</nav>{btn}{_THEME_SCRIPT}'
 
 
 NAV_CSS = """<style>
