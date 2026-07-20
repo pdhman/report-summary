@@ -127,7 +127,7 @@ def _write_report(today, date_str):
     html = f"""<div class="wrap">
   <header>
     <div class="eyebrow">주도섹터 필터링 · 자동 스크리너</div>
-    <h1>종목분석</h1>
+    <h1>종목탐색</h1>
     <div class="date">{date_str} <span class="gen">(생성 {gen_str})</span></div>
   </header>
 
@@ -222,7 +222,7 @@ def _write_report(today, date_str):
     out_path = os.path.join(OUT_DIR, f"report_{stamp}.html")
     full = "<!doctype html><html lang='ko'><head><meta charset='utf-8'>" \
            "<meta name='viewport' content='width=device-width,initial-scale=1'>" \
-           f"<title>종목분석 {date_str}</title></head><body>{html}</body></html>"
+           f"<title>종목탐색 {date_str}</title></head><body>{html}</body></html>"
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(full)
     print(f"[보고서] 생성 완료: {out_path}")
@@ -231,9 +231,9 @@ def _write_report(today, date_str):
 
 
 def build_index():
-    """종목분석 허브(screener.html): 상단 날짜 바 + 최신 스크리너 본문, 날짜 클릭 시 전환."""
+    """종목탐색 허브(screener.html): 상단 날짜 바 + 최신 스크리너 본문, 날짜 클릭 시 전환."""
     site_nav.build_hub(
-        os.path.join(OUT_DIR, "screener.html"), "종목분석", "stock",
+        os.path.join(OUT_DIR, "screener.html"), "종목탐색", "stock",
         "report_*.html", r"report_(\d{8})\.html$",
     )
 

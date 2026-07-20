@@ -19,7 +19,7 @@ import glob
 
 _ITEMS = [
     ("strategy", "📝", "투자전략", "index.html"),     # 블로그 일간 주도섹터 리포트
-    ("stock",    "🔎", "종목분석", "screener.html"),  # 자동 스크리너
+    ("stock",    "🔎", "종목탐색", "screener.html"),  # 자동 스크리너
     ("insight",  "📊", "인사이트", "insights.html"),
     ("brief",    "📰", "시황",    "briefs.html"),
 ]
