@@ -241,7 +241,7 @@ def build():
         if c["adjust"]:
             body += (f'<div class="krow"><span class="k-name">조정</span>'
                      f'<span class="k-val">{esc(c["adjust"])}</span></div>')
-        cards.append(_card("strategy.html", "📝", "오늘의 주도섹터", c["date"], body))
+        cards.append(_card("strategy.html", "📝", "주도섹터 리포트", c["date"], body))
 
     import pytz
     today = datetime.datetime.now(pytz.timezone("Asia/Seoul"))   # 러너(UTC)에서도 KST 표기
