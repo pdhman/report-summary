@@ -72,12 +72,16 @@ def _parse_item(chunk):
 def _parse_advice(text):
     """'운용 전략 제언' 섹션 → 헤딩 + 문단들."""
     body = re.sub(r"^.*?제언\s*", "", text, count=1, flags=re.S)
-    if "\n\n" in body.strip():
+    bullets = re.split(r"\n\s*[*\-•]\s+", "\n" + body.strip())
+    bullets = [b for b in bullets if b.strip()]
+    if len(bullets) >= 2:                          # 불릿(*)으로 문단이 나뉘어 온 경우
+        paras = [_clean_inline(b) for b in bullets]
+    elif "\n\n" in body.strip():                   # 빈 줄로 문단이 나뉘어 온 경우
         paras = [_clean_inline(p) for p in re.split(r"\n\s*\n", body) if p.strip()]
     else:
         body = _clean_inline(body)
-        # 줄바꿈이 소실된 경우: '…습니다.' 뒤에 '그러나/오늘'로 시작하는 지점에서 문단 분리
-        paras = re.split(r"(?<=니다\.)\s*(?=그러나|오늘|다만|따라서|결론)", body)
+        # 줄바꿈이 소실된 경우: 문장 끝('…다.') 뒤 '그러나/오늘' 등에서 문단 분리
+        paras = re.split(r"(?<=다\.)\s*(?=그러나|오늘|다만|따라서|결론)", body)
         paras = [p.strip() for p in paras if p.strip()]
     out = ["---", "", "### **라파엔투자자문 장 개시 전 운용 전략 제언**", ""]
     out += [p + "\n" for p in paras]
