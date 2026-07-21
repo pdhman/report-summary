@@ -130,14 +130,34 @@ def card_screener():
     }
 
 
+def _post_title(frag):
+    """블로그 조각의 <h1>에서 그날의 리포트 제목만 뽑는다.
+
+    '일간 주도 섹터 리포트(반등이 온다면- …)_26.07.21' → '반등이 온다면- …'
+    괄호 제목이 없는 날(예: '일간 주도 섹터 리포트_26.07.13')은 None.
+    """
+    m = re.search(r"<h1>(.*?)</h1>", frag, re.S)
+    if not m:
+        return None
+    t = re.sub(r"<[^>]+>", "", m.group(1)).strip()
+    t = re.sub(r"[_\s]*\d{2}[.\-]\d{2}[.\-]\d{2}\s*$", "", t)   # 끝의 _26.07.21
+    t = re.sub(r"_\d+\s*$", "", t).strip()                       # 끝의 _2
+    pm = re.search(r"\((.+)\)\s*$", t, re.S)
+    if not pm:
+        return None
+    inner = pm.group(1).strip()
+    return inner or None
+
+
 def card_sectors():
-    """주도섹터: 최신 블로그 조각에서 #주도섹터 / #조정섹터 다음 문단."""
+    """주도섹터: 최신 블로그 조각에서 제목 + #주도섹터 / #조정섹터 다음 문단."""
     files = sorted(glob.glob(os.path.join(BASE, "blog", "????-??-??.html")))
     if not files:
         return None
     path = files[-1]
     date = os.path.basename(path)[:10]
     frag = open(path, encoding="utf-8").read()
+    title = _post_title(frag)
     paras = [re.sub(r"<[^>]+>", "", p).strip()
              for p in re.findall(r"<p[^>]*>(.*?)</p>", frag, re.S)]
     paras = [p for p in paras if p]
@@ -147,9 +167,9 @@ def card_sectors():
                 return paras[i + 1]
         return None
     lead, adjust = after("#주도섹터"), after("#조정섹터")
-    if not lead and not adjust:
+    if not title and not lead and not adjust:
         return None
-    return {"date": date, "lead": lead, "adjust": adjust}
+    return {"date": date, "title": title, "lead": lead, "adjust": adjust}
 
 
 # ---------------------------------------------------------------- 렌더링
@@ -213,6 +233,8 @@ def build():
         print(f"[요약] 주도섹터 카드 실패: {e}")
     if c:
         body = ""
+        if c["title"]:
+            body += f'<div class="sc-lead">{esc(c["title"])}</div>'
         if c["lead"]:
             body += (f'<div class="krow"><span class="k-name">주도</span>'
                      f'<span class="k-val">{esc(c["lead"])}</span></div>')
@@ -267,6 +289,8 @@ def build():
   .sc-body {{ min-height:40px; }}
   .clamp {{ margin:0; font-size:13.5px; color:var(--ink); display:-webkit-box;
     -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }}
+  .sc-lead {{ font-size:14px; font-weight:700; line-height:1.45; margin-bottom:10px;
+    padding-bottom:9px; border-bottom:1px solid var(--line); }}
   .krow {{ display:flex; justify-content:space-between; align-items:baseline; gap:12px;
     padding:5px 0; font-size:13.5px; border-bottom:1px dashed color-mix(in srgb,var(--line) 70%,transparent); }}
   .krow:last-child {{ border-bottom:none; }}
