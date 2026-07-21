@@ -51,9 +51,19 @@ if ($report) { Start-Process $report.FullName }
 if ($LASTEXITCODE -ne 0) {
     & git -C $proj checkout -- reports/ 2>&1 | Out-File $out -Append -Encoding utf8
     & git -C $proj commit -m "screener: report $(Get-Date -Format 'yyyy-MM-dd')" 2>&1 | Out-File $out -Append -Encoding utf8
-    & git -C $proj pull --rebase origin main 2>&1 | Out-File $out -Append -Encoding utf8
+    & git -C $proj pull --rebase -X theirs origin main 2>&1 | Out-File $out -Append -Encoding utf8
+    if ($LASTEXITCODE -ne 0) {
+        # 생성물 충돌로 리베이스가 멈추면 로컬 본을 채택해 무인 복구
+        & git -C $proj checkout --theirs -- . 2>&1 | Out-File $out -Append -Encoding utf8
+        & git -C $proj add -A 2>&1 | Out-File $out -Append -Encoding utf8
+        & git -C $proj -c core.editor=true rebase --continue 2>&1 | Out-File $out -Append -Encoding utf8
+    }
     & git -C $proj push origin main 2>&1 | Out-File $out -Append -Encoding utf8
-    "[git] GitHub push OK" | Out-File $out -Append -Encoding utf8
+    if ($LASTEXITCODE -eq 0) {
+        "[git] GitHub push OK" | Out-File $out -Append -Encoding utf8
+    } else {
+        "[git] PUSH FAILED - check log" | Out-File $out -Append -Encoding utf8
+    }
 } else {
     "[git] no report change - skip push" | Out-File $out -Append -Encoding utf8
 }
