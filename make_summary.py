@@ -252,7 +252,7 @@ def build():
     <div class="date">{today:%Y-%m-%d} <span class="gen">(갱신 {today:%H:%M})</span></div>
   </header>
   <div class="cards">{''.join(cards) if cards else '<p class="muted">표시할 데이터가 없습니다.</p>'}</div>
-  <footer><p class="muted">본 페이지는 자동 생성된 참고 자료이며 투자 권유가 아닙니다.</p></footer>
+  <footer><p class="muted">본 페이지의 모든 정보는 자동 수집·생성된 참고 자료입니다. 투자 판단과 그 결과에 대한 책임은 이용자 본인에게 있습니다.</p></footer>
 </div>
 {site_nav.nav_html("home")}
 
