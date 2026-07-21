@@ -30,6 +30,14 @@ $md = Join-Path $proj ("briefs\{0}.md" -f $date)
 [System.IO.File]::WriteAllText($md, $text, (New-Object System.Text.UTF8Encoding($false)))
 Write-Host ("저장 완료: briefs\{0}.md  ({1:N0}자)" -f $date, $text.Length) -ForegroundColor Green
 
+# 3.5) 서식 자동 복구: 줄바꿈 소실 등 깨진 붙여넣기를 표준 형식으로 재조립
+$py = 'C:\Users\SAMSUNG\AppData\Local\Programs\Python\Python311\python.exe'
+$env:PYTHONIOENCODING = 'utf-8'
+& $py -u (Join-Path $proj 'format_brief.py') $md
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "서식 자동 복구를 건너뜁니다(구조 인식 실패) - 원본 그대로 게시. 페이지가 이상하면 알려주세요." -ForegroundColor Yellow
+}
+
 # 4) 커밋 & 푸시 (푸시하면 GitHub Actions가 페이지 생성 후 배포)
 $ymd = $date -replace '-', ''
 git add ("briefs/{0}.md" -f $date)
