@@ -68,10 +68,32 @@ def card_brief():
     return {"date": date, "excerpt": excerpt}
 
 
+def _ensure_fresh_xlsx(xlsx):
+    """리포트서머리.xlsx 가 오늘 것이 아니면 드라이브에서 내려받아 최신화.
+
+    로컬(스크리너·블로그 래퍼)에서 요약을 만들 때 오래된 엑셀을 읽어
+    '상승여력' 카드 날짜가 과거로 굳는 문제를 막는다. 실패해도 기존
+    파일로 계속 진행한다(러너에서는 이미 최신이라 건너뜀).
+    """
+    try:
+        import pytz
+        today = datetime.datetime.now(pytz.timezone("Asia/Seoul")).date()
+        if os.path.exists(xlsx):
+            mtime = datetime.datetime.fromtimestamp(os.path.getmtime(xlsx)).date()
+            if mtime >= today:
+                return
+        import sync_report_summary
+        sync_report_summary.download_from_drive()
+        print("[요약] 리포트서머리.xlsx 최신화 완료")
+    except Exception as e:
+        print(f"[요약] xlsx 최신화 건너뜀(기존 파일 사용): {e}")
+
+
 def card_upside():
     """상승여력: 리포트서머리.xlsx 최신 시트 목표주가 괴리율 TOP 3."""
     import pandas as pd
     xlsx = os.path.join(BASE, "리포트서머리.xlsx")
+    _ensure_fresh_xlsx(xlsx)
     if not os.path.exists(xlsx):
         return None
     xl = pd.ExcelFile(xlsx)
