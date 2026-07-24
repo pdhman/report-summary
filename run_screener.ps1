@@ -61,6 +61,9 @@ if ($LASTEXITCODE -ne 0) {
     & git -C $proj push origin main 2>&1 | Out-File $out -Append -Encoding utf8
     if ($LASTEXITCODE -eq 0) {
         "[git] GitHub push OK" | Out-File $out -Append -Encoding utf8
+        # push 이벤트가 배포를 못 거는 경우가 있어 명시적으로 배포 트리거
+        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $proj 'trigger_deploy.ps1')
+        "[git] deploy trigger exit: $LASTEXITCODE" | Out-File $out -Append -Encoding utf8
     } else {
         "[git] PUSH FAILED - check log" | Out-File $out -Append -Encoding utf8
     }
