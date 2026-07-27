@@ -85,6 +85,27 @@ def _download_image(url, date, idx):
     return f"blogimg/{name}"
 
 
+def _balance_strong(s):
+    """<strong> 짝 맞추기.
+
+    원문에 열고 닫지 않은 <strong> 이 섞여 있으면(네이버 편집기 특성) 브라우저가
+    그 서식을 뒤따르는 문단들에 계속 이어 붙여 본문 전체가 굵어진다.
+    짝 없는 닫힘은 버리고, 남은 열림은 끝에서 닫는다.
+    """
+    out, depth = [], 0
+    for tok in re.split(r"(</?strong>)", s):
+        if tok == "<strong>":
+            depth += 1
+            out.append(tok)
+        elif tok == "</strong>":
+            if depth:
+                depth -= 1
+                out.append(tok)
+        else:
+            out.append(tok)
+    return "".join(out) + "</strong>" * depth
+
+
 def _render_para(inner):
     """문단 inner HTML → 굵게(<strong>)·형광펜(<mark>)만 보존한 안전한 HTML."""
     spans = re.findall(r"<span([^>]*)>(.*?)</span>", inner, re.S)
@@ -100,6 +121,7 @@ def _render_para(inner):
         if not c.strip():
             continue
         c = html.escape(c).replace("\x01B\x01", "<strong>").replace("\x01b\x01", "</strong>")
+        c = _balance_strong(c)
         mm = re.search(r"background-color\s*:\s*(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)", attrs)
         if mm and mm.group(1).lower().lstrip("#") not in ("transparent", "white", "fff", "ffffff"):
             c = f"<mark>{c}</mark>"
