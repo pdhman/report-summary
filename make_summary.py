@@ -245,7 +245,7 @@ def build():
     except Exception as e:
         print(f"[요약] 시황 카드 실패: {e}")
     if c:
-        cards.append(_card("briefs.html", "📰", "오늘의 시황", c["date"],
+        cards.append(_card("briefs.html", "📰", "오늘의 뉴스", c["date"],
                            f'<p class="clamp">{esc(c["excerpt"])}</p>'))
 
     c = None
