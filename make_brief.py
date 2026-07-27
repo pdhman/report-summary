@@ -124,16 +124,16 @@ def build():
         pretty = f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:]}"
         page = f"""<div class="wrap">
   <header>
-    <div class="eyebrow">데일리 · 시황 브리핑</div>
-    <h1>시황 브리핑</h1>
+    <div class="eyebrow">데일리 · 뉴스 브리핑</div>
+    <h1>뉴스 브리핑</h1>
     <div class="date">{pretty} <span class="gen">(Gemini 정리)</span></div>
   </header>
   <article class="prose">{body_html}</article>
-  <footer><p class="muted">본 시황은 외부 생성(Gemini) 정리글을 게시한 참고 자료이며 투자 권유가 아닙니다.</p></footer>
+  <footer><p class="muted">본 뉴스 브리핑은 외부 생성(Gemini) 정리글을 게시한 참고 자료이며 투자 권유가 아닙니다.</p></footer>
 </div>"""
         os.makedirs(OUT_DIR, exist_ok=True)
         with open(os.path.join(OUT_DIR, f"brief_{ymd}.html"), "w", encoding="utf-8") as fh:
-            fh.write(_wrap(f"시황 브리핑 {pretty}", page))
+            fh.write(_wrap(f"뉴스 브리핑 {pretty}", page))
         briefs.append(ymd)
 
     briefs = sorted(set(briefs), reverse=True)
@@ -143,7 +143,7 @@ def build():
 
     # 시황 허브(briefs.html): 상단 날짜 바 + 최신 시황 본문, 날짜 클릭 시 전환.
     site_nav.build_hub(
-        os.path.join(OUT_DIR, "briefs.html"), "시황 브리핑", "brief",
+        os.path.join(OUT_DIR, "briefs.html"), "뉴스 브리핑", "brief",
         "brief_*.html", r"brief_(\d{8})\.html$",
         fallback_style=_SHARED_STYLE,
     )

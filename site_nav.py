@@ -11,7 +11,7 @@
    - build_hub(...) 이 각 섹션의 날짜별 페이지(report_*/insights_*/brief_*.html)를
      읽어 본문(.wrap 안쪽)을 모아 하나의 허브 페이지로 만든다.
 
-링크는 항상 존재하는 허브로 고정: 리포트 → index.html · 인사이트 → insights.html · 시황 → briefs.html
+링크는 항상 존재하는 허브로 고정: 리포트 → index.html · 인사이트 → insights.html · 뉴스 → briefs.html
 """
 import os
 import re
@@ -22,7 +22,7 @@ _ITEMS = [
     ("strategy", "📝", "투자전략", "strategy.html"),   # 블로그 일간 주도섹터 리포트
     ("stock",    "🔎", "종목탐색", "screener.html"),  # 자동 스크리너
     ("insight",  "📊", "인사이트", "insights.html"),
-    ("brief",    "📰", "시황",    "briefs.html"),
+    ("brief",    "📰", "뉴스",    "briefs.html"),
 ]
 
 
