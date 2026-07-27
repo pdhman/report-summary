@@ -65,7 +65,11 @@ jobs:
             echo "변경 없음 — 커밋 건너뜀"
           else
             git commit -m "insights: $(date -u +%Y-%m-%d) 자동 생성 [skip ci]"
-            git push
+            # push 이벤트 실행과 수동 트리거 실행이 동시에 돌면 push 경쟁이
+            # 생긴다. 리베이스 후 재시도하고, 그래도 밀리면(다른 실행이 이미
+            # 같은 내용을 커밋함) 배포는 계속 진행한다 — 실패로 처리하지 않음.
+            git pull --rebase -X theirs origin main || true
+            git push || echo "push 건너뜀 (동시 실행이 먼저 커밋함) — 배포는 계속"
           fi
 
       - name: Upload Pages artifact
