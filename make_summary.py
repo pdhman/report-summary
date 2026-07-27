@@ -190,6 +190,19 @@ def _post_title(frag):
     return inner or None
 
 
+def card_leverage():
+    """시장 레버리지: 신용융자·예탁금·반대매매비중 + 차트 페이지 재생성."""
+    import sys
+    mod_dir = os.path.join(BASE, "market_leverage_collector")
+    if not os.path.exists(os.path.join(mod_dir, "data", "credit_balance.csv")):
+        return None
+    if mod_dir not in sys.path:
+        sys.path.insert(0, mod_dir)
+    import make_chart
+    make_chart.build(out=os.path.join(OUT_DIR, "leverage.html"), nav_active="leverage")
+    return make_chart.latest_stats()
+
+
 def card_sectors():
     """주도섹터: 최신 블로그 조각에서 제목 + #주도섹터 / #조정섹터 다음 문단."""
     files = sorted(glob.glob(os.path.join(BASE, "blog", "????-??-??.html")))
@@ -283,6 +296,23 @@ def build():
                      f'<span class="k-val">{esc(c["adjust"])}</span></div>')
         cards.append(_card("strategy.html", "📝", "주도섹터 리포트", c["date"], body))
 
+    c = None
+    try:
+        c = card_leverage()
+    except Exception as e:
+        print(f"[요약] 레버리지 카드 실패: {e}")
+    if c:
+        def _row(name, val, diff, unit, dec=2):
+            cls = "up" if diff > 0 else ("down" if diff < 0 else "")
+            sign = "+" if diff > 0 else ""
+            return (f'<div class="krow"><span class="k-name">{name}</span>'
+                    f'<span class="k-val">{val:,.{dec}f}{unit} '
+                    f'<span class="k-diff {cls}">{sign}{diff:,.{dec}f}</span></span></div>')
+        body = (_row("신용거래융자", c["credit"], c["credit_d"], "조원")
+                + _row("투자자예탁금", c["deposit"], c["deposit_d"], "조원")
+                + _row("반대매매비중", c["ratio"], c["ratio_d"], "%"))
+        cards.append(_card("leverage.html", "📈", "시장 레버리지", c["date"], body))
+
     import pytz
     today = datetime.datetime.now(pytz.timezone("Asia/Seoul"))   # 러너(UTC)에서도 KST 표기
     body_html = f"""<div class="wrap">
@@ -337,6 +367,9 @@ def build():
   .k-name {{ color:var(--muted); flex:0 0 auto; }}
   .k-val {{ font-weight:600; text-align:right; }}
   .k-val.up {{ color:var(--up); font-variant-numeric:tabular-nums; }}
+  .k-diff {{ font-weight:600; font-size:12.5px; font-variant-numeric:tabular-nums; color:var(--muted); }}
+  .k-diff.up {{ color:var(--up); }}
+  .k-diff.down {{ color:var(--accent); }}
   .sc-more {{ margin-top:10px; color:var(--accent); font-size:13px; font-weight:600; }}
   footer {{ margin-top:26px; }}
   .muted {{ color:var(--muted); font-size:12px; }}

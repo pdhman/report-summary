@@ -116,7 +116,23 @@ def kpi(label, value, prev, unit, decimals=1):
     </div>'''
 
 
-def build():
+def latest_stats():
+    """요약 카드용 최신 수치. (날짜, 신용융자, 예탁금, 반대매매비중, 각 전일대비)"""
+    cb, mf = load()
+    JO = 1_000_000
+    ca = (_num(cb["신용거래융자_전체"]) / JO).tolist()
+    dp = (_num(mf["투자자예탁금 (장내파생상품 거래예수금제외)"]) / JO).tolist()
+    rt = _num(mf["미수금 대비 반대매매비중(%)"]).tolist()
+    return {
+        "date": cb["date"].iloc[-1].strftime("%Y-%m-%d"),
+        "credit": ca[-1], "credit_d": ca[-1] - ca[-2],
+        "deposit": dp[-1], "deposit_d": dp[-1] - dp[-2],
+        "ratio": rt[-1], "ratio_d": rt[-1] - rt[-2],
+    }
+
+
+def build(out=None, nav_active=None):
+    """out: 출력 경로(기본 leverage.html). nav_active 를 주면 사이트 하단 내비를 붙인다."""
     cb, mf = load()
     dates = [d.strftime("%Y-%m-%d") for d in cb["date"]]
     JO = 1_000_000  # 백만원 → 조원
@@ -266,10 +282,22 @@ def build():
 </script>
 </body></html>'''
 
-    with open(OUT, "w", encoding="utf-8") as f:
+    # 사이트에 편입할 때는 하단 내비를 붙여 다른 탭으로 돌아갈 수 있게 한다
+    if nav_active is not None:
+        import sys
+        root = os.path.dirname(BASE)
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        import site_nav
+        doc = doc.replace("</div>\n<script>",
+                          f'</div>\n{site_nav.nav_html(nav_active)}\n<style>body{{padding-bottom:92px}}</style>'
+                          f'{site_nav.NAV_CSS}\n<script>', 1)
+
+    path = out or OUT
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
         f.write(doc)
-    print(f"차트 생성 완료: {OUT}")
-    print(f"  기간 {dates[0]} ~ {dates[-1]} ({len(dates)}일)")
+    print(f"[레버리지] 차트 생성: {path} ({dates[0]} ~ {dates[-1]}, {len(dates)}일)")
 
 
 if __name__ == "__main__":
