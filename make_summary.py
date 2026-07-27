@@ -33,6 +33,12 @@ def _clean_name(s):
     return re.sub(r"\s*\([^)]*\)\s*$", "", str(s)).strip()
 
 
+def _strip_html(s):
+    """HTML 조각 → 순수 텍스트. 엔티티(&#x27; 등)를 풀어 esc() 가 이중
+    이스케이프(&amp;#x27;)하지 않게 한다."""
+    return _html.unescape(re.sub(r"<[^>]+>", "", s)).strip()
+
+
 # ---------------------------------------------------------------- 카드 데이터
 def card_brief():
     """시황: 최신 브리핑의 '운용 전략 제언' 첫 문단 요약."""
@@ -174,7 +180,7 @@ def _post_title(frag):
     m = re.search(r"<h1>(.*?)</h1>", frag, re.S)
     if not m:
         return None
-    t = re.sub(r"<[^>]+>", "", m.group(1)).strip()
+    t = _strip_html(m.group(1))
     t = re.sub(r"[_\s]*\d{2}[.\-]\d{2}[.\-]\d{2}\s*$", "", t)   # 끝의 _26.07.21
     t = re.sub(r"_\d+\s*$", "", t).strip()                       # 끝의 _2
     pm = re.search(r"\((.+)\)\s*$", t, re.S)
@@ -193,8 +199,7 @@ def card_sectors():
     date = os.path.basename(path)[:10]
     frag = open(path, encoding="utf-8").read()
     title = _post_title(frag)
-    paras = [re.sub(r"<[^>]+>", "", p).strip()
-             for p in re.findall(r"<p[^>]*>(.*?)</p>", frag, re.S)]
+    paras = [_strip_html(p) for p in re.findall(r"<p[^>]*>(.*?)</p>", frag, re.S)]
     paras = [p for p in paras if p]
     def after(tag):
         for i, p in enumerate(paras):
