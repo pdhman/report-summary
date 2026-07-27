@@ -13,6 +13,10 @@ gdrive_sa.json
 logs/
 *.tmp
 
+# 레버리지 수집기: 격리 의존성·SQLite(재생성 가능). CSV 는 시계열이라 추적한다
+market_leverage_collector/.deps/
+market_leverage_collector/data/*.db
+
 # Python
 __pycache__/
 *.pyc
