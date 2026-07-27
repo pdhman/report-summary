@@ -24,6 +24,18 @@ $logDir = Join-Path $proj 'logs'
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $out = Join-Path $logDir "screener_$stamp.log"
+
+# --- 브랜치 가드: 자동화는 항상 main 기준 (실습 브랜치에 있으면 전환) ---
+if (Test-Path (Join-Path $proj '.git/rebase-merge')) { & git -C $proj rebase --quit 2>$null }
+$branch = (& git -C $proj rev-parse --abbrev-ref HEAD 2>$null)
+if ($branch -ne 'main') {
+    "[guard] branch '$branch' -> main" | Out-File $out -Append -Encoding utf8
+    & git -C $proj checkout -f main 2>&1 | Out-File $out -Append -Encoding utf8
+    if ((& git -C $proj rev-parse --abbrev-ref HEAD 2>$null) -ne 'main') {
+        "[guard] FAILED to switch to main - abort" | Out-File $out -Append -Encoding utf8
+        exit 1
+    }
+}
 $err = Join-Path $logDir "screener_$stamp.err.log"
 
 # 실행 (자식 프로세스가 UTF-8 바이트를 그대로 파일에 기록)

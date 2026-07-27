@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # Daily blog (investment strategy) sync for Windows Task Scheduler
 #  - Every day 17:30 KST: scrape new posts from the Naver blog,
 #    rebuild the strategy pages/hub, then commit & push.
@@ -10,6 +10,14 @@
 
 $proj = $PSScriptRoot
 Set-Location $proj
+
+# --- 브랜치 가드: 자동화는 항상 main 기준 (실습 브랜치에 있으면 전환) ---
+if (Test-Path (Join-Path $proj '.git/rebase-merge')) { git rebase --quit 2>$null }
+$branch = (git rev-parse --abbrev-ref HEAD 2>$null)
+if ($branch -ne 'main') {
+    git checkout -f main 2>$null | Out-Null
+    if ((git rev-parse --abbrev-ref HEAD 2>$null) -ne 'main') { exit 1 }
+}
 
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $env:PYTHONUTF8       = '1'

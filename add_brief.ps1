@@ -8,6 +8,18 @@ $ErrorActionPreference = 'Stop'
 $proj = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $proj
 
+# --- 브랜치 가드: 게시는 항상 main 기준 (실습 브랜치에 있으면 전환) ---
+if (Test-Path (Join-Path $proj '.git/rebase-merge')) { git rebase --quit 2>$null }
+$branch = (git rev-parse --abbrev-ref HEAD 2>$null)
+if ($branch -ne 'main') {
+    Write-Host ("현재 브랜치 '{0}' -> main 으로 전환합니다." -f $branch) -ForegroundColor Yellow
+    git checkout -f main 2>$null | Out-Null
+    if ((git rev-parse --abbrev-ref HEAD 2>$null) -ne 'main') {
+        Write-Host "main 전환 실패 - 게시를 중단합니다." -ForegroundColor Red
+        Read-Host "엔터를 누르면 종료"; exit 1
+    }
+}
+
 # 1) 클립보드 읽기
 $text = Get-Clipboard -Raw
 if ([string]::IsNullOrWhiteSpace($text)) {
