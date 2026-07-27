@@ -18,6 +18,11 @@ run.cmd
 - `market_funds.csv`
 - `market_leverage.db`
 
+## 차트 보기
+
+수집 후 `chart.cmd`를 더블클릭하면 `leverage.html`을 만들고 브라우저로 엽니다.
+신용거래융자·투자자예탁금·반대매매비중 추이와 원자료 표가 한 페이지에 담깁니다.
+
 ## 테스트
 
 ```bat

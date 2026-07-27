@@ -27,3 +27,4 @@ venv/
 # OS / 에디터
 .DS_Store
 Thumbs.db
+market_leverage_collector/leverage.html
