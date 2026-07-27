@@ -116,7 +116,12 @@ def card_upside():
 
 
 def card_screener():
-    """주도주: 종목탐색 최신 날짜 요약."""
+    """주도주: 종목탐색 최신 날짜 요약.
+
+    선정 종목이 0개인 날은 xlsx 에 저장되지 않으므로(스크리너 사양),
+    실제 생성된 리포트 페이지(report_YYYYMMDD.html)의 최신 날짜를 함께 보고
+    그날이 더 최신이면 '0종목' 상태로 표시한다.
+    """
     import pandas as pd
     xlsx = os.path.join(BASE, "종목탐색_TOP30.xlsx")
     if not os.path.exists(xlsx):
@@ -126,6 +131,14 @@ def card_screener():
     latest = df["Date"].max()
     if pd.isna(latest):
         return None
+
+    # 리포트 페이지 기준 최신일이 xlsx 보다 앞서면 그날은 선정 0종목
+    pages = sorted(re.search(r"report_(\d{8})\.html$", os.path.basename(p)).group(1)
+                   for p in glob.glob(os.path.join(OUT_DIR, "report_????????.html")))
+    if pages and pages[-1] > latest.strftime("%Y%m%d"):
+        ymd = pages[-1]
+        return {"date": f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:]}", "n": 0, "n_new": 0,
+                "top_amt": None, "best_name": None, "best_streak": 0}
     day = df[df["Date"] == latest].drop_duplicates(subset=["ticker"], keep="first").copy()
     day["amount"] = pd.to_numeric(day.get("amount"), errors="coerce")
     # 연속 등장
