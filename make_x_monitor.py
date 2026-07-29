@@ -267,7 +267,10 @@ def _build_hub():
         with open(f, encoding="utf-8") as fh:
             html = fh.read()
         hide = "" if i == 0 else ' style="display:none"'
-        panels.append(f'<div class="day" id="day-{ymd}"{hide}>{site_nav.extract_wrap_inner(html)}</div>')
+        inner = site_nav.extract_wrap_inner(html)
+        # 허브 자체 헤더와 중복되는 패널 내부 헤더(eyebrow·h1·날짜) 제거
+        inner = re.sub(r"<header>.*?</header>\s*", "", inner, count=1, flags=re.S)
+        panels.append(f'<div class="day" id="day-{ymd}"{hide}>{inner}</div>')
     dates = [ymd for ymd, _ in entries]
 
     data = _feed_data()
@@ -275,13 +278,13 @@ def _build_hub():
     feed_assets = (_FEED_CSS + _FEED_JS) if feed else ""
 
     body = f"""<div class="wrap">
+  {site_nav._datebar(dates, dates[0])}
   <header>
     <div class="eyebrow">데일리 · X 모니터링</div>
     <h1>X 모니터링</h1>
     <div class="date">최신 {dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}</div>
   </header>{feed}
   <div class="xsection">일일 리포트</div>
-  {site_nav._datebar(dates, dates[0])}
   <div id="view">{"".join(panels)}</div>
 </div>
 {site_nav.nav_html("x")}"""
