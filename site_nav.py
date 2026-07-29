@@ -63,6 +63,37 @@ function _tgTheme(){
 </style>"""
 
 
+# 자동 갱신: 주기적으로 현재 페이지가 바뀌었는지만 확인(HEAD)하고, 바뀐 경우에만
+# 새로고침한다. 내용이 그대로면 아무 일도 일어나지 않아 화면이 튀지 않는다.
+# 모바일은 백그라운드 타이머를 늦추므로 탭 복귀 시에도 즉시 확인한다.
+_AUTOREFRESH_SCRIPT = """<script>
+(function(){
+  if(!/^https?:$/.test(location.protocol)) return;   // file:// 등에서는 동작 안 함
+  var POLL = 5 * 60 * 1000;                          // 5분마다 확인
+  var tag = null;
+  function stamp(res){
+    return res.headers.get('etag') || res.headers.get('last-modified')
+        || res.headers.get('content-length');
+  }
+  function check(){
+    fetch(location.pathname, { method:'HEAD', cache:'no-store' }).then(function(res){
+      if(!res.ok) return;
+      var s = stamp(res);
+      if(!s) return;                  // 판별 정보가 없으면 새로고침하지 않는다
+      if(tag === null){ tag = s; return; }   // 첫 확인은 기준값만 기록
+      if(s !== tag){ location.reload(); }
+    }).catch(function(){});
+  }
+  window.__checkUpdate = check;       // 콘솔에서 즉시 확인용
+  check();
+  setInterval(check, POLL);
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') check();
+  });
+})();
+</script>"""
+
+
 def nav_html(active):
     cells = "".join(
         f'<a class="nav-cell{" active" if key == active else ""}" href="{href}">'
@@ -70,7 +101,7 @@ def nav_html(active):
         for key, icon, label, href in _ITEMS
     )
     btn = _THEME_BTN if active == "home" else ""
-    return f'<nav class="bottomnav">{cells}</nav>{btn}{_THEME_SCRIPT}'
+    return f'<nav class="bottomnav">{cells}</nav>{btn}{_THEME_SCRIPT}{_AUTOREFRESH_SCRIPT}'
 
 
 NAV_CSS = """<style>

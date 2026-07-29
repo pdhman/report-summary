@@ -42,7 +42,7 @@
   <header>
     <div class="eyebrow">주도섹터 필터링 · 자동 스크리너</div>
     <h1>종목탐색</h1>
-    <div class="date">2026-07-28 <span class="gen">(생성 2026-07-29 15:36)</span></div>
+    <div class="date">2026-07-28 <span class="gen">(생성 2026-07-29 17:35)</span></div>
   </header>
 
   <section class="cards">
@@ -133,7 +133,7 @@
   <header>
     <div class="eyebrow">주도섹터 필터링 · 자동 스크리너</div>
     <h1>종목탐색</h1>
-    <div class="date">2026-07-24 <span class="gen">(생성 2026-07-27 23:53)</span></div>
+    <div class="date">2026-07-24 <span class="gen">(생성 2026-07-29 17:35)</span></div>
   </header>
 
   <section class="cards">
@@ -216,7 +216,7 @@
   <header>
     <div class="eyebrow">주도섹터 필터링 · 자동 스크리너</div>
     <h1>종목탐색</h1>
-    <div class="date">2026-07-23 <span class="gen">(생성 2026-07-27 23:53)</span></div>
+    <div class="date">2026-07-23 <span class="gen">(생성 2026-07-29 17:35)</span></div>
   </header>
 
   <section class="cards">
@@ -283,7 +283,7 @@
   <header>
     <div class="eyebrow">주도섹터 필터링 · 자동 스크리너</div>
     <h1>종목탐색</h1>
-    <div class="date">2026-07-22 <span class="gen">(생성 2026-07-27 23:53)</span></div>
+    <div class="date">2026-07-22 <span class="gen">(생성 2026-07-29 17:35)</span></div>
   </header>
 
   <section class="cards">
@@ -339,7 +339,7 @@
   <header>
     <div class="eyebrow">주도섹터 필터링 · 자동 스크리너</div>
     <h1>종목탐색</h1>
-    <div class="date">2026-07-21 <span class="gen">(생성 2026-07-27 23:53)</span></div>
+    <div class="date">2026-07-21 <span class="gen">(생성 2026-07-29 17:35)</span></div>
   </header>
 
   <section class="cards">
@@ -395,7 +395,7 @@
   <header>
     <div class="eyebrow">주도섹터 필터링 · 자동 스크리너</div>
     <h1>종목탐색</h1>
-    <div class="date">2026-07-20 <span class="gen">(생성 2026-07-27 23:53)</span></div>
+    <div class="date">2026-07-20 <span class="gen">(생성 2026-07-29 17:35)</span></div>
   </header>
 
   <section class="cards">
@@ -529,7 +529,7 @@
   <header>
     <div class="eyebrow">주도섹터 필터링 · 자동 스크리너</div>
     <h1>종목탐색</h1>
-    <div class="date">2026-07-15 <span class="gen">(생성 2026-07-27 23:53)</span></div>
+    <div class="date">2026-07-15 <span class="gen">(생성 2026-07-29 17:35)</span></div>
   </header>
 
   <section class="cards">
@@ -673,7 +673,32 @@ function _tgTheme(){
     line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
     box-shadow:0 2px 8px rgba(0,0,0,.12); transition:border-color .15s; padding:0; }
   #theme-toggle:hover { border-color:var(--accent); }
-</style><style>
+</style><script>
+(function(){
+  if(!/^https?:$/.test(location.protocol)) return;   // file:// 등에서는 동작 안 함
+  var POLL = 5 * 60 * 1000;                          // 5분마다 확인
+  var tag = null;
+  function stamp(res){
+    return res.headers.get('etag') || res.headers.get('last-modified')
+        || res.headers.get('content-length');
+  }
+  function check(){
+    fetch(location.pathname, { method:'HEAD', cache:'no-store' }).then(function(res){
+      if(!res.ok) return;
+      var s = stamp(res);
+      if(!s) return;                  // 판별 정보가 없으면 새로고침하지 않는다
+      if(tag === null){ tag = s; return; }   // 첫 확인은 기준값만 기록
+      if(s !== tag){ location.reload(); }
+    }).catch(function(){});
+  }
+  window.__checkUpdate = check;       // 콘솔에서 즉시 확인용
+  check();
+  setInterval(check, POLL);
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') check();
+  });
+})();
+</script><style>
   :root {
     --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d21; --muted:#6b7280;
     --line:#e6e8eb; --accent:#3b5bdb; --up:#e03131; --down:#1971c2;
