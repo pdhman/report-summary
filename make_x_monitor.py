@@ -73,6 +73,8 @@ _FEED_CSS = """
   .xgrade { border:1px solid var(--line); background:var(--panel); color:var(--ink);
     border-radius:999px; padding:6px 14px; font-size:13px; cursor:pointer; }
   .xgrade.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .xgrade.xdate { background:color-mix(in srgb,var(--accent) 12%,transparent); color:var(--accent);
+    border-color:color-mix(in srgb,var(--accent) 40%,transparent); }
   .xfeed { max-height:600px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;
     padding-right:2px; margin-bottom:8px; }
   .xcard { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:13px 15px; }
@@ -105,7 +107,7 @@ _FEED_JS = """
   var D = window.XMON_DATA || { accounts: [], posts: [] };
   var accByHandle = {};
   D.accounts.forEach(function (a) { accByHandle[a.handle.toLowerCase()] = a; });
-  var state = { grade: 0, cat: '', acc: '', date: '', q: '' };
+  var state = { grade: 0, cat: '', acc: '', date: '', q: '', noRepost: false };
 
   function kstDate(iso) {
     if (!iso) return '';
@@ -132,11 +134,27 @@ _FEED_JS = """
     document.getElementById('xfAcc').insertAdjacentHTML('beforeend',
       '<option value="' + esc(a.handle) + '">' + (a.grade === 2 ? '\\u2605\\u2605 ' : '') + esc(a.name) + '</option>');
   });
-  var dates = {};
-  D.posts.forEach(function (p) { dates[kstDate(p.time)] = 1; });
-  Object.keys(dates).sort().reverse().forEach(function (d) {
-    document.getElementById('xfDate').insertAdjacentHTML('beforeend',
-      '<option value="' + d + '">' + d + '</option>');
+  // 상단 날짜 바와 연동: 날짜 칩 클릭 시 피드도 해당 날짜로 필터
+  document.addEventListener('click', function (e) {
+    var chip = e.target.closest && e.target.closest('.datebar .chip');
+    if (!chip) return;
+    var y = chip.dataset.ymd;
+    if (!y) return;
+    state.date = y.slice(0, 4) + '-' + y.slice(4, 6) + '-' + y.slice(6, 8);
+    var c = document.getElementById('xfDateClear');
+    c.textContent = '📅 ' + state.date.slice(5) + ' ✕';
+    c.style.display = '';
+    render();
+  });
+  document.getElementById('xfDateClear').addEventListener('click', function () {
+    state.date = '';
+    this.style.display = 'none';
+    render();
+  });
+  document.getElementById('xfRepost').addEventListener('click', function () {
+    state.noRepost = !state.noRepost;
+    this.classList.toggle('on', state.noRepost);
+    render();
   });
 
   function render() {
@@ -146,6 +164,7 @@ _FEED_JS = """
       if (state.cat && (!a || (a.categories || []).indexOf(state.cat) < 0)) return false;
       if (state.acc && (p.handle || '').toLowerCase() !== state.acc.toLowerCase()) return false;
       if (state.date && kstDate(p.time) !== state.date) return false;
+      if (state.noRepost && p.repost_by) return false;
       if (state.q) {
         var q = state.q.toLowerCase();
         var hay = ((p.text || '') + ' ' + (p.handle || '') + ' ' + (a ? a.name : '')).toLowerCase();
@@ -184,9 +203,9 @@ _FEED_JS = """
       html || '<div class="xempty">조건에 맞는 글이 없습니다.</div>';
   }
 
-  document.querySelectorAll('.xgrade').forEach(function (b) {
+  document.querySelectorAll('.xgrade[data-g]').forEach(function (b) {
     b.addEventListener('click', function () {
-      document.querySelectorAll('.xgrade').forEach(function (x) { x.classList.remove('on'); });
+      document.querySelectorAll('.xgrade[data-g]').forEach(function (x) { x.classList.remove('on'); });
       b.classList.add('on');
       state.grade = +b.dataset.g;
       render();
@@ -194,7 +213,6 @@ _FEED_JS = """
   });
   document.getElementById('xfCat').addEventListener('change', function (e) { state.cat = e.target.value; render(); });
   document.getElementById('xfAcc').addEventListener('change', function (e) { state.acc = e.target.value; render(); });
-  document.getElementById('xfDate').addEventListener('change', function (e) { state.date = e.target.value; render(); });
   document.getElementById('xfSearch').addEventListener('input', function (e) { state.q = e.target.value.trim(); render(); });
   render();
 })();
@@ -210,10 +228,11 @@ def _feed_section(data):
     <button class="xgrade on" data-g="0">전체</button>
     <button class="xgrade" data-g="2">★★ 중요</button>
     <button class="xgrade" data-g="1">★ 참고</button>
+    <button class="xgrade" id="xfRepost">리포스트 제외</button>
     <select id="xfCat"><option value="">분야 전체</option></select>
     <select id="xfAcc"><option value="">계정 전체</option></select>
-    <select id="xfDate"><option value="">날짜 전체</option></select>
     <input id="xfSearch" type="search" placeholder="검색어...">
+    <button class="xgrade xdate" id="xfDateClear" style="display:none"></button>
   </div>
   <div class="xfeed" id="xfeed"></div>
   <script>window.XMON_DATA = {payload};</script>"""
