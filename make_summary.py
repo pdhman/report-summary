@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-첫 페이지(index.html) '오늘의 요약' 대시보드 생성기.
+첫 페이지(index.html) '알파노트' 대시보드 생성기.
 
 기존 산출물을 재조립해 카드 4장을 만든다 (새 크롤링 없음):
   1) 시황       briefs/<최신>.md 의 '운용 전략 제언' 첫 문단
@@ -340,7 +340,7 @@ def build():
     body_html = f"""<div class="wrap">
   <header>
     <div class="eyebrow">데일리 대시보드</div>
-    <h1>오늘의 요약</h1>
+    <h1>알파노트</h1>
     <div class="date">{today:%Y-%m-%d} <span class="gen">(갱신 {today:%H:%M})</span></div>
   </header>
   <div class="cards">{''.join(cards) if cards else '<p class="muted">표시할 데이터가 없습니다.</p>'}</div>
@@ -400,7 +400,7 @@ def build():
     os.makedirs(OUT_DIR, exist_ok=True)
     full = ("<!doctype html><html lang='ko'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-            f"<title>오늘의 요약</title></head><body>{body_html}</body></html>")
+            f"<title>알파노트</title></head><body>{body_html}</body></html>")
     with open(os.path.join(OUT_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(full)
     print(f"[요약] index.html 생성 (카드 {len(cards)}개)")
