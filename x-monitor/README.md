@@ -13,7 +13,7 @@ Claude Code에서 **"X 모니터링 돌려줘"** 또는 `/x-monitor` 라고 하�
 
 ```
 x-monitor/
-├── accounts.json        # 모니터링 대상 (엑셀에서 생성, grade 2=OO / 1=O)
+├── accounts.json        # 모니터링 대상 (엑셀에서 생성, grade 2=★★(엑셀 OO) / 1=★(엑셀 O))
 ├── state.json           # X 리스트 URL, 마지막 수집 시각
 ├── data/                # 날짜별 수집 원문 (JSON)
 ├── reports/             # 날짜별 요약 리포트 (Markdown)

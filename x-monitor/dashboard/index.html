@@ -69,8 +69,8 @@
   <div class="stats" id="stats"></div>
   <div class="filters">
     <button class="gradebtn on" data-g="0">전체</button>
-    <button class="gradebtn" data-g="2">OO 중요</button>
-    <button class="gradebtn" data-g="1">O 참고</button>
+    <button class="gradebtn" data-g="2">★★ 중요</button>
+    <button class="gradebtn" data-g="1">★ 참고</button>
     <select id="fCat"><option value="">분야 전체</option></select>
     <select id="fAcc"><option value="">계정 전체</option></select>
     <select id="fDate"><option value="">날짜 전체</option></select>
@@ -112,7 +112,7 @@
   });
   D.accounts.forEach(function (a) {
     document.getElementById('fAcc').insertAdjacentHTML('beforeend',
-      '<option value="' + esc(a.handle) + '">' + (a.grade === 2 ? '★ ' : '') + esc(a.name) + '</option>');
+      '<option value="' + esc(a.handle) + '">' + (a.grade === 2 ? '★★ ' : '') + esc(a.name) + '</option>');
   });
   var dates = {};
   D.posts.forEach(function (p) { dates[kstDate(p.time)] = 1; });
@@ -154,8 +154,8 @@
         '<div class="row1">' +
           '<div class="avatar">' + esc((name || '?').charAt(0).toUpperCase()) + '</div>' +
           '<div class="who"><b>' + esc(name) + '</b> ' +
-            (a.grade === 2 ? '<span class="badge g2">OO</span>' :
-             a.grade === 1 ? '<span class="badge g1">O</span>' : '') +
+            (a.grade === 2 ? '<span class="badge g2">★★</span>' :
+             a.grade === 1 ? '<span class="badge g1">★</span>' : '') +
             '<div class="h">@' + esc(p.handle) + '</div></div>' +
           '<span class="time">' + kstTime(p.time) + '</span>' +
         '</div>' +
