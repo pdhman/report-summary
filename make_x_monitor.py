@@ -94,6 +94,9 @@ _FEED_CSS = """
   .xcats { margin-top:8px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
   .xcat { font-size:11px; background:color-mix(in srgb,var(--line) 55%,transparent);
     color:var(--muted); border-radius:6px; padding:2px 8px; }
+  .xmet { font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .xtext a { color:var(--accent); word-break:break-all; }
+  .xticker { font-weight:700; color:var(--accent); }
   .xlink { font-size:12px; color:var(--accent); text-decoration:none; margin-left:auto; font-weight:600; }
   .xempty { text-align:center; color:var(--muted); padding:30px 0; font-size:13.5px; }
   .xsection { margin:26px 0 10px; font-size:17px; font-weight:700;
@@ -107,7 +110,7 @@ _FEED_JS = """
   var D = window.XMON_DATA || { accounts: [], posts: [] };
   var accByHandle = {};
   D.accounts.forEach(function (a) { accByHandle[a.handle.toLowerCase()] = a; });
-  var state = { grade: 0, cat: '', acc: '', date: '', q: '', noRepost: false };
+  var state = { grade: 0, cat: '', acc: '', date: '', q: '', noRepost: false, hot: false };
 
   function kstDate(iso) {
     if (!iso) return '';
@@ -122,6 +125,22 @@ _FEED_JS = """
     return (s || '').replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
     });
+  }
+  function fmtN(n) {
+    if (n == null) return '';
+    if (n >= 10000) return (n / 10000).toFixed(n >= 100000 ? 0 : 1) + '만';
+    if (n >= 1000) return n.toLocaleString();
+    return '' + n;
+  }
+  // esc() 이후 적용: URL 링크화 + $티커 강조
+  function rich(s) {
+    return s
+      .replace(/https?:\/\/[^\s<]+/g, function (u) {
+        var disp = u.replace(/^https?:\/\//, '').replace(/^www\./, '');
+        if (disp.length > 40) disp = disp.slice(0, 37) + '…';
+        return '<a href="' + u + '" target="_blank" rel="noopener">' + disp + '</a>';
+      })
+      .replace(/\$([A-Za-z]{1,6})(?![A-Za-z0-9_])/g, '<b class="xticker">$$$1</b>');
   }
 
   var cats = {};
@@ -156,6 +175,11 @@ _FEED_JS = """
     this.classList.toggle('on', state.noRepost);
     render();
   });
+  document.getElementById('xfSort').addEventListener('click', function () {
+    state.hot = !state.hot;
+    this.classList.toggle('on', state.hot);
+    render();
+  });
 
   function render() {
     var posts = D.posts.filter(function (p) {
@@ -172,6 +196,9 @@ _FEED_JS = """
       }
       return true;
     });
+    if (state.hot) {
+      posts = posts.slice().sort(function (a, b) { return (b.views || 0) - (a.views || 0); });
+    }
 
     var today = kstDate(new Date().toISOString());
     var todayCnt = D.posts.filter(function (p) { return kstDate(p.time) === today; }).length;
@@ -193,9 +220,11 @@ _FEED_JS = """
           '<div class="xh">@' + esc(p.handle) + '</div></div>' +
         '<span class="xtime">' + kstTime(p.time) + '</span></div>' +
         (p.repost_by ? '<div class="xrepost">\\u21bb ' + esc(p.repost_by) + '</div>' : '') +
-        '<div class="xtext">' + esc(p.text) + '</div>' +
+        '<div class="xtext">' + rich(esc(p.text)) + '</div>' +
         '<div class="xcats">' +
           (a.categories || []).map(function (c) { return '<span class="xcat">' + esc(c) + '</span>'; }).join('') +
+          (p.views != null ? '<span class="xmet">👁 ' + fmtN(p.views) + '</span>' : '') +
+          (p.likes != null ? '<span class="xmet">♥ ' + fmtN(p.likes) + '</span>' : '') +
           (p.url ? '<a class="xlink" href="' + esc(p.url) + '" target="_blank" rel="noopener">원문 ↗</a>' : '') +
         '</div></div>';
     });
@@ -229,6 +258,7 @@ def _feed_section(data):
     <button class="xgrade" data-g="2">★★ 중요</button>
     <button class="xgrade" data-g="1">★ 참고</button>
     <button class="xgrade" id="xfRepost">리포스트 제외</button>
+    <button class="xgrade" id="xfSort">🔥 화제순</button>
     <select id="xfCat"><option value="">분야 전체</option></select>
     <select id="xfAcc"><option value="">계정 전체</option></select>
     <input id="xfSearch" type="search" placeholder="검색어...">
