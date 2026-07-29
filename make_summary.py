@@ -203,6 +203,13 @@ def card_leverage():
     return make_chart.latest_stats()
 
 
+def card_x():
+    """X 모니터링: 최신 리포트 요약 + 게시 페이지(x_*.html/x.html) 재생성."""
+    import make_x_monitor
+    make_x_monitor.build()
+    return make_x_monitor.latest_card()
+
+
 def card_sectors():
     """주도섹터: 최신 블로그 조각에서 제목 + #주도섹터 / #조정섹터 다음 문단."""
     files = sorted(glob.glob(os.path.join(BASE, "blog", "????-??-??.html")))
@@ -312,6 +319,21 @@ def build():
                 + _row("투자자예탁금", c["deposit"], c["deposit_d"], "조원")
                 + _row("반대매매비중", c["ratio"], c["ratio_d"], "%"))
         cards.append(_card("leverage.html", "📈", "시장 레버리지", c["date"], body))
+
+    c = None
+    try:
+        c = card_x()
+    except Exception as e:
+        print(f"[요약] X 모니터링 카드 실패: {e}")
+    if c:
+        body = ""
+        if c["count"] is not None:
+            body += (f'<div class="krow"><span class="k-name">수집</span>'
+                     f'<span class="k-val">{c["count"]}건</span></div>')
+        if c["summary"]:
+            body += f'<p class="clamp">{esc(c["summary"])}</p>'
+        if body:
+            cards.append(_card("x.html", "𝕏", "X 모니터링", c["date"], body))
 
     import pytz
     today = datetime.datetime.now(pytz.timezone("Asia/Seoul"))   # 러너(UTC)에서도 KST 표기
