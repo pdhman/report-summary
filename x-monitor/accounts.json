@@ -1,0 +1,477 @@
+{
+  "source": "X_팔로잉_리스트(7.19)_20260720_200154.xlsx",
+  "accounts": [
+    {
+      "handle": "Bluekurtic",
+      "name": "Bluekurtic Market Insights",
+      "grade": 2,
+      "categories": [
+        "퀀트/퀀트적 통계"
+      ],
+      "note": "기관급 인사이트 대중화",
+      "url": "https://x.com/Bluekurtic"
+    },
+    {
+      "handle": "jaykaeppel",
+      "name": "Jay Kaeppel",
+      "grade": 2,
+      "categories": [
+        "퀀트/퀀트적 통계",
+        "기술적분석",
+        "계절성"
+      ],
+      "note": "SentimenTrader 시니어 분석가, 시즌성 저자",
+      "url": "https://x.com/jaykaeppel"
+    },
+    {
+      "handle": "KennethLFisher",
+      "name": "Ken Fisher",
+      "grade": 2,
+      "categories": [
+        "중장기 가치투자",
+        "매크로"
+      ],
+      "note": "글로벌 투자자, P/S비율 창안",
+      "url": "https://x.com/KennethLFisher"
+    },
+    {
+      "handle": "KobeissiLetter",
+      "name": "The Kobeissi Letter",
+      "grade": 2,
+      "categories": [
+        "매크로"
+      ],
+      "note": "글로벌 자본시장 코멘터리",
+      "url": "https://x.com/KobeissiLetter"
+    },
+    {
+      "handle": "markminervini",
+      "name": "Mark Minervini",
+      "grade": 2,
+      "categories": [
+        "중기 트레이딩",
+        "단기 트레이딩",
+        "기술적분석"
+      ],
+      "note": "SEPA 창시, 'Trade Like a Champion' 저자",
+      "url": "https://x.com/markminervini"
+    },
+    {
+      "handle": "MarkRitchie_II",
+      "name": "Mark Ritchie II",
+      "grade": 2,
+      "categories": [
+        "중기 트레이딩",
+        "단기 트레이딩",
+        "코인",
+        "기술적분석"
+      ],
+      "note": "모멘텀 트레이더, Momentum Masters 등장",
+      "url": "https://x.com/MarkRitchie_II"
+    },
+    {
+      "handle": "PeterLBrandt",
+      "name": "The Factor Report (Peter Brandt)",
+      "grade": 2,
+      "categories": [
+        "단기 트레이딩",
+        "중기 트레이딩",
+        "코인",
+        "원자재"
+      ],
+      "note": "고전 차트 분석, 선물 트레이더 50년",
+      "url": "https://x.com/PeterLBrandt"
+    },
+    {
+      "handle": "TechCharts",
+      "name": "Aksel Kibar, CMT",
+      "grade": 2,
+      "categories": [
+        "단기 트레이딩",
+        "중기 트레이딩",
+        "기술적분석",
+        "코인",
+        "원자재"
+      ],
+      "note": "CMT, 고전 차트 트레이더, 前 펀드매니저",
+      "url": "https://x.com/TechCharts"
+    },
+    {
+      "handle": "TheShortBear",
+      "name": "THE SHORT BEAR",
+      "grade": 2,
+      "categories": [
+        "단기 트레이딩",
+        "중기 트레이딩",
+        "중장기 가치투자",
+        "코인",
+        "매크로",
+        "기술적분석"
+      ],
+      "note": "숏/베어 관점",
+      "url": "https://x.com/TheShortBear"
+    },
+    {
+      "handle": "afzal_57",
+      "name": "CA Afzal Lokhandwala",
+      "grade": 1,
+      "categories": [
+        "단기 트레이딩",
+        "기술적분석"
+      ],
+      "note": "트레이더/애널리스트",
+      "url": "https://x.com/afzal_57"
+    },
+    {
+      "handle": "aleabitoreddit",
+      "name": "Serenity",
+      "grade": 1,
+      "categories": [
+        "중기 트레이딩",
+        "중장기 가치투자"
+      ],
+      "note": "지금 X에서 제일 핫한 반도체/AI 공급망 분석가",
+      "url": "https://x.com/aleabitoreddit"
+    },
+    {
+      "handle": "AlmanacTrader",
+      "name": "Jeffrey A. Hirsch",
+      "grade": 1,
+      "categories": [
+        "퀀트/퀀트적 통계",
+        "계절성"
+      ],
+      "note": "Stock Trader's Almanac, 시즌성",
+      "url": "https://x.com/AlmanacTrader"
+    },
+    {
+      "handle": "bbands",
+      "name": "John Bollinger",
+      "grade": 1,
+      "categories": [
+        "코인",
+        "기술적분석"
+      ],
+      "note": "볼린저밴드 창시, 기술적 분석",
+      "url": "https://x.com/bbands"
+    },
+    {
+      "handle": "caprioleio",
+      "name": "Charles Edwards",
+      "grade": 1,
+      "categories": [
+        "중장기 가치투자",
+        "코인"
+      ],
+      "note": "Capriole Fund 창업, 크립토",
+      "url": "https://x.com/caprioleio"
+    },
+    {
+      "handle": "charliebilello",
+      "name": "Charlie Bilello",
+      "grade": 1,
+      "categories": [
+        "퀀트/퀀트적 통계"
+      ],
+      "note": "Creative Planning 수석전략가, 데이터",
+      "url": "https://x.com/charliebilello"
+    },
+    {
+      "handle": "ChrisCamillo",
+      "name": "Chris Camillo",
+      "grade": 1,
+      "categories": [
+        "중장기 가치투자"
+      ],
+      "note": "소셜아비트라지, $20k→$80M, Dumb Money",
+      "url": "https://x.com/ChrisCamillo"
+    },
+    {
+      "handle": "ConnorJBates_",
+      "name": "Connor Bates",
+      "grade": 1,
+      "categories": [
+        "단기 트레이딩",
+        "중기 트레이딩",
+        "기술적분석"
+      ],
+      "note": "Revere Asset 포트폴리오매니저",
+      "url": "https://x.com/ConnorJBates_"
+    },
+    {
+      "handle": "CryptoHayes",
+      "name": "Arthur Hayes",
+      "grade": 1,
+      "categories": [
+        "코인"
+      ],
+      "note": "BitMEX 공동창업, Maelstrom CIO, 코인",
+      "url": "https://x.com/CryptoHayes"
+    },
+    {
+      "handle": "DumbMoneyTV",
+      "name": "Dumb Money",
+      "grade": 1,
+      "categories": [
+        "중장기 가치투자"
+      ],
+      "note": "소셜아비트라지 3인방 (Camillo 등)",
+      "url": "https://x.com/DumbMoneyTV"
+    },
+    {
+      "handle": "fundstrat",
+      "name": "Thomas (Tom) Lee",
+      "grade": 1,
+      "categories": [
+        "중기 트레이딩",
+        "코인",
+        "매크로"
+      ],
+      "note": "Fundstrat, BitMine 회장, 매크로",
+      "url": "https://x.com/fundstrat"
+    },
+    {
+      "handle": "GavinSBaker",
+      "name": "Gavin Baker",
+      "grade": 1,
+      "categories": [
+        "중기 트레이딩",
+        "중장기 가치투자",
+        "매크로"
+      ],
+      "note": "Atreides Mgmt 매니징파트너·CIO",
+      "url": "https://x.com/GavinSBaker"
+    },
+    {
+      "handle": "HowardMarksBook",
+      "name": "Howard Marks",
+      "grade": 1,
+      "categories": [
+        "중장기 가치투자",
+        "매크로"
+      ],
+      "note": "Oaktree 공동창업, 가치/채권",
+      "url": "https://x.com/HowardMarksBook"
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "name": "ISABELNET",
+      "grade": 1,
+      "categories": [
+        "퀀트/퀀트적 통계",
+        "계절성"
+      ],
+      "note": "주식시장 예측/차트 데이터",
+      "url": "https://x.com/ISABELNET_SA"
+    },
+    {
+      "handle": "jfsrev",
+      "name": "Jeff Sun, CFTe",
+      "grade": 1,
+      "categories": [
+        "단기 트레이딩",
+        "중기 트레이딩",
+        "기술적분석"
+      ],
+      "note": "멀티에셋 트레이더, 17챕터 트레이딩 가이드",
+      "url": "https://x.com/jfsrev"
+    },
+    {
+      "handle": "jjcmoreno",
+      "name": "Julio Moreno",
+      "grade": 1,
+      "categories": [
+        "코인"
+      ],
+      "note": "CryptoQuant 리서치총괄, 온체인",
+      "url": "https://x.com/jjcmoreno"
+    },
+    {
+      "handle": "JLawStock",
+      "name": "J Law",
+      "grade": 1,
+      "categories": [
+        "단기 트레이딩",
+        "중기 트레이딩",
+        "기술적분석"
+      ],
+      "note": "2회 US 투자챔피언(24·25), 포지션/스윙",
+      "url": "https://x.com/JLawStock"
+    },
+    {
+      "handle": "ki_young_ju",
+      "name": "Ki Young Ju",
+      "grade": 1,
+      "categories": [
+        "코인"
+      ],
+      "note": "CryptoQuant 창업, 온체인 데이터",
+      "url": "https://x.com/ki_young_ju"
+    },
+    {
+      "handle": "LeifSoreide",
+      "name": "Leif Soreide",
+      "grade": 1,
+      "categories": [
+        "단기 트레이딩",
+        "중기 트레이딩",
+        "코인",
+        "기술적분석"
+      ],
+      "note": "2019 US 투자챔피언, 모멘텀/브레이크아웃 트레이더",
+      "url": "https://x.com/LeifSoreide"
+    },
+    {
+      "handle": "LindaRaschke",
+      "name": "Linda Raschke",
+      "grade": 1,
+      "categories": [
+        "단기 트레이딩",
+        "기술적분석"
+      ],
+      "note": "단기 트레이더, New Market Wizards 등장",
+      "url": "https://x.com/LindaRaschke"
+    },
+    {
+      "handle": "MacroCharts",
+      "name": "Macro Charts",
+      "grade": 1,
+      "categories": [
+        "퀀트/퀀트적 통계",
+        "기술적분석"
+      ],
+      "note": "前 펀드매니저, 큰 트렌드/실행",
+      "url": "https://x.com/MacroCharts"
+    },
+    {
+      "handle": "McClellanOsc",
+      "name": "Tom McClellan",
+      "grade": 1,
+      "categories": [
+        "퀀트/퀀트적 통계",
+        "기술적분석"
+      ],
+      "note": "기술적 분석가, McClellan Market Report",
+      "url": "https://x.com/McClellanOsc"
+    },
+    {
+      "handle": "michaelterpin",
+      "name": "Michael Terpin",
+      "grade": 1,
+      "categories": [
+        "코인"
+      ],
+      "note": "크립토 갓파더, Bitcoin Supercycle 저자",
+      "url": "https://x.com/michaelterpin"
+    },
+    {
+      "handle": "NautilusCap",
+      "name": "Nautilus Research",
+      "grade": 1,
+      "categories": [
+        "퀀트/퀀트적 통계"
+      ],
+      "note": "기관용 리서치 부티크",
+      "url": "https://x.com/NautilusCap"
+    },
+    {
+      "handle": "OddStats",
+      "name": "OddStats",
+      "grade": 1,
+      "categories": [
+        "퀀트/퀀트적 통계"
+      ],
+      "note": "시장 통계/데이터",
+      "url": "https://x.com/OddStats"
+    },
+    {
+      "handle": "OliverKell_",
+      "name": "Oliver Kell",
+      "grade": 1,
+      "categories": [
+        "단기 트레이딩",
+        "기술적분석"
+      ],
+      "note": "2020 US 투자챔피언, 셋업/룰 e-book",
+      "url": "https://x.com/OliverKell_"
+    },
+    {
+      "handle": "QuantifiablEdgs",
+      "name": "Quantifiable Edges",
+      "grade": 1,
+      "categories": [
+        "중장기 가치투자",
+        "코인"
+      ],
+      "note": "지표/역사 기반 시장분석",
+      "url": "https://x.com/QuantifiablEdgs"
+    },
+    {
+      "handle": "quantpedia",
+      "name": "Radovan Vojtko (Quantpedia)",
+      "grade": 1,
+      "categories": [
+        "퀀트/퀀트적 통계"
+      ],
+      "note": "퀀트/알고 전략 백과, 학술→전략",
+      "url": "https://x.com/quantpedia"
+    },
+    {
+      "handle": "RayDalio",
+      "name": "Ray Dalio",
+      "grade": 1,
+      "categories": [
+        "중장기 가치투자",
+        "매크로"
+      ],
+      "note": "Bridgewater 창업, Principles 저자, 매크로",
+      "url": "https://x.com/RayDalio"
+    },
+    {
+      "handle": "RichardMoglen",
+      "name": "Richard Moglen",
+      "grade": 1,
+      "categories": [
+        "단기 트레이딩",
+        "중기 트레이딩",
+        "기술적분석"
+      ],
+      "note": "TraderLion 공동창업, Trader's Handbook",
+      "url": "https://x.com/RichardMoglen"
+    },
+    {
+      "handle": "RyanDetrick",
+      "name": "Ryan Detrick, CMT",
+      "grade": 1,
+      "categories": [
+        "단기 트레이딩",
+        "중기 트레이딩",
+        "퀀트/퀀트적 통계",
+        "계절성"
+      ],
+      "note": "Carson Group 수석전략가, 시즌성",
+      "url": "https://x.com/RyanDetrick"
+    },
+    {
+      "handle": "yardeni",
+      "name": "Yardeni Research",
+      "grade": 1,
+      "categories": [
+        "매크로"
+      ],
+      "note": "경제지표/시장 분석 코멘터리",
+      "url": "https://x.com/yardeni"
+    },
+    {
+      "handle": "zhusu",
+      "name": "Zhu Su",
+      "grade": 1,
+      "categories": [
+        "단기 트레이딩",
+        "중기 트레이딩"
+      ],
+      "note": "前 3AC, 크립토",
+      "url": "https://x.com/zhusu"
+    }
+  ]
+}
