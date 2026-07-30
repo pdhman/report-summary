@@ -257,12 +257,25 @@
     </div>
   </section>
 
-<script src="data.js"></script>
+<script src="market_data.js"></script>
 <script>
 "use strict";
-// 분석 서버(Flask, 8766)가 제공하는 API. 이 페이지를 8766에서 열면 상대경로,
-// 정적 서버(8778)나 file:// 로 열면 절대경로로 호출한다 (서버에 CORS 허용됨).
+// 서버 없이도 동작하도록, 매일 자동 생성되는 market_data.js(기본 티커)를 기본 데이터로 쓴다.
+// 분석 서버(Flask 8766)가 켜져 있으면 검색으로 임의 티커를 추가할 수 있다.
+// 단, localhost 는 "이 브라우저가 돌는 PC"를 뜻하므로 다른 PC에서는 정적 데이터만 사용된다.
 const API = location.port === "8766" ? "" : "http://localhost:8766";
+
+// market_data.js 의 bars[[yyyymmdd,o,h,l,c,v,adj]] → 계절성이 쓰는 {dates, closes(수정종가)}
+const SEASONALITY_DATA = {};
+if (typeof MARKET_DATA !== "undefined") {
+  for (const [sym, d] of Object.entries(MARKET_DATA)) {
+    SEASONALITY_DATA[sym] = {
+      name: d.name,
+      dates: d.bars.map(b => b[0]),
+      closes: d.bars.map(b => b[6]),
+    };
+  }
+}
 const HOLDS = [10, 15, 20, 25, 30];
 const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 // 윤년 무시 고정 월 누적일수 (2/29 → 2/28 취급)
@@ -833,9 +846,13 @@ async function loadSymbol(raw) {
   try {
     let res;
     try {
-      res = await fetch(`${API}/api/closes?symbol=${encodeURIComponent(sym)}`);
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 2500);
+      res = await fetch(`${API}/api/closes?symbol=${encodeURIComponent(sym)}`, { signal: ctl.signal });
+      clearTimeout(timer);
     } catch (e) {
-      throw new Error("분석 서버(localhost:8766)에 연결할 수 없습니다 — 서버를 켜면 아무 티커나 조회됩니다");
+      throw new Error("이 기기에서는 목록의 종목만 분석할 수 있습니다 — 임의 티커 검색은 "
+        + "분석 서버(python seasonality/server.py)를 켠 PC에서만 됩니다");
     }
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);

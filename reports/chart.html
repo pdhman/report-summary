@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>주식 차트</title>
 <script src="lib/lightweight-charts.standalone.production.js"></script>
+<script src="market_data.js"></script>
 <style>
   :root {
     --page: #f6f7f9; --surface: #ffffff; --ink: #1a1d21; --ink-2: #4b5563;
@@ -105,16 +106,7 @@
         <input id="symInput" placeholder="티커 입력 (예: AAPL, 005930.KS, BTC-USD)" spellcheck="false">
         <button id="goBtn">조회</button>
       </div>
-      <div class="chips" id="presets" style="margin-top:8px">
-        <span class="chip" data-s="SPY">SPY</span>
-        <span class="chip" data-s="QQQ">QQQ</span>
-        <span class="chip" data-s="AAPL">AAPL</span>
-        <span class="chip" data-s="NVDA">NVDA</span>
-        <span class="chip" data-s="TSLA">TSLA</span>
-        <span class="chip" data-s="005930.KS">005930.KS</span>
-        <span class="chip" data-s="069500.KS">069500.KS</span>
-        <span class="chip" data-s="BTC-USD">BTC-USD</span>
-      </div>
+      <div class="chips" id="presets" style="margin-top:8px"></div>
     </div>
   </div>
 
@@ -282,6 +274,37 @@ function applyPeriod() {
   chart.timeScale().setVisibleRange({ from: fromStr, to: bars[bars.length - 1].t });
 }
 
+// market_data.js(매일 자동 생성)에서 꺼내 쓰는 정적 폴백 — 서버가 없어도 기본 티커는 보인다
+function fromStatic(symbol) {
+  const d = typeof MARKET_DATA !== "undefined" ? MARKET_DATA[symbol] : null;
+  if (!d) return null;
+  const iso = n => `${String(n).slice(0,4)}-${String(n).slice(4,6)}-${String(n).slice(6)}`;
+  return {
+    symbol, name: d.name, currency: d.currency || "", isStatic: true,
+    bars: d.bars.map(b => ({ t: iso(b[0]), o: b[1], h: b[2], l: b[3], c: b[4], v: b[5] })),
+  };
+}
+
+// 서버 API를 먼저 시도하되(임의 티커·당일 시세), 응답이 없으면 정적 데이터로 넘어간다.
+async function fetchBars(symbol) {
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 2500);
+    const res = await fetch(`${API}/api/ohlcv?symbol=${encodeURIComponent(symbol)}`, { signal: ctl.signal });
+    clearTimeout(timer);
+    const data = await res.json();
+    if (res.ok) return data;
+    if (!fromStatic(symbol)) throw new Error(data.error || `HTTP ${res.status}`);
+  } catch (e) {
+    if (e instanceof Error && /찾을 수 없|HTTP/.test(e.message)) throw e;
+  }
+  const stat = fromStatic(symbol);
+  if (stat) return stat;
+  const known = typeof MARKET_DATA !== "undefined" ? Object.keys(MARKET_DATA).join(", ") : "";
+  throw new Error(`${symbol}: 이 기기에서는 조회할 수 없습니다. 사전 수집된 종목(${known})만 가능하며, `
+    + `임의 티커는 분석 서버(python seasonality/server.py)를 켠 PC에서만 검색됩니다.`);
+}
+
 async function load(symbol) {
   symbol = symbol.trim().toUpperCase();
   if (!symbol) return;
@@ -289,14 +312,7 @@ async function load(symbol) {
   $("status").className = "";
   $("status").textContent = `${symbol} 불러오는 중...`;
   try {
-    let res;
-    try {
-      res = await fetch(`${API}/api/ohlcv?symbol=${encodeURIComponent(symbol)}`);
-    } catch (e) {
-      throw new Error("분석 서버(localhost:8766)에 연결할 수 없습니다 — python seasonality/server.py 로 실행하세요");
-    }
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    const data = await fetchBars(symbol);
     curSymbol = symbol; curMeta = data;
     bars = data.bars;
     barByTime = new Map();
@@ -320,7 +336,8 @@ async function load(symbol) {
     $("phPx").textContent = `${fmtN(lastB.c)} ${data.currency}`;
     $("phChg").textContent = `${chg >= 0 ? "▲" : "▼"} ${fmtN(Math.abs(chg))} (${chg >= 0 ? "+" : ""}${chgPct.toFixed(2)}%)`;
     $("phChg").className = "chg " + (chg >= 0 ? "up" : "down");
-    $("phDate").textContent = `${bars[0].t} ~ ${lastB.t} · ${bars.length.toLocaleString()}일`;
+    $("phDate").textContent = `${bars[0].t} ~ ${lastB.t} · ${bars.length.toLocaleString()}일`
+      + (data.isStatic ? " · 사전 수집 데이터" : "");
     $("status").style.display = "none";
     $("symInput").value = symbol;
     try { localStorage.setItem("analysis.symbol", symbol); } catch (e) {}
@@ -344,8 +361,15 @@ function exportCSV() {
   URL.revokeObjectURL(a.href);
 }
 
+function buildPresets() {
+  const syms = typeof MARKET_DATA !== "undefined" ? Object.keys(MARKET_DATA) : [];
+  $("presets").innerHTML = syms.map(s =>
+    `<span class="chip" data-s="${s}">${MARKET_DATA[s].name}</span>`).join("");
+}
+
 function init() {
   initChart();
+  buildPresets();
   buildMAButtons();
   $("goBtn").addEventListener("click", () => load($("symInput").value));
   $("symInput").addEventListener("keydown", e => { if (e.key === "Enter") load($("symInput").value); });

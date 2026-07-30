@@ -56,6 +56,15 @@ jobs:
           MPLBACKEND: Agg
         run: python sync_report_summary.py
 
+      # 분석 탭(차트·계절성)이 서버 없이 동작하도록 기본 티커 일봉을 정적 파일로 굽는다.
+      # 야후가 러너 IP를 일시 차단해도 스크립트가 기존 데이터를 유지하므로,
+      # 실패해도 배포는 계속한다(continue-on-error).
+      - name: Build market data (분석 탭 정적 데이터)
+        continue-on-error: true
+        env:
+          PYTHONUTF8: "1"
+        run: python seasonality/fetch_data.py
+
       - name: Commit generated reports
         run: |
           git config user.name  "github-actions[bot]"
