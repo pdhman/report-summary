@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>주식 차트</title>
+<script src="lib/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root {
+    --page: #f6f7f9; --surface: #ffffff; --ink: #1a1d21; --ink-2: #4b5563;
+    --muted: #6b7280; --grid: #e6e8eb; --soft: #f1f3f5; --border: #e6e8eb;
+    --pos: #16a34a; --neg: #dc2626;
+    --accent: #3b5bdb; --tool: #eb6834;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #0f1216; --surface: #171b21; --ink: #e8eaed; --ink-2: #c2c7cf;
+      --muted: #9aa2ad; --grid: #252b33; --soft: #1f2530; --border: #252b33;
+      --pos: #22c55e; --neg: #f87171; --accent: #748ffc;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #0f1216; --surface: #171b21; --ink: #e8eaed; --ink-2: #c2c7cf;
+    --muted: #9aa2ad; --grid: #252b33; --soft: #1f2530; --border: #252b33;
+    --pos: #22c55e; --neg: #f87171; --accent: #748ffc;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    background: var(--page); color: var(--ink); padding: 24px 28px 40px;
+  }
+  .pagehead { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .subtabs { display: flex; gap: 6px; }
+  .stab { text-decoration: none; font-size: 13px; font-weight: 700; padding: 8px 16px;
+    border-radius: 999px; border: 1px solid var(--grid); color: var(--muted); background: var(--surface); }
+  .stab:hover { border-color: var(--tool); color: var(--tool); }
+  .stab.on { background: var(--tool); border-color: var(--tool); color: #fff; }
+  .stab.on:hover { color: #fff; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  h1 { font-size: 20px; display: flex; align-items: center; gap: 8px; }
+  .searchbox { display: flex; gap: 0; }
+  .searchbox input {
+    font-size: 14px; padding: 9px 14px; width: 280px;
+    border: 1px solid var(--grid); border-right: none; border-radius: 10px 0 0 10px;
+    background: var(--surface); color: var(--ink); outline: none;
+    font-family: Consolas, monospace; text-transform: uppercase;
+  }
+  .searchbox input:focus { border-color: var(--tool); }
+  .searchbox button {
+    font-size: 14px; padding: 9px 18px; border: none; border-radius: 0 10px 10px 0;
+    background: var(--tool); color: #fff; font-weight: 700; cursor: pointer;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chip {
+    font-size: 12px; padding: 5px 11px; border-radius: 999px;
+    border: 1px solid var(--grid); background: var(--surface); color: var(--ink-2);
+    cursor: pointer; user-select: none; font-family: Consolas, monospace;
+  }
+  .chip:hover { border-color: var(--muted); }
+  .chip.on { background: var(--tool); border-color: var(--tool); color: #fff; font-weight: 600; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px; margin-bottom: 14px;
+  }
+  .pricehead { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .pricehead .nm { font-size: 18px; font-weight: 700; }
+  .pricehead .sym { font-size: 12px; color: var(--muted); border: 1px solid var(--grid); border-radius: 6px; padding: 2px 8px; font-family: Consolas, monospace; }
+  .pricehead .px { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .pricehead .chg { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .up { color: var(--pos); } .down { color: var(--neg); }
+  .toolrow { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .toolrow .lbl { font-size: 11px; color: var(--muted); margin-right: 6px; }
+  .right-tools { display: flex; gap: 6px; align-items: center; }
+  button.plain {
+    font-size: 12px; padding: 6px 12px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--grid); background: var(--surface); color: var(--ink-2);
+  }
+  button.plain:hover { border-color: var(--muted); }
+  button.plain.on { background: var(--tool); border-color: var(--tool); color: #fff; font-weight: 600; }
+  #chartWrap { position: relative; }
+  #chartEl { width: 100%; height: 560px; }
+  #legend {
+    position: absolute; top: 8px; left: 10px; z-index: 5; pointer-events: none;
+    font-size: 12px; color: var(--ink-2); background: color-mix(in srgb, var(--surface) 85%, transparent);
+    border-radius: 6px; padding: 4px 8px; font-variant-numeric: tabular-nums;
+  }
+  #legend b { color: var(--ink); }
+  #status { font-size: 13px; color: var(--muted); padding: 30px 0; text-align: center; }
+  #status.err { color: var(--neg); }
+  .attrib { font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .attrib a { color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="pagehead">
+      <h1>📊 분석</h1>
+      <div class="subtabs">
+        <a class="stab on" href="chart.html">📈 차트</a>
+        <a class="stab" href="seasonality.html">☀️ 계절성</a>
+      </div>
+    </div>
+    <div>
+      <div class="searchbox">
+        <input id="symInput" placeholder="티커 입력 (예: AAPL, 005930.KS, BTC-USD)" spellcheck="false">
+        <button id="goBtn">조회</button>
+      </div>
+      <div class="chips" id="presets" style="margin-top:8px">
+        <span class="chip" data-s="SPY">SPY</span>
+        <span class="chip" data-s="QQQ">QQQ</span>
+        <span class="chip" data-s="AAPL">AAPL</span>
+        <span class="chip" data-s="NVDA">NVDA</span>
+        <span class="chip" data-s="TSLA">TSLA</span>
+        <span class="chip" data-s="005930.KS">005930.KS</span>
+        <span class="chip" data-s="069500.KS">069500.KS</span>
+        <span class="chip" data-s="BTC-USD">BTC-USD</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="pricehead" id="priceHead" style="display:none">
+      <span class="nm" id="phName"></span>
+      <span class="sym" id="phSym"></span>
+      <span class="px" id="phPx"></span>
+      <span class="chg" id="phChg"></span>
+      <span style="font-size:12px;color:var(--muted)" id="phDate"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="toolrow">
+      <div class="chips" id="periodBtns">
+        <span class="lbl">기간</span>
+        <span class="chip" data-p="1M">1M</span>
+        <span class="chip" data-p="3M">3M</span>
+        <span class="chip" data-p="6M">6M</span>
+        <span class="chip on" data-p="1Y">1Y</span>
+        <span class="chip" data-p="3Y">3Y</span>
+        <span class="chip" data-p="5Y">5Y</span>
+        <span class="chip" data-p="ALL">All</span>
+      </div>
+      <div class="right-tools">
+        <button class="plain" id="csvBtn">⬇ CSV</button>
+        <button class="plain on" id="linBtn">Linear</button>
+        <button class="plain" id="logBtn">Log</button>
+      </div>
+    </div>
+    <div class="toolrow" style="justify-content:flex-start">
+      <div class="chips" id="smaBtns"><span class="lbl">SMA</span></div>
+      <div class="chips" id="emaBtns" style="margin-left:14px"><span class="lbl">EMA</span></div>
+    </div>
+    <div id="chartWrap">
+      <div id="chartEl"></div>
+      <div id="legend" style="display:none"></div>
+      <div id="status">티커를 입력하거나 위 버튼을 눌러 조회하세요.</div>
+    </div>
+    <div class="attrib">차트: <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView Lightweight Charts</a> · 데이터: Yahoo Finance (지연/무보증) · 과거 성과는 미래를 보장하지 않습니다.</div>
+  </div>
+
+<script>
+"use strict";
+// 분석 서버(Flask, 8766) API — 8766에서 열면 상대경로, 그 외(8778·file://)는 절대경로
+const API = location.port === "8766" ? "" : "http://localhost:8766";
+const $ = id => document.getElementById(id);
+const fmtN = (v, d=2) => v == null ? "·" : v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtVol = v => v >= 1e9 ? (v/1e9).toFixed(2)+"B" : v >= 1e6 ? (v/1e6).toFixed(2)+"M" : v >= 1e3 ? (v/1e3).toFixed(1)+"K" : String(v);
+
+// 이동평균선 설정: [기간, 색, 기본 표시 여부]
+const SMA_DEFS = [[5,"#898781",0],[10,"#1baf7a",0],[20,"#eb6834",1],[50,"#2a78d6",1],[60,"#eda100",0],[120,"#e87ba4",0],[200,"#4a3aa7",1]];
+const EMA_DEFS = [[9,"#0e7490",0],[21,"#a16207",0],[65,"#9d174d",0]];
+
+let chart = null, candleSeries = null, volSeries = null;
+let bars = [];            // 현재 종목 전체 일봉
+let curSymbol = null, curMeta = {};
+const maSeries = {};      // "S20" / "E9" → line series
+let activePeriod = "1Y", logScale = false;
+
+// 현재 테마의 CSS 변수로 차트 색 구성 (테마 전환 시 applyOptions로 갱신)
+function chartTheme() {
+  const cs = getComputedStyle(document.body);
+  const v = n => cs.getPropertyValue(n).trim();
+  return {
+    layout: { background: { color: v("--surface") }, textColor: v("--ink-2"),
+              fontFamily: 'Consolas, "Malgun Gothic", monospace' },
+    grid: { vertLines: { color: v("--soft") }, horzLines: { color: v("--soft") } },
+    rightPriceScale: { borderColor: v("--grid") },
+    timeScale: { borderColor: v("--grid"), rightOffset: 3 },
+  };
+}
+
+function initChart() {
+  chart = LightweightCharts.createChart($("chartEl"), {
+    ...chartTheme(),
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    autoSize: true,
+  });
+  candleSeries = chart.addCandlestickSeries({
+    upColor: "#16a34a", downColor: "#dc2626", borderVisible: false,
+    wickUpColor: "#16a34a", wickDownColor: "#dc2626",
+  });
+  volSeries = chart.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
+  chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+
+  chart.subscribeCrosshairMove(p => {
+    const lg = $("legend");
+    if (!p.time || !p.seriesData.has(candleSeries)) { lg.style.display = "none"; return; }
+    const d = p.seriesData.get(candleSeries);
+    const bar = barByTime.get(p.time);
+    const chg = bar && bar.prevC ? (d.close / bar.prevC - 1) * 100 : null;
+    lg.innerHTML = `<b>${p.time}</b> · 시 ${fmtN(d.open)} 고 ${fmtN(d.high)} 저 ${fmtN(d.low)} 종 <b>${fmtN(d.close)}</b>` +
+      (chg === null ? "" : ` <b class="${chg >= 0 ? "up" : "down"}">${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%</b>`) +
+      (bar ? ` · 량 ${fmtVol(bar.v)}` : "");
+    lg.style.display = "block";
+  });
+}
+
+let barByTime = new Map();
+
+function sma(period) {
+  const out = []; let sum = 0;
+  for (let i = 0; i < bars.length; i++) {
+    sum += bars[i].c;
+    if (i >= period) sum -= bars[i - period].c;
+    if (i >= period - 1) out.push({ time: bars[i].t, value: sum / period });
+  }
+  return out;
+}
+function ema(period) {
+  const out = []; const k = 2 / (period + 1); let e = null;
+  for (let i = 0; i < bars.length; i++) {
+    e = e === null ? bars[i].c : bars[i].c * k + e * (1 - k);
+    if (i >= period - 1) out.push({ time: bars[i].t, value: e });
+  }
+  return out;
+}
+
+function setMA(kind, period, color, on) {
+  const key = kind + period;
+  if (on && !maSeries[key]) {
+    maSeries[key] = chart.addLineSeries({ color, lineWidth: 1.6, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+    maSeries[key].setData(kind === "S" ? sma(period) : ema(period));
+  } else if (!on && maSeries[key]) {
+    chart.removeSeries(maSeries[key]);
+    delete maSeries[key];
+  }
+}
+
+function refreshMAs() {
+  for (const key of Object.keys(maSeries)) {
+    const kind = key[0], period = +key.slice(1);
+    maSeries[key].setData(kind === "S" ? sma(period) : ema(period));
+  }
+}
+
+function buildMAButtons() {
+  for (const [defs, kind, wrap] of [[SMA_DEFS, "S", $("smaBtns")], [EMA_DEFS, "E", $("emaBtns")]]) {
+    for (const [p, color, def] of defs) {
+      const b = document.createElement("span");
+      b.className = "chip" + (def ? " on" : "");
+      b.textContent = p;
+      if (def) b.style.cssText = `background:${color};border-color:${color}`;
+      b.addEventListener("click", () => {
+        const on = !b.classList.contains("on");
+        b.classList.toggle("on", on);
+        b.style.cssText = on ? `background:${color};border-color:${color};color:#fff` : "";
+        if (bars.length) setMA(kind, p, color, on);
+      });
+      b.dataset.kind = kind; b.dataset.p = p; b.dataset.color = color;
+      wrap.appendChild(b);
+    }
+  }
+}
+
+function applyPeriod() {
+  if (!bars.length) return;
+  if (activePeriod === "ALL") { chart.timeScale().fitContent(); return; }
+  const days = { "1M": 31, "3M": 92, "6M": 183, "1Y": 366, "3Y": 1096, "5Y": 1827 }[activePeriod];
+  const last = new Date(bars[bars.length - 1].t);
+  const from = new Date(last); from.setDate(from.getDate() - days);
+  const fromStr = from.toISOString().slice(0, 10);
+  chart.timeScale().setVisibleRange({ from: fromStr, to: bars[bars.length - 1].t });
+}
+
+async function load(symbol) {
+  symbol = symbol.trim().toUpperCase();
+  if (!symbol) return;
+  $("status").style.display = "block";
+  $("status").className = "";
+  $("status").textContent = `${symbol} 불러오는 중...`;
+  try {
+    let res;
+    try {
+      res = await fetch(`${API}/api/ohlcv?symbol=${encodeURIComponent(symbol)}`);
+    } catch (e) {
+      throw new Error("분석 서버(localhost:8766)에 연결할 수 없습니다 — python seasonality/server.py 로 실행하세요");
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    curSymbol = symbol; curMeta = data;
+    bars = data.bars;
+    barByTime = new Map();
+    for (let i = 0; i < bars.length; i++) {
+      bars[i].prevC = i > 0 ? bars[i - 1].c : null;
+      barByTime.set(bars[i].t, bars[i]);
+    }
+    candleSeries.setData(bars.map(b => ({ time: b.t, open: b.o, high: b.h, low: b.l, close: b.c })));
+    volSeries.setData(bars.map(b => ({ time: b.t, value: b.v, color: b.c >= b.o ? "rgba(22,163,74,0.4)" : "rgba(220,38,38,0.4)" })));
+    refreshMAs();
+    // 기본 표시 이평선이 아직 없다면 생성
+    document.querySelectorAll("#smaBtns .chip.on, #emaBtns .chip.on").forEach(b =>
+      setMA(b.dataset.kind, +b.dataset.p, b.dataset.color, true));
+    applyPeriod();
+    // 가격 헤더
+    const lastB = bars[bars.length - 1], prevC = bars.length > 1 ? bars[bars.length - 2].c : lastB.c;
+    const chg = lastB.c - prevC, chgPct = prevC ? chg / prevC * 100 : 0;
+    $("priceHead").style.display = "flex";
+    $("phName").textContent = data.name;
+    $("phSym").textContent = symbol;
+    $("phPx").textContent = `${fmtN(lastB.c)} ${data.currency}`;
+    $("phChg").textContent = `${chg >= 0 ? "▲" : "▼"} ${fmtN(Math.abs(chg))} (${chg >= 0 ? "+" : ""}${chgPct.toFixed(2)}%)`;
+    $("phChg").className = "chg " + (chg >= 0 ? "up" : "down");
+    $("phDate").textContent = `${bars[0].t} ~ ${lastB.t} · ${bars.length.toLocaleString()}일`;
+    $("status").style.display = "none";
+    $("symInput").value = symbol;
+    try { localStorage.setItem("analysis.symbol", symbol); } catch (e) {}
+    document.title = `${symbol} 차트`;
+    document.querySelectorAll("#presets .chip").forEach(c => c.classList.toggle("on", c.dataset.s === symbol));
+  } catch (e) {
+    $("status").className = "err";
+    $("status").textContent = `오류: ${e.message}`;
+  }
+}
+
+function exportCSV() {
+  if (!bars.length) return;
+  const L = ["date,open,high,low,close,volume"];
+  for (const b of bars) L.push(`${b.t},${b.o},${b.h},${b.l},${b.c},${b.v}`);
+  const blob = new Blob([L.join("\r\n")], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${curSymbol}_daily.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function init() {
+  initChart();
+  buildMAButtons();
+  $("goBtn").addEventListener("click", () => load($("symInput").value));
+  $("symInput").addEventListener("keydown", e => { if (e.key === "Enter") load($("symInput").value); });
+  document.querySelectorAll("#presets .chip").forEach(c =>
+    c.addEventListener("click", () => load(c.dataset.s)));
+  document.querySelectorAll("#periodBtns .chip").forEach(c =>
+    c.addEventListener("click", () => {
+      activePeriod = c.dataset.p;
+      document.querySelectorAll("#periodBtns .chip").forEach(x => x.classList.toggle("on", x === c));
+      applyPeriod();
+    }));
+  $("linBtn").addEventListener("click", () => setScale(false));
+  $("logBtn").addEventListener("click", () => setScale(true));
+  $("csvBtn").addEventListener("click", exportCSV);
+  load(new URLSearchParams(location.search).get("symbol")
+       || localStorage.getItem("analysis.symbol") || "SPY");
+}
+
+function setScale(log) {
+  logScale = log;
+  chart.applyOptions({ rightPriceScale: { mode: log ? LightweightCharts.PriceScaleMode.Logarithmic : LightweightCharts.PriceScaleMode.Normal } });
+  $("linBtn").classList.toggle("on", !log);
+  $("logBtn").classList.toggle("on", log);
+}
+
+init();
+// 알파노트 테마 토글(data-theme)·OS 테마 변경 시 차트 색 갱신
+new MutationObserver(() => chart && chart.applyOptions(chartTheme()))
+  .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)")
+  .addEventListener("change", () => chart && chart.applyOptions(chartTheme()));
+</script>
+
+<nav class="bottomnav">
+  <a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a>
+  <a class="nav-cell" href="strategy.html"><span class="ni">📝</span><span class="nl">투자전략</span></a>
+  <a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a>
+  <a class="nav-cell active" href="chart.html"><span class="ni">📈</span><span class="nl">분석</span></a>
+  <a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">뉴스</span></a>
+</nav>
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('theme');
+    if(t){ document.documentElement.dataset.theme = t; }
+  } catch(e) {}
+})();
+</script>
+<style>
+  .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:2px;
+    background:color-mix(in srgb,var(--surface) 92%,transparent); backdrop-filter:blur(10px);
+    border-top:1px solid var(--grid); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); }
+  .bottomnav .nav-cell { display:flex; flex-direction:column; align-items:center; gap:3px; text-decoration:none; color:var(--muted);
+    padding:6px 4px; border-radius:12px; flex:1 1 0; max-width:96px; transition:color .15s,background .15s; }
+  .bottomnav .nav-cell:hover { color:var(--accent); }
+  .bottomnav .nav-cell.active { color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  .bottomnav .ni { font-size:20px; line-height:1; }
+  .bottomnav .nl { font-size:11px; font-weight:600; }
+  body { padding-bottom: 110px; }
+</style>
+</body>
+</html>

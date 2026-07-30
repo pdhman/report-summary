@@ -21,7 +21,7 @@ _ITEMS = [
     ("home",     "🏠", "홈",      "index.html"),      # 오늘의 요약 대시보드
     ("strategy", "📝", "투자전략", "strategy.html"),   # 블로그 일간 주도섹터 리포트
     ("stock",    "🔎", "종목탐색", "screener.html"),  # 자동 스크리너
-    ("insight",  "📊", "인사이트", "insights.html"),
+    ("analysis", "📈", "분석",    "chart.html"),      # 주식 차트 · 계절성 (인사이트는 홈 카드로 접근)
     ("brief",    "📰", "뉴스",    "briefs.html"),
 ]
 
