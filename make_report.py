@@ -152,13 +152,6 @@ def _write_report(today, date_str):
     gen_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     # ---- 종목 테이블 행 ----
-    # 펀더멘털(OpenDART): 키가 없으면 조용히 건너뛴다(열은 '-' 표시)
-    try:
-        import dart_client
-        _dart_on = bool(dart_client._api_key())
-    except Exception:
-        dart_client, _dart_on = None, False
-
     rows_html = []
     for i, r in today.iterrows():
         code = str(int(r["ticker"])).zfill(6) if pd.notna(r["ticker"]) else "-"
@@ -169,22 +162,6 @@ def _write_report(today, date_str):
         streak_badge = f'<span class="badge new">NEW</span>' if streak == 1 else f'<span class="badge streak">{streak}일 연속</span>'
         rs = r.get("rs_score", float("nan"))
         ret = r.get("return_252d", float("nan"))
-
-        # 펀더멘털 열: 매출 YoY + 종합 판정 배지(툴팁에 상세)
-        yoy_txt, fund_badge = "-", "-"
-        if _dart_on and code != "-":
-            f = dart_client.fundamentals(code)
-            if f:
-                if f.get("sales_yoy") is not None:
-                    yoy_txt = f"{f['sales_yoy']:+.1f}%"
-                ok = dart_client.passes_filter(f)
-                tip = esc(f"기준 {f['period']}"
-                          + (f" · 영업이익률 {f['op_margin']:.1f}%" if f.get("op_margin") is not None else "")
-                          + (f" · 부채비율 {f['debt_ratio']:.0f}%" if f.get("debt_ratio") is not None else ""))
-                if ok is True:
-                    fund_badge = f'<span class="badge fund-ok" title="{tip}">통과</span>'
-                elif ok is False:
-                    fund_badge = f'<span class="badge fund-warn" title="{tip}">주의</span>'
         rows_html.append(f"""
       <tr>
         <td class="rank">{i+1}</td>
@@ -194,13 +171,11 @@ def _write_report(today, date_str):
         <td class="num">{('%.1f'%rs) if pd.notna(rs) else '-'}</td>
         <td class="num">{('%.1f%%'%ret) if pd.notna(ret) else '-'}</td>
         <td class="num">{fmt_int(r.get('close'))}</td>
-        <td class="num">{yoy_txt}</td>
-        <td class="st">{fund_badge}</td>
         <td class="ind">{esc(r.get('Industry','-'))}</td>
         <td class="st">{streak_badge}</td>
       </tr>""")
     if not rows_html:
-        rows_html = ['<tr><td colspan="11" class="empty">오늘은 조건을 통과한 종목이 없습니다.</td></tr>']
+        rows_html = ['<tr><td colspan="9" class="empty">오늘은 조건을 통과한 종목이 없습니다.</td></tr>']
 
     # ---- 하단 차트: 산업 분포(도넛) + 연속 등장 종목(가로 막대) ----
     pie_html = _pie_chart(ind_counts) if not ind_counts.empty else None
@@ -226,8 +201,7 @@ def _write_report(today, date_str):
       <table>
         <thead><tr>
           <th>#</th><th>종목</th><th class="num">거래대금(백만)</th><th class="num">등락률</th>
-          <th class="num">RS</th><th class="num">1년 수익률</th><th class="num">종가</th>
-          <th class="num">매출YoY</th><th>펀더멘털</th><th>산업</th><th>등장</th>
+          <th class="num">RS</th><th class="num">1년 수익률</th><th class="num">종가</th><th>산업</th><th>등장</th>
         </tr></thead>
         <tbody>{''.join(rows_html)}</tbody>
       </table>
@@ -245,8 +219,7 @@ def _write_report(today, date_str):
   </section>
 
   <footer>
-    <p class="muted">본 리포트는 자동 생성된 참고 자료이며 투자 권유가 아닙니다. · RS: 상대강도(백분위) · 거래대금 단위: 백만원
-      · 펀더멘털: OpenDART 최신 보고서 기준(통과 = 영업이익 흑자, 부채비율 300% 미만 · 배지에 마우스를 올리면 상세)</p>
+    <p class="muted">본 리포트는 자동 생성된 참고 자료이며 투자 권유가 아닙니다. · RS: 상대강도(백분위) · 거래대금 단위: 백만원</p>
   </footer>
 </div>
 {site_nav.nav_html("stock")}
@@ -278,7 +251,7 @@ def _write_report(today, date_str):
   .card .v span {{ font-size:14px; font-weight:500; color:var(--muted); margin-left:2px; }}
   h2 {{ font-size:17px; margin:26px 0 12px; }}
   .tablewrap {{ overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--panel); }}
-  table {{ width:100%; border-collapse:collapse; font-size:14px; min-width:860px; }}
+  table {{ width:100%; border-collapse:collapse; font-size:14px; min-width:720px; }}
   thead th {{ text-align:left; color:var(--muted); font-weight:600; font-size:12px;
     padding:12px 12px; border-bottom:1px solid var(--line); white-space:nowrap; }}
   tbody td {{ padding:12px 12px; border-bottom:1px solid var(--line); vertical-align:middle; }}
@@ -295,8 +268,6 @@ def _write_report(today, date_str):
   .badge {{ display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap; }}
   .badge.new {{ background:color-mix(in srgb,var(--accent) 18%,transparent); color:var(--accent); }}
   .badge.streak {{ background:color-mix(in srgb,var(--up) 16%,transparent); color:var(--up); }}
-  .badge.fund-ok {{ background:color-mix(in srgb,#1baf7a 16%,transparent); color:#1a8f65; cursor:help; }}
-  .badge.fund-warn {{ background:color-mix(in srgb,#eda100 18%,transparent); color:#b07800; cursor:help; }}
   /* ---- 하단 차트 공통 ---- */
   :root {{ --vz1:#2a78d6; --vz2:#008300; --vz3:#e87ba4; --vz4:#eda100;
     --vz5:#1baf7a; --vz6:#eb6834; --vz7:#4a3aa7; --vz8:#e34948; }}

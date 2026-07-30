@@ -47,6 +47,7 @@ $p = Start-Process -FilePath $py -ArgumentList "-u `"$script`"" `
 if ((Test-Path $err) -and ((Get-Item $err).Length -eq 0)) { Remove-Item $err }
 
 # --- 보고서(HTML) 생성 및 브라우저로 열기 ---
+& cmd /c "`"$py`" enrich_fundamentals.py >> `"$out`" 2>&1"
 & cmd /c "`"$py`" make_report.py >> `"$out`" 2>&1"
 $report = Get-ChildItem (Join-Path $proj 'reports\report_*.html') -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Desc | Select-Object -First 1
 if ($report) { Start-Process $report.FullName }
