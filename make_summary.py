@@ -153,18 +153,9 @@ def card_screener():
                 "top_amt": None, "best_name": None, "best_streak": 0}
     day = df[df["Date"] == latest].drop_duplicates(subset=["ticker"], keep="first").copy()
     day["amount"] = pd.to_numeric(day.get("amount"), errors="coerce")
-    # 연속 등장
-    all_dates = sorted(df["Date"].dropna().unique(), reverse=True)
-    def streak(tk):
-        ap = set(df[df["ticker"] == tk]["Date"])
-        s = 0
-        for dd in all_dates:
-            if dd in ap:
-                s += 1
-            else:
-                break
-        return s
-    day["streak"] = day["ticker"].map(streak)
+    # 연속 등장: 거래일 기준 (make_report 와 동일 로직)
+    import make_report
+    day["streak"] = day["ticker"].map(make_report.compute_streaks(df, latest))
     n = len(day)
     n_new = int((day["streak"] == 1).sum())
     top_amt = day.sort_values("amount", ascending=False).iloc[0]["name"] if n else None

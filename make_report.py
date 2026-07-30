@@ -95,6 +95,60 @@ def _streak_chart(today):
     return "".join(rows)
 
 
+def _trading_days(start, end):
+    """실제 거래일 목록(KOSPI 지수 기준). 조회 실패 시 None."""
+    try:
+        import FinanceDataReader as fdr
+        idx = fdr.DataReader("KS11", pd.Timestamp(start).strftime("%Y-%m-%d"),
+                             pd.Timestamp(end).strftime("%Y-%m-%d"))
+        days = sorted(set(pd.to_datetime(idx.index).normalize()))
+        return days or None
+    except Exception as e:
+        print(f"[보고서] 거래일 조회 실패({e}) — 리포트 생성일로 대체")
+        return None
+
+
+def _screener_run_days():
+    """리포트 페이지가 있는 날짜 = 스크리너가 돌아간 날(거래일 대체용)."""
+    days = []
+    for p in glob.glob(os.path.join(OUT_DIR, "report_????????.html")):
+        m = re.search(r"report_(\d{8})\.html$", os.path.basename(p))
+        if m:
+            days.append(pd.Timestamp(m.group(1)))
+    return sorted(set(days))
+
+
+def compute_streaks(df, latest):
+    """latest 기준 종목별 연속 등장 일수를 '거래일' 기준으로 계산.
+
+    xlsx 에는 선정 종목이 있던 날만 기록되므로, 0종목이었던 거래일을 건너뛰면
+    떨어진 날짜가 연속으로 잡힌다(예: 07-28 · 07-30 → 2일 연속). 실제 거래일
+    달력을 기준으로 세어 중간에 미등장 거래일이 있으면 연속을 끊는다.
+    """
+    latest = pd.Timestamp(latest).normalize()
+    dfd = pd.to_datetime(df["Date"], errors="coerce").dt.normalize()
+    start = dfd.min()
+
+    tdays = _trading_days(start, latest)
+    if not tdays:
+        tdays = [d for d in _screener_run_days() if start <= d <= latest]
+    if not tdays:
+        tdays = sorted(set(dfd.dropna()))
+    tdays = sorted(set(d for d in tdays if d <= latest) | {latest}, reverse=True)
+
+    appeared = {tk: set(g) for tk, g in dfd.groupby(df["ticker"])}
+    streaks = {}
+    for tk, days in appeared.items():
+        s = 0
+        for d in tdays:
+            if d in days:
+                s += 1
+            else:
+                break
+        streaks[tk] = s
+    return streaks
+
+
 def main():
     if not os.path.exists(XLSX):
         print(f"[보고서] {XLSX} 없음 — 보고서 생성 건너뜀")
@@ -117,19 +171,8 @@ def main():
             today[c] = pd.to_numeric(today[c], errors="coerce")
     today = today.sort_values("amount", ascending=False).reset_index(drop=True)
 
-    # 연속 등장(Streak) 계산: 최근 날짜부터 연속으로 등장한 일수
-    all_dates = sorted(df["Date"].dropna().unique(), reverse=True)
-    streaks = {}
-    for tk in today["ticker"].unique():
-        appeared = set(df[df["ticker"] == tk]["Date"])
-        s = 0
-        for d in all_dates:
-            if d in appeared:
-                s += 1
-            else:
-                break
-        streaks[tk] = s
-    today["streak"] = today["ticker"].map(streaks)
+    # 연속 등장(Streak): 거래일 기준 (0종목이었던 거래일이 끼면 연속 끊김)
+    today["streak"] = today["ticker"].map(compute_streaks(df, latest))
 
     date_str = latest.strftime("%Y-%m-%d") if pd.notna(latest) else "-"
     _write_report(today, date_str)
