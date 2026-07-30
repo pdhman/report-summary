@@ -30,3 +30,6 @@ venv/
 .DS_Store
 Thumbs.db
 market_leverage_collector/leverage.html
+
+# OpenDART 조회 캐시
+.dart_cache/
