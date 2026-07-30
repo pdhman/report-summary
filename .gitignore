@@ -33,3 +33,6 @@ market_leverage_collector/leverage.html
 
 # OpenDART 조회 캐시
 .dart_cache/
+
+# API 키 등 개인 설정 (절대 커밋 금지)
+config.yaml

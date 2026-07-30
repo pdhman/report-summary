@@ -2,7 +2,7 @@
   <header>
     <div class="eyebrow">주도섹터 필터링 · 자동 스크리너</div>
     <h1>종목탐색</h1>
-    <div class="date">2026-07-20 <span class="gen">(생성 2026-07-29 17:35)</span></div>
+    <div class="date">2026-07-20 <span class="gen">(생성 2026-07-30 13:36)</span></div>
   </header>
 
   <section class="cards">
@@ -18,7 +18,8 @@
       <table>
         <thead><tr>
           <th>#</th><th>종목</th><th class="num">거래대금(백만)</th><th class="num">등락률</th>
-          <th class="num">RS</th><th class="num">1년 수익률</th><th class="num">종가</th><th>산업</th><th>등장</th>
+          <th class="num">RS</th><th class="num">1년 수익률</th><th class="num">종가</th>
+          <th class="num">매출YoY</th><th>펀더멘털</th><th>산업</th><th>등장</th>
         </tr></thead>
         <tbody>
       <tr>
@@ -29,6 +30,8 @@
         <td class="num">68.1</td>
         <td class="num">133.9%</td>
         <td class="num">55,900</td>
+        <td class="num">+6.1%</td>
+        <td class="st"><span class="badge fund-warn" title="기준 2026.1Q · 영업이익률 17.8% · 부채비율 420%">주의</span></td>
         <td class="ind">건물 건설업</td>
         <td class="st"><span class="badge streak">2일 연속</span></td>
       </tr>
@@ -40,6 +43,8 @@
         <td class="num">70.2</td>
         <td class="num">137.8%</td>
         <td class="num">146,700</td>
+        <td class="num">-0.5%</td>
+        <td class="st"><span class="badge fund-ok" title="기준 2026.1Q · 영업이익률 13.8% · 부채비율 202%">통과</span></td>
         <td class="ind">석유 정제품 제조업</td>
         <td class="st"><span class="badge streak">2일 연속</span></td>
       </tr>
@@ -51,6 +56,8 @@
         <td class="num">53.2</td>
         <td class="num">66.7%</td>
         <td class="num">83,200</td>
+        <td class="num">+9.9%</td>
+        <td class="st"><span class="badge fund-ok" title="기준 2026.1Q · 영업이익률 18.4% · 부채비율 86%">통과</span></td>
         <td class="ind">기타 금융업</td>
         <td class="st"><span class="badge new">NEW</span></td>
       </tr>
@@ -62,6 +69,8 @@
         <td class="num">77.7</td>
         <td class="num">222.6%</td>
         <td class="num">15,500</td>
+        <td class="num">+72.5%</td>
+        <td class="st"><span class="badge fund-ok" title="기준 2026.1Q · 영업이익률 28.3% · 부채비율 42%">통과</span></td>
         <td class="ind">전자부품 제조업</td>
         <td class="st"><span class="badge streak">2일 연속</span></td>
       </tr></tbody>
@@ -95,7 +104,8 @@
   </section>
 
   <footer>
-    <p class="muted">본 리포트는 자동 생성된 참고 자료이며 투자 권유가 아닙니다. · RS: 상대강도(백분위) · 거래대금 단위: 백만원</p>
+    <p class="muted">본 리포트는 자동 생성된 참고 자료이며 투자 권유가 아닙니다. · RS: 상대강도(백분위) · 거래대금 단위: 백만원
+      · 펀더멘털: OpenDART 최신 보고서 기준(통과 = 영업이익 흑자, 부채비율 300% 미만 · 배지에 마우스를 올리면 상세)</p>
   </footer>
 </div>
 <nav class="bottomnav"><a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a><a class="nav-cell" href="strategy.html"><span class="ni">📝</span><span class="nl">투자전략</span></a><a class="nav-cell active" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a><a class="nav-cell" href="insights.html"><span class="ni">📊</span><span class="nl">인사이트</span></a><a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">뉴스</span></a></nav><script>
@@ -182,7 +192,7 @@ function _tgTheme(){
   .card .v span { font-size:14px; font-weight:500; color:var(--muted); margin-left:2px; }
   h2 { font-size:17px; margin:26px 0 12px; }
   .tablewrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
-  table { width:100%; border-collapse:collapse; font-size:14px; min-width:720px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; min-width:860px; }
   thead th { text-align:left; color:var(--muted); font-weight:600; font-size:12px;
     padding:12px 12px; border-bottom:1px solid var(--line); white-space:nowrap; }
   tbody td { padding:12px 12px; border-bottom:1px solid var(--line); vertical-align:middle; }
@@ -199,6 +209,8 @@ function _tgTheme(){
   .badge { display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap; }
   .badge.new { background:color-mix(in srgb,var(--accent) 18%,transparent); color:var(--accent); }
   .badge.streak { background:color-mix(in srgb,var(--up) 16%,transparent); color:var(--up); }
+  .badge.fund-ok { background:color-mix(in srgb,#1baf7a 16%,transparent); color:#1a8f65; cursor:help; }
+  .badge.fund-warn { background:color-mix(in srgb,#eda100 18%,transparent); color:#b07800; cursor:help; }
   /* ---- 하단 차트 공통 ---- */
   :root { --vz1:#2a78d6; --vz2:#008300; --vz3:#e87ba4; --vz4:#eda100;
     --vz5:#1baf7a; --vz6:#eb6834; --vz7:#4a3aa7; --vz8:#e34948; }

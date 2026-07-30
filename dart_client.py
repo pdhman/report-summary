@@ -90,15 +90,27 @@ def _fetch_accounts(corp_code, year, reprt):
     if data.get("status") != "000":
         return None
     rows = data.get("list") or []
+    def _norm(name):
+        """계정명 표준화: '영업이익(손실)' → '영업이익', '영업수익' → '매출액'(금융사)."""
+        name = re.sub(r"\(손실\)|\(결손금\)", "", name).strip()
+        if name == "영업수익":
+            return "매출액"
+        return name
+
     for fs in ("CFS", "OFS"):
         acc = {}
         for r in rows:
             if r.get("fs_div") != fs:
                 continue
-            name = r.get("account_nm", "").strip()
+            name = _norm(r.get("account_nm", "").strip())
             acc[name] = {"now": _num(r.get("thstrm_amount")),
                          "prev": _num(r.get("frmtrm_amount"))}
-        if acc.get("매출액", {}).get("now") is not None or acc.get("영업이익", {}).get("now") is not None:
+        if any(acc.get(k, {}).get("now") is not None
+               for k in ("매출액", "영업이익", "자산총계")):
+            # 금융사(은행·보험·지주)는 매출액 계정이 없고 예수·보험부채로 부채비율이
+            # 구조적으로 높다 — 판정 시 부채비율 기준을 적용하지 않도록 표시
+            acc["_financial"] = ("매출액" not in acc) and any(
+                k in acc for k in ("이자수익", "예수부채", "보험계약부채", "순이자손익"))
             return acc
     return None
 
@@ -162,7 +174,8 @@ def fundamentals(stock_code):
                           "sales_yoy": sales_yoy,
                           "op_profit": op.get("now"),
                           "op_margin": op_margin,
-                          "debt_ratio": debt_ratio}
+                          "debt_ratio": debt_ratio,
+                          "financial": bool(acc.get("_financial"))}
                 break
     except Exception as e:
         print(f"[DART] {stock_code} 조회 실패: {e}")
@@ -175,6 +188,8 @@ def fundamentals(stock_code):
 def passes_filter(f):
     """기본 펀더멘털 판정: 영업이익 흑자이고 부채비율 300% 미만이면 통과.
 
+    금융사(은행·보험·지주)는 예수·보험부채로 부채비율이 구조적으로 높아
+    부채비율 기준을 적용하지 않는다(흑자 여부만 판정).
     데이터가 없으면 None(판정 불가) — 제외하지 않고 '-' 로 표시한다.
     """
     if not f:
@@ -184,7 +199,7 @@ def passes_filter(f):
         return None
     if op <= 0:
         return False
-    if debt is not None and debt >= 300:
+    if not f.get("financial") and debt is not None and debt >= 300:
         return False
     return True
 
