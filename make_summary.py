@@ -116,7 +116,13 @@ def card_upside():
     if d.empty:
         return None
     d["upside"] = (d["목표주가"] - d["전일수정주가"]) / d["전일수정주가"] * 100
-    top = d.sort_values("upside", ascending=False).head(3)
+    # 한 종목에 증권사별 리포트가 여러 건 있어 상위권을 같은 종목이 중복 차지한다.
+    # 종목(코드) 기준으로 괴리율이 가장 큰 한 건만 남겨 서로 다른 3종목이 나오게 한다.
+    code = d["기업명"].astype(str).str.extract(r"\((\d{6})\)")[0]
+    d = d.assign(_key=code.fillna(d["기업명"].astype(str).map(_clean_name)))
+    d = (d.sort_values("upside", ascending=False)
+           .drop_duplicates(subset=["_key"], keep="first"))
+    top = d.head(3)
     rows = [(_clean_name(r["기업명"]), float(r["upside"])) for _, r in top.iterrows()]
     return {"date": f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:]}", "rows": rows}
 
