@@ -42,3 +42,8 @@ market_leverage_collector/leverage.html
 
 # API 키 등 개인 설정 (절대 커밋 금지)
 config.yaml
+
+# price-alert: 카카오 토큰·알림 상태 (절대 커밋 금지)
+price-alert/kakao_tokens.json
+price-alert/alert_state.json
+!price-alert/config.json

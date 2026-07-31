@@ -1,0 +1,9 @@
+{
+  "thresholds": [3.0, 5.0, 7.0],
+  "market_days": [0, 1, 2, 3, 4],
+  "market_start": "09:00",
+  "market_end": "15:35",
+  "data_js": "../prop-dashboard/data.js",
+  "state_file": "alert_state.json",
+  "redirect_port": 8899
+}
