@@ -75,11 +75,13 @@ def main():
     port = _redirect_port()
     redirect = f"http://localhost:{port}/callback"
 
-    # 기존 토큰 파일이 있으면 REST 키 재사용 (재인증 시)
-    rest_key = ""
+    # 기존 토큰 파일이 있으면 REST 키·Client Secret 재사용 (재인증 시)
+    rest_key, client_secret = "", ""
     if os.path.exists(kakao.TOKENS_FILE):
         try:
-            rest_key = kakao.load_tokens().get("rest_api_key", "")
+            prev = kakao.load_tokens()
+            rest_key = prev.get("rest_api_key", "")
+            client_secret = prev.get("client_secret", "")
         except Exception:  # noqa: BLE001
             pass
     if rest_key:
@@ -95,17 +97,22 @@ def main():
     webbrowser.open(url)
     code = _wait_for_code(port)
 
-    status, resp = kakao._post(kakao.TOKEN_URL, {
+    body = {
         "grant_type": "authorization_code",
         "client_id": rest_key,
         "redirect_uri": redirect,
         "code": code,
-    })
+    }
+    if client_secret:
+        body["client_secret"] = client_secret
+    status, resp = kakao._post(kakao.TOKEN_URL, body)
     if status != 200 or "access_token" not in resp:
         err, desc = resp.get("error", "?"), resp.get("error_description", "?")
         print(f"토큰 교환 실패 (HTTP {status}): {err} / {desc}")
         if err == "invalid_client":
             print("→ REST API 키가 맞는지 확인하세요 (JavaScript 키 아님).")
+            print("→ [제품 설정 > 카카오 로그인 > 보안]에서 Client Secret이 '사용함'이면"
+                  " 비활성화하거나, kakao_tokens.json에 client_secret 값을 추가하세요.")
         elif "redirect" in str(desc).lower() or err == "misconfigured":
             print(f"→ 카카오 로그인 > Redirect URI에 {redirect} 가 정확히 등록됐는지 확인하세요.")
         elif "scope" in str(desc).lower():
@@ -114,13 +121,16 @@ def main():
 
     from datetime import datetime, timezone
     now = datetime.now(timezone.utc).isoformat()
-    kakao.save_tokens({
+    saved = {
         "rest_api_key": rest_key,
         "access_token": resp["access_token"],
         "refresh_token": resp["refresh_token"],
         "access_token_at": now,
         "refresh_token_at": now,
-    })
+    }
+    if client_secret:
+        saved["client_secret"] = client_secret
+    kakao.save_tokens(saved)
     print(f"토큰 저장 완료: {kakao.TOKENS_FILE}")
 
     kakao.send_message("[주가알림] 카카오 알림 연동 완료 ✅")

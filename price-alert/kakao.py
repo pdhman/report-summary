@@ -67,11 +67,16 @@ def _post(url, data, headers=None):
 def refresh_access_token(tokens=None, path=TOKENS_FILE):
     """access token 갱신. 갱신된 tokens dict 반환. 실패 시 ReauthNeeded."""
     tokens = tokens or load_tokens(path)
-    status, resp = _post(TOKEN_URL, {
+    if not tokens.get("refresh_token"):
+        raise ReauthNeeded("토큰 파일에 refresh_token 없음 — kakao_auth.py 를 실행하세요")
+    body = {
         "grant_type": "refresh_token",
         "client_id": tokens["rest_api_key"],
         "refresh_token": tokens["refresh_token"],
-    })
+    }
+    if tokens.get("client_secret"):  # 콘솔에서 Client Secret 사용 시 필수
+        body["client_secret"] = tokens["client_secret"]
+    status, resp = _post(TOKEN_URL, body)
     if status != 200 or "access_token" not in resp:
         raise ReauthNeeded(
             f"토큰 갱신 실패 (HTTP {status}: {resp.get('error', '?')}"

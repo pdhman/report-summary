@@ -11,13 +11,15 @@ prop-dashboard `data.js`의 보유종목을 평일 09:00~15:30, 10분 간격으�
 ## 1회 설정 — 카카오 앱 만들기 (직접, 브라우저에서)
 
 1. <https://developers.kakao.com> 로그인 → **내 애플리케이션 → 애플리케이션 추가하기** (이름 예: `price-alert`)
-2. **앱 설정 > 앱 키**에서 **REST API 키** 복사 (JavaScript 키 아님!)
-3. **제품 설정 > 카카오 로그인** → 활성화 ON → **Redirect URI**에 아래를 정확히 등록:
+2. **[앱] > [플랫폼 키]**에서 **REST API 키** 복사 (JavaScript 키 아님!)
+3. **제품 설정 > 카카오 로그인 > 일반** → 사용 설정 ON
+4. **[앱] > [플랫폼 키] > [REST API 키] > [리다이렉트 URI]**에 아래를 정확히 등록:
    ```
    http://localhost:8899/callback
    ```
-4. **제품 설정 > 카카오 로그인 > 동의항목** → **카카오톡 메시지 전송(talk_message)** → 선택 동의 설정
-5. 인증 실행:
+   (구버전 콘솔은 제품 설정 > 카카오 로그인 페이지에 Redirect URI 항목이 있음)
+5. **제품 설정 > 카카오 로그인 > 동의항목** → **카카오톡 메시지 전송(talk_message)** → 선택 동의 설정
+6. 인증 실행:
    ```bash
    python price-alert/kakao_auth.py
    ```
