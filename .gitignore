@@ -5,6 +5,7 @@ gdrive_sa.json
 !reports/counts.json
 !x-monitor/accounts.json
 !x-monitor/data/*.json
+!reports/data/*.json
 
 # 데이터 파일 (드라이브에서 관리됨)
 *.xlsx

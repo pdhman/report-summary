@@ -162,7 +162,8 @@
     <span><label>종목</label>
       <select id="tickerSelect"></select></span>
     <span class="symsearch">
-      <input id="symSearch" placeholder="티커 추가 (예: AAPL, 005930.KS)" spellcheck="false">
+      <input id="symSearch" list="symList" placeholder="티커 검색 (예: TQQQ, GLD)" spellcheck="false">
+      <datalist id="symList"></datalist>
       <button id="symGo">조회</button>
     </span>
     <span id="loadStatus"></span>
@@ -257,7 +258,7 @@
     </div>
   </section>
 
-<script src="market_data.js"></script>
+<script src="data/index.js"></script>
 <script>
 "use strict";
 // 서버 없이도 동작하도록, 매일 자동 생성되는 market_data.js(기본 티커)를 기본 데이터로 쓴다.
@@ -265,16 +266,16 @@
 // 단, localhost 는 "이 브라우저가 돌는 PC"를 뜻하므로 다른 PC에서는 정적 데이터만 사용된다.
 const API = location.port === "8766" ? "" : "http://localhost:8766";
 
-// market_data.js 의 bars[[yyyymmdd,o,h,l,c,v,adj]] → 계절성이 쓰는 {dates, closes(수정종가)}
-const SEASONALITY_DATA = {};
-if (typeof MARKET_DATA !== "undefined") {
-  for (const [sym, d] of Object.entries(MARKET_DATA)) {
-    SEASONALITY_DATA[sym] = {
-      name: d.name,
-      dates: d.bars.map(b => b[0]),
-      closes: d.bars.map(b => b[6]),
-    };
-  }
+// 유니버스 목록(index.js)은 가볍게 미리 싣고, 종목 데이터는 선택할 때 내려받는다.
+const UNIVERSE = new Map((typeof TICKER_INDEX !== "undefined" ? TICKER_INDEX : []).map(e => [e.s, e]));
+const SEASONALITY_DATA = {};   // 내려받은 종목만 채워진다
+
+// data/<티커>.json 의 bars[[yyyymmdd,o,h,l,c,v,adj]] → 계절성이 쓰는 {dates, closes(수정종가)}
+async function fetchStatic(sym) {
+  const res = await fetch(`data/${encodeURIComponent(sym)}.json`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const d = await res.json();
+  return { name: d.name, dates: d.bars.map(b => b[0]), closes: d.bars.map(b => b[6]) };
 }
 const HOLDS = [10, 15, 20, 25, 30];
 const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
@@ -835,7 +836,7 @@ function switchTicker(sym) {
   refresh();
 }
 
-// API에서 수정종가를 받아 새 티커를 추가 (계절성 페이지의 즉시 검색)
+// 유니버스 종목은 정적 파일에서, 그 외 티커는 분석 서버(API)에서 가져온다.
 async function loadSymbol(raw) {
   const sym = raw.trim().toUpperCase();
   if (!sym) return;
@@ -844,20 +845,26 @@ async function loadSymbol(raw) {
   st.className = "";
   st.textContent = `${sym} 불러오는 중...`;
   try {
-    let res;
-    try {
-      const ctl = new AbortController();
-      const timer = setTimeout(() => ctl.abort(), 2500);
-      res = await fetch(`${API}/api/closes?symbol=${encodeURIComponent(sym)}`, { signal: ctl.signal });
-      clearTimeout(timer);
-    } catch (e) {
-      throw new Error("이 기기에서는 목록의 종목만 분석할 수 있습니다 — 임의 티커 검색은 "
-        + "분석 서버(python seasonality/server.py)를 켠 PC에서만 됩니다");
+    let entry = null;
+    if (UNIVERSE.has(sym)) {
+      entry = await fetchStatic(sym);
+    } else {
+      let res;
+      try {
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 2500);
+        res = await fetch(`${API}/api/closes?symbol=${encodeURIComponent(sym)}`, { signal: ctl.signal });
+        clearTimeout(timer);
+      } catch (e) {
+        throw new Error("목록에 없는 종목입니다 — 목록 밖 티커는 분석 서버"
+          + "(python seasonality/server.py)를 켠 PC에서만 검색됩니다");
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      entry = { name: data.name, dates: data.dates, closes: data.closes };
+      $("tickerSelect").add(new Option(`${sym} · ${entry.name}`, sym));
     }
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-    SEASONALITY_DATA[sym] = { name: data.name, dates: data.dates, closes: data.closes };
-    $("tickerSelect").add(new Option(`${data.name} (${sym})`, sym));
+    SEASONALITY_DATA[sym] = entry;
     st.textContent = "";
     $("symSearch").value = "";
     switchTicker(sym);
@@ -867,14 +874,48 @@ async function loadSymbol(raw) {
   }
 }
 
-function init() {
+function buildTickerSelect() {
   const sel = $("tickerSelect");
-  for (const [sym, d] of Object.entries(SEASONALITY_DATA)) sel.add(new Option(`${d.name} (${sym})`, sym));
-  state.ticker = sel.value;
+  sel.innerHTML = "";
+  let lastGroup = null, og = null;
+  for (const e of UNIVERSE.values()) {
+    if (e.g !== lastGroup) {
+      og = document.createElement("optgroup");
+      og.label = e.g;
+      sel.add(og);
+      lastGroup = e.g;
+    }
+    og.appendChild(new Option(`${e.s} · ${e.n}`, e.s));
+  }
+  $("symList").innerHTML = [...UNIVERSE.values()]
+    .map(e => `<option value="${e.s}">${e.n} (${e.g})</option>`).join("");
+}
+
+async function init() {
+  const sel = $("tickerSelect");
+  buildTickerSelect();
+  if (!UNIVERSE.size) {
+    $("loadStatus").className = "err";
+    $("loadStatus").textContent = "종목 목록(data/index.js)을 불러오지 못했습니다.";
+    return;
+  }
+  // 마지막으로 보던 종목(차트 탭과 공유) → 없으면 목록의 첫 종목
+  const want = (new URLSearchParams(location.search).get("symbol")
+                || localStorage.getItem("analysis.symbol") || "").toUpperCase();
+  const first = UNIVERSE.has(want) ? want : [...UNIVERSE.keys()][0];
+  try {
+    SEASONALITY_DATA[first] = await fetchStatic(first);
+  } catch (e) {
+    $("loadStatus").className = "err";
+    $("loadStatus").textContent = `${first} 데이터를 불러오지 못했습니다: ${e.message}`;
+    return;
+  }
+  sel.value = first;
+  state.ticker = first;
   initPeriodSelects();
   resetYears();
 
-  sel.addEventListener("change", () => switchTicker(sel.value));
+  sel.addEventListener("change", () => loadSymbol(sel.value));
   $("symGo").addEventListener("click", () => loadSymbol($("symSearch").value));
   $("symSearch").addEventListener("keydown", e => { if (e.key === "Enter") loadSymbol($("symSearch").value); });
   $("startYear").addEventListener("change", ev => {
@@ -905,10 +946,8 @@ function init() {
   setupChartHover();
   setupDailyHover();
   refresh();
-  // 차트 탭에서 보던 티커 이어받기 (?symbol= 또는 localStorage)
-  const want = (new URLSearchParams(location.search).get("symbol")
-                || localStorage.getItem("analysis.symbol") || "").toUpperCase();
-  if (want && want !== state.ticker) loadSymbol(want);
+  // 목록 밖 티커를 보던 중이었다면(서버 있는 PC) 이어서 시도
+  if (want && want !== state.ticker && !UNIVERSE.has(want)) loadSymbol(want);
 }
 
 function placeTip(tip, box, ev) {

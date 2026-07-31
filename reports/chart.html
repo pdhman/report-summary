@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>주식 차트</title>
 <script src="lib/lightweight-charts.standalone.production.js"></script>
-<script src="market_data.js"></script>
+<script src="data/index.js"></script>
 <style>
   :root {
     --page: #f6f7f9; --surface: #ffffff; --ink: #1a1d21; --ink-2: #4b5563;
@@ -103,10 +103,15 @@
     </div>
     <div>
       <div class="searchbox">
-        <input id="symInput" placeholder="티커 입력 (예: AAPL, 005930.KS, BTC-USD)" spellcheck="false">
+        <input id="symInput" list="symList" placeholder="티커 입력 (예: TQQQ, AAPL, 005930.KS)" spellcheck="false">
+        <datalist id="symList"></datalist>
         <button id="goBtn">조회</button>
       </div>
-      <div class="chips" id="presets" style="margin-top:8px"></div>
+      <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+        <select id="universeSelect" style="font-size:13px; padding:7px 10px; border:1px solid var(--grid);
+          border-radius:8px; background:var(--surface); color:var(--ink); max-width:280px"></select>
+        <div class="chips" id="presets"></div>
+      </div>
     </div>
   </div>
 
@@ -274,19 +279,30 @@ function applyPeriod() {
   chart.timeScale().setVisibleRange({ from: fromStr, to: bars[bars.length - 1].t });
 }
 
-// market_data.js(매일 자동 생성)에서 꺼내 쓰는 정적 폴백 — 서버가 없어도 기본 티커는 보인다
-function fromStatic(symbol) {
-  const d = typeof MARKET_DATA !== "undefined" ? MARKET_DATA[symbol] : null;
-  if (!d) return null;
-  const iso = n => `${String(n).slice(0,4)}-${String(n).slice(4,6)}-${String(n).slice(6)}`;
-  return {
-    symbol, name: d.name, currency: d.currency || "", isStatic: true,
-    bars: d.bars.map(b => ({ t: iso(b[0]), o: b[1], h: b[2], l: b[3], c: b[4], v: b[5] })),
-  };
+// 유니버스 종목은 data/<티커>.json 을 그때그때 내려받는다 (서버 불필요)
+const UNIVERSE = new Map((typeof TICKER_INDEX !== "undefined" ? TICKER_INDEX : []).map(e => [e.s, e]));
+const iso = n => `${String(n).slice(0,4)}-${String(n).slice(4,6)}-${String(n).slice(6)}`;
+
+async function fromStatic(symbol) {
+  if (!UNIVERSE.has(symbol)) return null;
+  try {
+    const res = await fetch(`data/${encodeURIComponent(symbol)}.json`);
+    if (!res.ok) return null;
+    const d = await res.json();
+    return {
+      symbol, name: d.name, currency: d.currency || "", isStatic: true,
+      bars: d.bars.map(b => ({ t: iso(b[0]), o: b[1], h: b[2], l: b[3], c: b[4], v: b[5] })),
+    };
+  } catch (e) { return null; }
 }
 
-// 서버 API를 먼저 시도하되(임의 티커·당일 시세), 응답이 없으면 정적 데이터로 넘어간다.
+// 유니버스에 있으면 정적 파일이 가장 빠르고 확실하다.
+// 그 외 티커는 분석 서버(API)가 켜져 있을 때만 조회된다.
 async function fetchBars(symbol) {
+  if (UNIVERSE.has(symbol)) {
+    const stat = await fromStatic(symbol);
+    if (stat) return stat;
+  }
   try {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 2500);
@@ -294,15 +310,12 @@ async function fetchBars(symbol) {
     clearTimeout(timer);
     const data = await res.json();
     if (res.ok) return data;
-    if (!fromStatic(symbol)) throw new Error(data.error || `HTTP ${res.status}`);
+    throw new Error(data.error || `HTTP ${res.status}`);
   } catch (e) {
     if (e instanceof Error && /찾을 수 없|HTTP/.test(e.message)) throw e;
   }
-  const stat = fromStatic(symbol);
-  if (stat) return stat;
-  const known = typeof MARKET_DATA !== "undefined" ? Object.keys(MARKET_DATA).join(", ") : "";
-  throw new Error(`${symbol}: 이 기기에서는 조회할 수 없습니다. 사전 수집된 종목(${known})만 가능하며, `
-    + `임의 티커는 분석 서버(python seasonality/server.py)를 켠 PC에서만 검색됩니다.`);
+  throw new Error(`${symbol}: 목록에 없는 종목입니다. 목록 밖 티커는 분석 서버`
+    + `(python seasonality/server.py)를 켠 PC에서만 검색됩니다.`);
 }
 
 async function load(symbol) {
@@ -343,6 +356,7 @@ async function load(symbol) {
     try { localStorage.setItem("analysis.symbol", symbol); } catch (e) {}
     document.title = `${symbol} 차트`;
     document.querySelectorAll("#presets .chip").forEach(c => c.classList.toggle("on", c.dataset.s === symbol));
+    $("universeSelect").value = UNIVERSE.has(symbol) ? symbol : "";
   } catch (e) {
     $("status").className = "err";
     $("status").textContent = `오류: ${e.message}`;
@@ -361,10 +375,28 @@ function exportCSV() {
   URL.revokeObjectURL(a.href);
 }
 
+const QUICK = ["SPY", "QQQ", "TQQQ", "069500.KS", "005930.KS"];
+
 function buildPresets() {
-  const syms = typeof MARKET_DATA !== "undefined" ? Object.keys(MARKET_DATA) : [];
-  $("presets").innerHTML = syms.map(s =>
-    `<span class="chip" data-s="${s}">${MARKET_DATA[s].name}</span>`).join("");
+  // 자주 보는 종목은 칩으로, 전체 유니버스는 그룹 셀렉트와 자동완성으로 제공
+  $("presets").innerHTML = QUICK.filter(s => UNIVERSE.has(s))
+    .map(s => `<span class="chip" data-s="${s}">${s}</span>`).join("");
+
+  const sel = $("universeSelect");
+  let lastGroup = null, og = null;
+  sel.innerHTML = "";
+  sel.add(new Option(`전체 목록 (${UNIVERSE.size}종목)…`, ""));
+  for (const e of UNIVERSE.values()) {
+    if (e.g !== lastGroup) {
+      og = document.createElement("optgroup");
+      og.label = e.g;
+      sel.add(og);
+      lastGroup = e.g;
+    }
+    og.appendChild(new Option(`${e.s} · ${e.n}`, e.s));
+  }
+  $("symList").innerHTML = [...UNIVERSE.values()]
+    .map(e => `<option value="${e.s}">${e.n} (${e.g})</option>`).join("");
 }
 
 function init() {
@@ -375,6 +407,7 @@ function init() {
   $("symInput").addEventListener("keydown", e => { if (e.key === "Enter") load($("symInput").value); });
   document.querySelectorAll("#presets .chip").forEach(c =>
     c.addEventListener("click", () => load(c.dataset.s)));
+  $("universeSelect").addEventListener("change", ev => { if (ev.target.value) load(ev.target.value); });
   document.querySelectorAll("#periodBtns .chip").forEach(c =>
     c.addEventListener("click", () => {
       activePeriod = c.dataset.p;
