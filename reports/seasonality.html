@@ -275,7 +275,8 @@ async function fetchStatic(sym) {
   const res = await fetch(`data/${encodeURIComponent(sym.replace("^", "_"))}.json`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const d = await res.json();
-  return { name: d.name, dates: d.bars.map(b => b[0]), closes: d.bars.map(b => b[6]) };
+  return { name: d.name, note: d.note || "",
+           dates: d.bars.map(b => b[0]), closes: d.bars.map(b => b[6]) };
 }
 const HOLDS = [10, 15, 20, 25, 30];
 const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
@@ -810,7 +811,8 @@ function refresh() {
   renderDailyWin(dailyWinStats(tk, yearsSet));
   renderMonthPattern(tk, yearsSet, state.patternMonth);
   const n = tk.dates.length;
-  $("metaText").innerHTML = `<b>${tk.name}</b> · 데이터 ${String(tk.dates[0]).slice(0,4)}~${String(tk.dates[n-1]).slice(0,4)} · 선택 ${years.length}년`;
+  $("metaText").innerHTML = `<b>${tk.name}</b> · 데이터 ${String(tk.dates[0]).slice(0,4)}~${String(tk.dates[n-1]).slice(0,4)} · 선택 ${years.length}년`
+    + (tk.note ? ` <span style="color:var(--muted)">· ${tk.note}</span>` : "");
   $("csvBtn").onclick = () => exportCSV(rows, mret, years);
 }
 

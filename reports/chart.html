@@ -315,7 +315,7 @@ async function fromStatic(symbol) {
     if (!res.ok) return null;
     const d = await res.json();
     return {
-      symbol, name: d.name, currency: d.currency || "", isStatic: true,
+      symbol, name: d.name, currency: d.currency || "", isStatic: true, note: d.note || "",
       bars: d.bars.map(b => ({ t: iso(b[0]), o: b[1], h: b[2], l: b[3], c: b[4], v: b[5] })),
     };
   } catch (e) { return null; }
@@ -375,7 +375,8 @@ async function load(symbol) {
     $("phChg").textContent = `${chg >= 0 ? "▲" : "▼"} ${fmtN(Math.abs(chg))} (${chg >= 0 ? "+" : ""}${chgPct.toFixed(2)}%)`;
     $("phChg").className = "chg " + (chg >= 0 ? "up" : "down");
     $("phDate").textContent = `${bars[0].t} ~ ${lastB.t} · ${bars.length.toLocaleString()}일`
-      + (data.isStatic ? " · 사전 수집 데이터" : "");
+      + (data.isStatic ? " · 사전 수집 데이터" : "")
+      + (data.note ? ` · ${data.note}` : "");
     $("status").style.display = "none";
     $("symInput").value = symbol;
     try { localStorage.setItem("analysis.symbol", symbol); } catch (e) {}

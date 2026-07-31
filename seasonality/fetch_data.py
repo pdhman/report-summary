@@ -18,6 +18,7 @@
 조회에 실패한 종목은 기존 파일을 그대로 두므로, 야후의 일시적 차단이
 사이트의 데이터를 지우지 않는다.
 """
+import datetime
 import json
 import math
 import sys
@@ -30,6 +31,15 @@ from universe import UNIVERSE, flat
 BASE = Path(__file__).parent
 OUT_DIR = BASE.parent / "reports" / "data"
 INDEX_FILE = OUT_DIR / "index.js"
+
+# 야후 데이터에 공백이 있는 종목을, 그 종목이 추종하는 지수로 메운다.
+# (KODEX 200 은 2009-04-17 이전이 거의 비어 있다 — 2007년 8일·2008년 0일)
+# FinanceDataReader 심볼 / 메우기 시작일 / 화면 표기용 설명
+BACKFILL = {
+    "069500.KS": {"fdr": "KS200", "start": "2002-10-14",   # KODEX 200 상장일
+                  "label": "코스피200 지수"},
+}
+GAP_DAYS = 30       # 이보다 긴 공백이 있으면 그 이전 구간은 신뢰하지 않는다
 
 
 def fetch(symbol: str):
@@ -56,14 +66,69 @@ def fetch(symbol: str):
     return (bars, currency) if bars else None
 
 
+def _date(n: int) -> datetime.date:
+    return datetime.date(n // 10000, n // 100 % 100, n % 100)
+
+
+def backfill(sym: str, bars: list):
+    """야후 데이터의 앞쪽 공백을 추종 지수로 메운다. (메운 봉수, 시작일) 반환."""
+    cfg = BACKFILL.get(sym)
+    if not cfg:
+        return bars, None
+
+    # 마지막 큰 공백 지점(J) 이후만 신뢰한다. 그 앞은 지수로 대체.
+    j = 0
+    for i in range(1, len(bars)):
+        if (_date(bars[i][0]) - _date(bars[i - 1][0])).days > GAP_DAYS:
+            j = i
+    if j == 0:
+        return bars, None
+
+    junction = bars[j]
+    try:
+        import FinanceDataReader as fdr
+        idx = fdr.DataReader(cfg["fdr"], cfg["start"], str(_date(junction[0])))
+    except Exception as e:
+        print(f"    [{sym}] 지수 백필 실패({e.__class__.__name__}) — 야후 데이터만 사용")
+        return bars, None
+    if idx.empty or junction[0] not in [int(t.strftime("%Y%m%d")) for t in idx.index]:
+        print(f"    [{sym}] 지수 백필: 접합일 데이터 없음 — 야후 데이터만 사용")
+        return bars, None
+
+    # 접합일에서 수준을 맞춰 이어 붙인다(수익률 연속). 종가용/수정종가용 배율을 따로 둔다.
+    base = float(idx.loc[idx.index[[int(t.strftime("%Y%m%d")) == junction[0]
+                                    for t in idx.index]][0], "Close"])
+    k_px, k_adj = junction[4] / base, junction[6] / base
+
+    filled = []
+    for ts, row in idx.iterrows():
+        ymd = int(ts.strftime("%Y%m%d"))
+        if ymd >= junction[0]:
+            break
+        c = float(row["Close"])
+        if not c or math.isnan(c):
+            continue
+        o, h, l = (float(row.get(k, c) or c) for k in ("Open", "High", "Low"))
+        if any(math.isnan(v) or v <= 0 for v in (o, h, l)):
+            o = h = l = c
+        filled.append([ymd, round(o * k_px, 4), round(h * k_px, 4), round(l * k_px, 4),
+                       round(c * k_px, 4), 0, round(c * k_adj, 4)])
+    if not filled:
+        return bars, None
+    return filled + bars[j:], (len(filled), filled[0][0], junction[0])
+
+
 def fname(sym: str) -> str:
     """티커 → 파일명. 지수 심볼의 '^'는 URL 에서 번거로우므로 '_'로 바꾼다."""
     return sym.replace("^", "_")
 
 
-def write_ticker(sym: str, name: str, group: str, bars: list, currency: str) -> None:
-    head = json.dumps({"symbol": sym, "name": name, "group": group,
-                       "currency": currency}, ensure_ascii=False)[:-1]
+def write_ticker(sym: str, name: str, group: str, bars: list, currency: str,
+                 note: str = "") -> None:
+    meta = {"symbol": sym, "name": name, "group": group, "currency": currency}
+    if note:
+        meta["note"] = note
+    head = json.dumps(meta, ensure_ascii=False)[:-1]
     lines = [head + ', "bars": [']
     lines.extend(json.dumps(b, separators=(",", ":")) + "," for b in bars[:-1])
     lines.append(json.dumps(bars[-1], separators=(",", ":")))
@@ -127,9 +192,16 @@ def main() -> None:
             failed.append(sym)
             continue
         bars, currency = got
-        write_ticker(sym, name, group, bars, currency)
+        bars, bf = backfill(sym, bars)
+        note = ""
+        if bf:
+            ymd = str(bf[2])
+            note = (f"{ymd[:4]}-{ymd[4:6]} 이전 구간은 {BACKFILL[sym]['label']}로 대체 "
+                    f"(야후 원본 데이터 공백)")
+        write_ticker(sym, name, group, bars, currency, note)
         ok += 1
-        print(f"[{i}/{len(targets)}] {sym} {len(bars)}일 ({bars[0][0]}~{bars[-1][0]})")
+        tail = f" · 지수로 {bf[0]}일 백필({bf[1]}~)" if bf else ""
+        print(f"[{i}/{len(targets)}] {sym} {len(bars)}일 ({bars[0][0]}~{bars[-1][0]}){tail}")
 
     write_index()
     total_mb = sum(f.stat().st_size for f in OUT_DIR.glob("*.json")) / 1024 / 1024
