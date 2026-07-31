@@ -191,6 +191,9 @@ function initChart() {
     ...chartTheme(),
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
     autoSize: true,
+    // 기본 minBarSpacing(0.5)이면 좁은 화면에서 수천 봉을 담을 수 없어
+    // 기간 설정이 무시된다. 낮춰야 5Y·All 이 제대로 적용된다.
+    timeScale: { ...chartTheme().timeScale, minBarSpacing: 0.02 },
   });
   candleSeries = chart.addCandlestickSeries({
     upColor: "#16a34a", downColor: "#dc2626", borderVisible: false,
@@ -269,14 +272,20 @@ function buildMAButtons() {
   }
 }
 
+// 기간을 '거래일 수'로 다룬다. 날짜 기반 setVisibleRange 는 데이터가 없는
+// 구간(상장 전)을 요청하면 빈 화면이 되거나 무시돼 종목을 바꿀 때 엉뚱한
+// 위치에서 시작하는 문제가 있었다.
+const PERIOD_BARS = { "1M": 21, "3M": 63, "6M": 126, "1Y": 252, "3Y": 756, "5Y": 1260 };
+
 function applyPeriod() {
   if (!bars.length) return;
-  if (activePeriod === "ALL") { chart.timeScale().fitContent(); return; }
-  const days = { "1M": 31, "3M": 92, "6M": 183, "1Y": 366, "3Y": 1096, "5Y": 1827 }[activePeriod];
-  const last = new Date(bars[bars.length - 1].t);
-  const from = new Date(last); from.setDate(from.getDate() - days);
-  const fromStr = from.toISOString().slice(0, 10);
-  chart.timeScale().setVisibleRange({ from: fromStr, to: bars[bars.length - 1].t });
+  const ts = chart.timeScale();
+  // 사용자가 가격축을 드래그해 자동 맞춤이 꺼져 있어도 되살린다
+  chart.priceScale("right").applyOptions({ autoScale: true });
+  if (activePeriod === "ALL") { ts.fitContent(); return; }
+  // 상장 이력이 짧으면 있는 만큼만 보여준다 (앞쪽 빈 공간 방지)
+  const n = Math.min(PERIOD_BARS[activePeriod] || 252, bars.length);
+  ts.setVisibleLogicalRange({ from: bars.length - n, to: bars.length + 1 });
 }
 
 // 유니버스 종목은 data/<티커>.json 을 그때그때 내려받는다 (서버 불필요)
