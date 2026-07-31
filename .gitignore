@@ -1,3 +1,8 @@
+# 이 저장소는 공개다. prop-dashboard 에는 실계좌 보유종목·평가금액·손익이 들어 있어
+# 별도 비공개 저장소(pdhman/prop-dashboard)에서 관리한다. 여기에는 절대 커밋 금지.
+# (자체 .git 을 가진 폴더라 실수로 add 하면 gitlink 로 들어간다 — 아예 무시한다)
+prop-dashboard/
+
 # 서비스 계정 키 등 비밀값 (절대 커밋 금지)
 gdrive_sa.json
 *.json
