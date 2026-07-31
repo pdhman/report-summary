@@ -1,0 +1,9 @@
+# generated / local data
+dashboard.html
+monitor_log.txt
+gpu_rental_history.csv
+revenue_history.csv
+fred_*_history.csv
+manual_data.json
+shot_*.png
+__pycache__/
