@@ -33,8 +33,125 @@ def _files():
 def _wrap(title, body):
     return ("<!doctype html><html lang='ko'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-            f"<title>{title}</title></head><body>{body}"
-            f"{site_nav.nav_html('x')}{_SHARED_STYLE}{site_nav.NAV_CSS}</body></html>")
+            f"<title>{title}</title></head><body>{body}{_MODAL_HTML}"
+            f"{site_nav.nav_html('x')}{_SHARED_STYLE}{site_nav.NAV_CSS}"
+            f"{_MODAL_CSS}{_MODAL_JS}</body></html>")
+
+
+# ------------------------------------------------- 원문 모달 (트윗 임베드)
+# 리포트 본문·피드의 '원문' 링크를 가로채 페이지 안에서 트윗을 보여준다.
+# X 공식 위젯(platform.twitter.com)을 처음 열 때만 지연 로드하고,
+# 삭제·비공개·네트워크 실패 시에는 새 탭 링크로 안내한다.
+_MODAL_HTML = """
+<div id="xm-ov" hidden>
+  <div id="xm-box" role="dialog" aria-modal="true" aria-label="원문 보기">
+    <div id="xm-bar">
+      <span id="xm-ttl">원문</span>
+      <a id="xm-new" href="#" target="_blank" rel="noopener">새 탭 ↗</a>
+      <button id="xm-x" aria-label="닫기">✕</button>
+    </div>
+    <div id="xm-body"><div id="xm-msg">불러오는 중…</div></div>
+  </div>
+</div>"""
+
+_MODAL_CSS = """
+<style>
+  #xm-ov { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.55);
+    display:flex; align-items:center; justify-content:center; padding:20px; }
+  #xm-ov[hidden] { display:none; }
+  #xm-box { background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    width:min(560px,100%); max-height:86vh; display:flex; flex-direction:column; overflow:hidden;
+    box-shadow:0 12px 40px rgba(0,0,0,.35); }
+  #xm-bar { display:flex; align-items:center; gap:10px; padding:10px 14px;
+    border-bottom:1px solid var(--line); flex:0 0 auto; }
+  #xm-ttl { font-weight:700; font-size:14px; flex:1 1 auto; }
+  #xm-new { font-size:12.5px; color:var(--accent); text-decoration:none; font-weight:600; }
+  #xm-x { border:none; background:transparent; color:var(--muted); font-size:16px;
+    cursor:pointer; line-height:1; padding:4px 2px; }
+  #xm-x:hover { color:var(--ink); }
+  #xm-body { overflow-y:auto; padding:10px 14px 14px; }
+  #xm-msg { color:var(--muted); font-size:13.5px; text-align:center; padding:26px 0; line-height:1.6; }
+  #xm-body twitter-widget, #xm-body iframe { margin:0 auto !important; }
+</style>"""
+
+_MODAL_JS = """
+<script>
+(function () {
+  var ov = document.getElementById('xm-ov'), box = document.getElementById('xm-box');
+  var body = document.getElementById('xm-body'), msg = document.getElementById('xm-msg');
+  var newTab = document.getElementById('xm-new'), ttl = document.getElementById('xm-ttl');
+  var lastFocus = null, timer = null;
+
+  function theme() {
+    var t = document.documentElement.dataset.theme;
+    if (t) return t;
+    return (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  function close() {
+    ov.hidden = true;
+    if (timer) { clearTimeout(timer); timer = null; }
+    body.innerHTML = '<div id="xm-msg">불러오는 중…</div>';
+    msg = document.getElementById('xm-msg');
+    if (lastFocus) { try { lastFocus.focus(); } catch (e) {} }
+  }
+  function fail(why) {
+    if (msg) msg.innerHTML = why + '<br>위의 <b>새 탭 ↗</b> 으로 X에서 확인해 주세요.';
+  }
+  function loadWidgets(cb, err) {
+    if (window.twttr && window.twttr.widgets) { cb(); return; }
+    var s = document.getElementById('xm-wjs');
+    if (!s) {
+      s = document.createElement('script');
+      s.id = 'xm-wjs'; s.async = true; s.src = 'https://platform.twitter.com/widgets.js';
+      document.head.appendChild(s);
+    }
+    var n = 0, iv = setInterval(function () {
+      if (window.twttr && window.twttr.widgets) { clearInterval(iv); cb(); }
+      else if (++n > 60) { clearInterval(iv); err(); }
+    }, 100);
+  }
+  function open(url, handle) {
+    var m = url.match(/status\\/(\\d+)/);
+    if (!m) { window.open(url, '_blank', 'noopener'); return; }
+    lastFocus = document.activeElement;
+    newTab.href = url;
+    ttl.textContent = handle ? '@' + handle : '원문';
+    ov.hidden = false;
+    document.getElementById('xm-x').focus();
+    timer = setTimeout(function () { fail('불러오는 데 시간이 걸리고 있습니다.'); }, 7000);
+    loadWidgets(function () {
+      window.twttr.widgets.createTweet(m[1], body, {
+        theme: theme(), lang: 'ko', dnt: true, align: 'center', conversation: 'none'
+      }).then(function (el) {
+        if (timer) { clearTimeout(timer); timer = null; }
+        if (!el) fail('트윗을 불러올 수 없습니다 (삭제·비공개일 수 있습니다).');
+        else if (msg && msg.parentNode) msg.parentNode.removeChild(msg);
+      }).catch(function () {
+        if (timer) { clearTimeout(timer); timer = null; }
+        fail('트윗을 불러오지 못했습니다.');
+      });
+    }, function () {
+      if (timer) { clearTimeout(timer); timer = null; }
+      fail('X 위젯을 불러오지 못했습니다 (네트워크 차단일 수 있습니다).');
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href*="/status/"]');
+    if (!a) return;
+    if (a.id === 'xm-new') return;
+    if (!/^https?:\\/\\/(x|twitter)\\.com\\//.test(a.href)) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;   // 새 탭 열기는 그대로
+    e.preventDefault();
+    var h = null, mm = a.href.match(/^https?:\\/\\/(?:x|twitter)\\.com\\/([A-Za-z0-9_]+)\\//);
+    if (mm) h = mm[1];
+    open(a.href, h);
+  });
+  document.getElementById('xm-x').addEventListener('click', close);
+  ov.addEventListener('click', function (e) { if (!box.contains(e.target)) close(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !ov.hidden) close(); });
+})();
+</script>"""
 
 
 # ---------------------------------------------------------------- 피드 데이터
@@ -336,12 +453,14 @@ def _build_hub():
   <div class="xsection">일일 리포트</div>
   <div id="view">{"".join(panels)}</div>
 </div>
+{_MODAL_HTML}
 {site_nav.nav_html("x")}"""
 
     full = ("<!doctype html><html lang='ko'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
             f"<title>X 모니터링</title></head><body>{body}"
-            f"{_SHARED_STYLE}{feed_assets}{site_nav.NAV_CSS}{site_nav.DATEBAR_CSS}{site_nav.HUB_JS}</body></html>")
+            f"{_SHARED_STYLE}{feed_assets}{site_nav.NAV_CSS}{site_nav.DATEBAR_CSS}{site_nav.HUB_JS}"
+            f"{_MODAL_CSS}{_MODAL_JS}</body></html>")
     with open(os.path.join(OUT_DIR, "x.html"), "w", encoding="utf-8") as fh:
         fh.write(full)
     print(f"[허브] x.html 갱신 ({len(entries)}건, 최신 {dates[0]}, 피드 {'포함' if feed else '없음'})")

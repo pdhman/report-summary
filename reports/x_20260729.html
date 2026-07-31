@@ -51,6 +51,16 @@
 <h2>코멘트</h2>
 <p>QQQ 5일 연속 하락을 놓고 <strong>단기 반등 통계(OddStats)</strong> 와 <strong>2000년식 로테이션 경고(같은 OddStats, Kobeissi 섹터 격차)</strong> 가 정면으로 갈리는 하루. 여기에 이란발 유가 급등과 FOMC가 겹쳐 있어, 모니터링 계정들 사이에서도 "디레버리징 일단락 후 반등" vs "SPX&gt;QQQ 로테이션의 시작"으로 시각이 나뉘어 있음. 반도체는 SK하이닉스 미스에도 불구하고 AI 캐펙스의 수혜가 칩 쪽으로 쏠린다는 차트(FCF 역전)가 가장 많이 회자됨.</p></article>
   <footer><p class="muted">본 페이지는 X(트위터) 공개 게시물을 수집·요약한 참고 자료이며 투자 권유가 아닙니다.</p></footer>
+</div>
+<div id="xm-ov" hidden>
+  <div id="xm-box" role="dialog" aria-modal="true" aria-label="원문 보기">
+    <div id="xm-bar">
+      <span id="xm-ttl">원문</span>
+      <a id="xm-new" href="#" target="_blank" rel="noopener">새 탭 ↗</a>
+      <button id="xm-x" aria-label="닫기">✕</button>
+    </div>
+    <div id="xm-body"><div id="xm-msg">불러오는 중…</div></div>
+  </div>
 </div><nav class="bottomnav"><a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a><a class="nav-cell" href="strategy.html"><span class="ni">📝</span><span class="nl">투자전략</span></a><a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a><a class="nav-cell" href="chart.html"><span class="ni">📈</span><span class="nl">분석</span></a><a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">뉴스</span></a></nav><script>
 function _tgCur(){
   var t = document.documentElement.dataset.theme;
@@ -163,4 +173,99 @@ function _tgTheme(){
   .bottomnav .ni { font-size:20px; line-height:1; }
   .bottomnav .nl { font-size:11px; font-weight:600; }
   body { padding-bottom:92px; }
-</style></body></html>
+</style>
+<style>
+  #xm-ov { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.55);
+    display:flex; align-items:center; justify-content:center; padding:20px; }
+  #xm-ov[hidden] { display:none; }
+  #xm-box { background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    width:min(560px,100%); max-height:86vh; display:flex; flex-direction:column; overflow:hidden;
+    box-shadow:0 12px 40px rgba(0,0,0,.35); }
+  #xm-bar { display:flex; align-items:center; gap:10px; padding:10px 14px;
+    border-bottom:1px solid var(--line); flex:0 0 auto; }
+  #xm-ttl { font-weight:700; font-size:14px; flex:1 1 auto; }
+  #xm-new { font-size:12.5px; color:var(--accent); text-decoration:none; font-weight:600; }
+  #xm-x { border:none; background:transparent; color:var(--muted); font-size:16px;
+    cursor:pointer; line-height:1; padding:4px 2px; }
+  #xm-x:hover { color:var(--ink); }
+  #xm-body { overflow-y:auto; padding:10px 14px 14px; }
+  #xm-msg { color:var(--muted); font-size:13.5px; text-align:center; padding:26px 0; line-height:1.6; }
+  #xm-body twitter-widget, #xm-body iframe { margin:0 auto !important; }
+</style>
+<script>
+(function () {
+  var ov = document.getElementById('xm-ov'), box = document.getElementById('xm-box');
+  var body = document.getElementById('xm-body'), msg = document.getElementById('xm-msg');
+  var newTab = document.getElementById('xm-new'), ttl = document.getElementById('xm-ttl');
+  var lastFocus = null, timer = null;
+
+  function theme() {
+    var t = document.documentElement.dataset.theme;
+    if (t) return t;
+    return (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  function close() {
+    ov.hidden = true;
+    if (timer) { clearTimeout(timer); timer = null; }
+    body.innerHTML = '<div id="xm-msg">불러오는 중…</div>';
+    msg = document.getElementById('xm-msg');
+    if (lastFocus) { try { lastFocus.focus(); } catch (e) {} }
+  }
+  function fail(why) {
+    if (msg) msg.innerHTML = why + '<br>위의 <b>새 탭 ↗</b> 으로 X에서 확인해 주세요.';
+  }
+  function loadWidgets(cb, err) {
+    if (window.twttr && window.twttr.widgets) { cb(); return; }
+    var s = document.getElementById('xm-wjs');
+    if (!s) {
+      s = document.createElement('script');
+      s.id = 'xm-wjs'; s.async = true; s.src = 'https://platform.twitter.com/widgets.js';
+      document.head.appendChild(s);
+    }
+    var n = 0, iv = setInterval(function () {
+      if (window.twttr && window.twttr.widgets) { clearInterval(iv); cb(); }
+      else if (++n > 60) { clearInterval(iv); err(); }
+    }, 100);
+  }
+  function open(url, handle) {
+    var m = url.match(/status\/(\d+)/);
+    if (!m) { window.open(url, '_blank', 'noopener'); return; }
+    lastFocus = document.activeElement;
+    newTab.href = url;
+    ttl.textContent = handle ? '@' + handle : '원문';
+    ov.hidden = false;
+    document.getElementById('xm-x').focus();
+    timer = setTimeout(function () { fail('불러오는 데 시간이 걸리고 있습니다.'); }, 7000);
+    loadWidgets(function () {
+      window.twttr.widgets.createTweet(m[1], body, {
+        theme: theme(), lang: 'ko', dnt: true, align: 'center', conversation: 'none'
+      }).then(function (el) {
+        if (timer) { clearTimeout(timer); timer = null; }
+        if (!el) fail('트윗을 불러올 수 없습니다 (삭제·비공개일 수 있습니다).');
+        else if (msg && msg.parentNode) msg.parentNode.removeChild(msg);
+      }).catch(function () {
+        if (timer) { clearTimeout(timer); timer = null; }
+        fail('트윗을 불러오지 못했습니다.');
+      });
+    }, function () {
+      if (timer) { clearTimeout(timer); timer = null; }
+      fail('X 위젯을 불러오지 못했습니다 (네트워크 차단일 수 있습니다).');
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href*="/status/"]');
+    if (!a) return;
+    if (a.id === 'xm-new') return;
+    if (!/^https?:\/\/(x|twitter)\.com\//.test(a.href)) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;   // 새 탭 열기는 그대로
+    e.preventDefault();
+    var h = null, mm = a.href.match(/^https?:\/\/(?:x|twitter)\.com\/([A-Za-z0-9_]+)\//);
+    if (mm) h = mm[1];
+    open(a.href, h);
+  });
+  document.getElementById('xm-x').addEventListener('click', close);
+  ov.addEventListener('click', function (e) { if (!box.contains(e.target)) close(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !ov.hidden) close(); });
+})();
+</script></body></html>
