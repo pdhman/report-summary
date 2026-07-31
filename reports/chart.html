@@ -277,15 +277,31 @@ function buildMAButtons() {
 // 위치에서 시작하는 문제가 있었다.
 const PERIOD_BARS = { "1M": 21, "3M": 63, "6M": 126, "1Y": 252, "3Y": 756, "5Y": 1260 };
 
+// setData 직후 라이브러리가 렌더 패스에서 표시 범위를 기본값(마지막 몇 봉)으로
+// 되돌린다. 즉시 호출하면 덮어써지므로 렌더 이후에 다시 적용한다.
+// rAF 는 탭이 화면에 없으면 실행되지 않으므로 타이머도 함께 건다(적용은 멱등).
+function applyPeriodSoon() {
+  applyPeriod();
+  setTimeout(applyPeriod, 0);
+  setTimeout(applyPeriod, 60);
+  requestAnimationFrame(() => requestAnimationFrame(applyPeriod));
+}
+
 function applyPeriod() {
   if (!bars.length) return;
   const ts = chart.timeScale();
   // 사용자가 가격축을 드래그해 자동 맞춤이 꺼져 있어도 되살린다
   chart.priceScale("right").applyOptions({ autoScale: true });
-  if (activePeriod === "ALL") { ts.fitContent(); return; }
-  // 상장 이력이 짧으면 있는 만큼만 보여준다 (앞쪽 빈 공간 방지)
-  const n = Math.min(PERIOD_BARS[activePeriod] || 252, bars.length);
-  ts.setVisibleLogicalRange({ from: bars.length - n, to: bars.length + 1 });
+
+  // setVisibleLogicalRange 는 setData 직후 렌더 상태에 따라 무시되는 경우가 있다.
+  // barSpacing 은 '옵션'이라 확정적으로 적용되므로, 보여줄 봉 수에 맞춰
+  // 직접 계산하고 최신 봉으로 스크롤한다.
+  const plotW = Math.max(120, $("chartEl").clientWidth - 70);   // 가격축 폭 제외
+  const n = Math.min(activePeriod === "ALL" ? bars.length
+                                            : (PERIOD_BARS[activePeriod] || 252),
+                     bars.length);
+  ts.applyOptions({ barSpacing: Math.max(0.02, plotW / n) });
+  ts.scrollToRealTime();
 }
 
 // 유니버스 종목은 data/<티커>.json 을 그때그때 내려받는다 (서버 불필요)
@@ -348,7 +364,7 @@ async function load(symbol) {
     // 기본 표시 이평선이 아직 없다면 생성
     document.querySelectorAll("#smaBtns .chip.on, #emaBtns .chip.on").forEach(b =>
       setMA(b.dataset.kind, +b.dataset.p, b.dataset.color, true));
-    applyPeriod();
+    applyPeriodSoon();
     // 가격 헤더
     const lastB = bars[bars.length - 1], prevC = bars.length > 1 ? bars[bars.length - 2].c : lastB.c;
     const chg = lastB.c - prevC, chgPct = prevC ? chg / prevC * 100 : 0;
