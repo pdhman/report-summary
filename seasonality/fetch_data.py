@@ -56,6 +56,11 @@ def fetch(symbol: str):
     return (bars, currency) if bars else None
 
 
+def fname(sym: str) -> str:
+    """티커 → 파일명. 지수 심볼의 '^'는 URL 에서 번거로우므로 '_'로 바꾼다."""
+    return sym.replace("^", "_")
+
+
 def write_ticker(sym: str, name: str, group: str, bars: list, currency: str) -> None:
     head = json.dumps({"symbol": sym, "name": name, "group": group,
                        "currency": currency}, ensure_ascii=False)[:-1]
@@ -63,7 +68,7 @@ def write_ticker(sym: str, name: str, group: str, bars: list, currency: str) -> 
     lines.extend(json.dumps(b, separators=(",", ":")) + "," for b in bars[:-1])
     lines.append(json.dumps(bars[-1], separators=(",", ":")))
     lines.append("]}")
-    (OUT_DIR / f"{sym}.json").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (OUT_DIR / f"{fname(sym)}.json").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def write_index() -> None:
@@ -71,7 +76,7 @@ def write_index() -> None:
     entries = []
     for group, items in UNIVERSE:
         for sym, name in items.items():
-            path = OUT_DIR / f"{sym}.json"
+            path = OUT_DIR / f"{fname(sym)}.json"
             if not path.exists():
                 continue
             try:
@@ -107,7 +112,7 @@ def main() -> None:
         targets = [(sym, name, group) for group, items in UNIVERSE
                    for sym, name in items.items()]
     if only_missing:
-        targets = [t for t in targets if not (OUT_DIR / f"{t[0]}.json").exists()]
+        targets = [t for t in targets if not (OUT_DIR / f"{fname(t[0])}.json").exists()]
 
     ok, failed = 0, []
     for i, (sym, name, group) in enumerate(targets, 1):

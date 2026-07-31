@@ -6,45 +6,28 @@
 <title>계절성 분석</title>
 <style>
   :root {
-    --page: #f6f7f9; --surface: #ffffff; --ink: #1a1d21; --ink-2: #4b5563;
-    --muted: #6b7280; --grid: #e6e8eb; --soft: #f1f3f5; --border: #e6e8eb;
-    --axis: #c6cad1; --neutral: #d8dbe0;
-    --pos: #16a34a; --pos-strong: #15803d; --neg: #dc2626;
-    --accent: #3b5bdb; --tool: #eb6834; --accent-2: #2a78d6;
-    --panel: var(--surface); --line: var(--grid);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --page: #0f1216; --surface: #171b21; --ink: #e8eaed; --ink-2: #c2c7cf;
-      --muted: #9aa2ad; --grid: #252b33; --soft: #1f2530; --border: #252b33;
-      --axis: #3a4250; --neutral: #333b47;
-      --pos: #22c55e; --pos-strong: #4ade80; --neg: #f87171;
-      --accent: #748ffc; --accent-2: #5b9bf5;
-    }
-  }
-  :root[data-theme="dark"] {
-    --page: #0f1216; --surface: #171b21; --ink: #e8eaed; --ink-2: #c2c7cf;
-    --muted: #9aa2ad; --grid: #252b33; --soft: #1f2530; --border: #252b33;
-    --axis: #3a4250; --neutral: #333b47;
-    --pos: #22c55e; --pos-strong: #4ade80; --neg: #f87171;
-    --accent: #748ffc; --accent-2: #5b9bf5;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --border: rgba(11,11,11,0.10);
+    --pos: #16a34a;
+    --pos-strong: #15803d;
+    --neg: #dc2626;
+    --accent: #eb6834;
+    --accent-2: #2a78d6;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
     background: var(--page);
     color: var(--ink);
     padding: 24px 28px 60px;
   }
   h1 { font-size: 22px; display: flex; align-items: center; gap: 8px; }
   .subtitle { color: var(--muted); font-size: 13px; margin: 4px 0 20px; }
-  .pagehead { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
-  .subtabs { display: flex; gap: 6px; }
-  .stab { text-decoration: none; font-size: 13px; font-weight: 700; padding: 8px 16px;
-    border-radius: 999px; border: 1px solid var(--grid); color: var(--muted); background: var(--surface); }
-  .stab:hover { border-color: var(--tool); color: var(--tool); }
-  .stab.on { background: var(--tool); border-color: var(--tool); color: #fff; }
-  .stab.on:hover { color: #fff; }
 
   .card {
     background: var(--surface);
@@ -59,19 +42,19 @@
   .symsearch input {
     font-size: 13px; padding: 7px 10px; width: 210px;
     border: 1px solid var(--grid); border-right: none; border-radius: 8px 0 0 8px;
-    background: var(--surface); color: var(--ink); outline: none;
+    background: #fff; color: var(--ink); outline: none;
     font-family: Consolas, monospace; text-transform: uppercase;
   }
-  .symsearch input:focus { border-color: var(--tool); }
+  .symsearch input:focus { border-color: var(--accent); }
   .symsearch button {
     font-size: 13px; padding: 7px 14px; border: none; border-radius: 0 8px 8px 0;
-    background: var(--tool); color: #fff; font-weight: 700; cursor: pointer;
+    background: var(--accent); color: #fff; font-weight: 700; cursor: pointer;
   }
   #loadStatus { font-size: 12px; color: var(--muted); }
   #loadStatus.err { color: var(--neg); }
   select {
     font-size: 14px; padding: 7px 10px; border: 1px solid var(--grid);
-    border-radius: 8px; background: var(--surface); color: var(--ink);
+    border-radius: 8px; background: #fff; color: var(--ink);
   }
   #tickerSelect { min-width: 220px; font-weight: 600; }
 
@@ -79,11 +62,11 @@
   .chips .lbl { font-size: 12px; color: var(--muted); margin-right: 4px; }
   .chip {
     font-size: 12px; padding: 5px 11px; border-radius: 999px;
-    border: 1px solid var(--grid); background: var(--surface); color: var(--ink-2);
+    border: 1px solid var(--grid); background: #fff; color: var(--ink-2);
     cursor: pointer; user-select: none;
   }
   .chip:hover { border-color: var(--muted); }
-  .chip.on { background: var(--tool); border-color: var(--tool); color: #fff; font-weight: 600; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   .chip.preset { border-style: dashed; }
   .divider { width: 1px; height: 18px; background: var(--grid); margin: 0 4px; }
 
@@ -91,7 +74,7 @@
   .meta b { color: var(--ink); }
   button.csv {
     font-size: 12px; padding: 6px 12px; border-radius: 8px; cursor: pointer;
-    border: 1px solid var(--grid); background: var(--surface); color: var(--ink-2);
+    border: 1px solid var(--grid); background: #fff; color: var(--ink-2);
   }
   button.csv:hover { border-color: var(--muted); }
 
@@ -101,8 +84,8 @@
   thead th { color: var(--ink-2); font-weight: 600; border-bottom: 1px solid var(--grid); font-size: 12px; }
   thead tr.grp th { border-bottom: none; padding-bottom: 2px; font-size: 12px; }
   thead tr.grp th.g1 { color: var(--ink-2); }
-  thead tr.grp th.g2 { color: var(--tool); }
-  tbody tr { border-bottom: 1px solid var(--soft); }
+  thead tr.grp th.g2 { color: var(--accent); }
+  tbody tr { border-bottom: 1px solid #f1f0ec; }
   td.mon { font-weight: 600; }
   td.num { font-variant-numeric: tabular-nums; }
   td.dt { font-family: Consolas, monospace; font-size: 12.5px; color: var(--ink-2); }
@@ -128,7 +111,7 @@
   #chart { width: 100%; display: block; }
   #tooltip {
     position: absolute; pointer-events: none; display: none;
-    background: var(--surface); border: 1px solid var(--grid); border-radius: 8px;
+    background: #fff; border: 1px solid var(--grid); border-radius: 8px;
     padding: 7px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.10);
     white-space: nowrap; z-index: 5;
   }
@@ -137,7 +120,7 @@
   #tooltip .row b { color: var(--ink); font-variant-numeric: tabular-nums; }
   .tt {
     position: absolute; pointer-events: none; display: none;
-    background: var(--surface); border: 1px solid var(--grid); border-radius: 8px;
+    background: #fff; border: 1px solid var(--grid); border-radius: 8px;
     padding: 7px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.10);
     white-space: nowrap; z-index: 5;
   }
@@ -149,21 +132,14 @@
 </style>
 </head>
 <body>
-  <div class="pagehead">
-    <h1>📊 분석</h1>
-    <div class="subtabs">
-      <a class="stab" href="chart.html">📈 차트</a>
-      <a class="stab on" href="seasonality.html">☀️ 계절성</a>
-    </div>
-  </div>
+  <h1>☀️ 계절성 분석 <a href="/chart.html" style="font-size:13px;color:#898781;text-decoration:none;font-weight:400">📈 주식 차트로 →</a></h1>
   <div class="subtitle">월별 평균 수익률 · 승률 · 최적 진입 · 히트맵 · 평균 누적 수익률</div>
 
   <div class="card controls">
     <span><label>종목</label>
       <select id="tickerSelect"></select></span>
     <span class="symsearch">
-      <input id="symSearch" list="symList" placeholder="티커 검색 (예: TQQQ, GLD)" spellcheck="false">
-      <datalist id="symList"></datalist>
+      <input id="symSearch" placeholder="티커 추가 (예: AAPL, 005930.KS)" spellcheck="false">
       <button id="symGo">조회</button>
     </span>
     <span id="loadStatus"></span>
@@ -258,25 +234,9 @@
     </div>
   </section>
 
-<script src="data/index.js"></script>
+<script src="data.js"></script>
 <script>
 "use strict";
-// 서버 없이도 동작하도록, 매일 자동 생성되는 market_data.js(기본 티커)를 기본 데이터로 쓴다.
-// 분석 서버(Flask 8766)가 켜져 있으면 검색으로 임의 티커를 추가할 수 있다.
-// 단, localhost 는 "이 브라우저가 돌는 PC"를 뜻하므로 다른 PC에서는 정적 데이터만 사용된다.
-const API = location.port === "8766" ? "" : "http://localhost:8766";
-
-// 유니버스 목록(index.js)은 가볍게 미리 싣고, 종목 데이터는 선택할 때 내려받는다.
-const UNIVERSE = new Map((typeof TICKER_INDEX !== "undefined" ? TICKER_INDEX : []).map(e => [e.s, e]));
-const SEASONALITY_DATA = {};   // 내려받은 종목만 채워진다
-
-// data/<티커>.json 의 bars[[yyyymmdd,o,h,l,c,v,adj]] → 계절성이 쓰는 {dates, closes(수정종가)}
-async function fetchStatic(sym) {
-  const res = await fetch(`data/${encodeURIComponent(sym.replace("^", "_"))}.json`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const d = await res.json();
-  return { name: d.name, dates: d.bars.map(b => b[0]), closes: d.bars.map(b => b[6]) };
-}
 const HOLDS = [10, 15, 20, 25, 30];
 const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 // 윤년 무시 고정 월 누적일수 (2/29 → 2/28 취급)
@@ -294,13 +254,6 @@ const median = a => {
   const s = [...a].sort((x, y) => x - y), k = s.length >> 1;
   return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2;
 };
-// SVG는 CSS 변수를 속성으로 못 받으므로 렌더 시점의 계산값을 사용 (테마 전환 시 refresh()로 재렌더)
-function chromeC() {
-  const cs = getComputedStyle(document.body);
-  const v = n => cs.getPropertyValue(n).trim();
-  return { grid: v("--grid"), soft: v("--soft"), muted: v("--muted"), axis: v("--axis"),
-           neutral: v("--neutral"), pos: v("--pos"), posStrong: v("--pos-strong"), neg: v("--neg") };
-}
 
 let state = { ticker: null, startYear: null, endYear: null, years: new Set(),
               patternMonth: new Date().getMonth() + 1 };
@@ -449,7 +402,6 @@ function dailyWinStats(tk, yearsSet) {
 
 let dwState = null;
 function renderDailyWin(stats) {
-  const C = chromeC();
   const W = 1000, H = 200, padL = 52, padR = 16, padT = 10, padB = 26;
   const x = d => padL + (d - 1) / (DAYS_IN_YEAR - 1) * (W - padL - padR);
   const y = v => padT + (1 - v) * (H - padT - padB);
@@ -457,20 +409,20 @@ function renderDailyWin(stats) {
   for (const p of [0, 0.25, 0.5, 0.75, 1]) {
     const yy = y(p);
     const emph = p === 0.5;
-    g += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="${emph ? "${C.axis}" : "${C.grid}"}" stroke-width="1" ${emph ? 'stroke-dasharray="4 3"' : ""} vector-effect="non-scaling-stroke"/>`;
-    g += `<text x="${padL - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="${C.muted}">${p * 100}%</text>`;
+    g += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="${emph ? "#c3c2b7" : "#e1e0d9"}" stroke-width="1" ${emph ? 'stroke-dasharray="4 3"' : ""} vector-effect="non-scaling-stroke"/>`;
+    g += `<text x="${padL - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="#898781">${p * 100}%</text>`;
   }
   for (let m = 0; m < 12; m++) {
     const xx = x(CUM_DAYS[m] + 1);
-    g += `<line x1="${xx}" y1="${padT}" x2="${xx}" y2="${H - padB}" stroke="${C.soft}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
-    g += `<text x="${xx + 3}" y="${H - padB + 15}" font-size="11" fill="${C.muted}">${m + 1}월</text>`;
+    g += `<line x1="${xx}" y1="${padT}" x2="${xx}" y2="${H - padB}" stroke="#f1f0ec" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+    g += `<text x="${xx + 3}" y="${H - padB + 15}" font-size="11" fill="#898781">${m + 1}월</text>`;
   }
   const barW = (W - padL - padR) / DAYS_IN_YEAR * 0.75;
   for (let d = 1; d <= DAYS_IN_YEAR; d++) {
     const s = stats[d];
     if (!s.n) continue;
     const wr = s.win / s.n;
-    const color = wr >= 0.7 ? C.posStrong : wr <= 0.3 ? C.neg : C.neutral;
+    const color = wr >= 0.7 ? "#15803d" : wr <= 0.3 ? "#dc2626" : "#d6d5cd";
     g += `<rect x="${(x(d) - barW / 2).toFixed(2)}" y="${y(wr).toFixed(1)}" width="${barW.toFixed(2)}" height="${(y(0) - y(wr)).toFixed(1)}" fill="${color}"/>`;
   }
   $("dwChart").innerHTML = g;
@@ -502,7 +454,6 @@ function monthPatternAgg(tk, yearsSet, m) {
 
 let mpState = null;
 function renderMonthPattern(tk, yearsSet, m) {
-  const C = chromeC();
   const agg = monthPatternAgg(tk, yearsSet, m);
   const W = 1000, H = 240, padL = 52, padR = 16, padT = 12, padB = 26;
   let lo = 0, hi = 0;
@@ -517,17 +468,17 @@ function renderMonthPattern(tk, yearsSet, m) {
   let g = "";
   for (let k = Math.ceil(lo / step); k * step <= hi; k++) {
     const v = k * step, yy = y(v);
-    g += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="${C.grid}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
-    g += `<text x="${padL - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="${C.muted}">${(v * 100).toFixed(dec)}%</text>`;
+    g += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="#e1e0d9" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+    g += `<text x="${padL - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="#898781">${(v * 100).toFixed(dec)}%</text>`;
   }
   if (lo < 0 && hi > 0)
-    g += `<line x1="${padL}" y1="${y(0)}" x2="${W - padR}" y2="${y(0)}" stroke="${C.axis}" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`;
+    g += `<line x1="${padL}" y1="${y(0)}" x2="${W - padR}" y2="${y(0)}" stroke="#c3c2b7" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`;
   const barW = plotW / Math.max(agg.length, 1) * 0.62;
   agg.forEach((a, i) => {
     const v = a.sum / a.n;
     const top = Math.min(y(v), y(0)), h = Math.abs(y(v) - y(0));
-    g += `<rect x="${(xC(i) - barW / 2).toFixed(2)}" y="${top.toFixed(1)}" width="${barW.toFixed(2)}" height="${Math.max(h, 0.5).toFixed(1)}" rx="2" fill="${v >= 0 ? C.pos : C.neg}"/>`;
-    g += `<text x="${xC(i).toFixed(1)}" y="${H - padB + 15}" text-anchor="middle" font-size="10" fill="${C.muted}">${i + 1}</text>`;
+    g += `<rect x="${(xC(i) - barW / 2).toFixed(2)}" y="${top.toFixed(1)}" width="${barW.toFixed(2)}" height="${Math.max(h, 0.5).toFixed(1)}" rx="2" fill="${v >= 0 ? "#16a34a" : "#dc2626"}"/>`;
+    g += `<text x="${xC(i).toFixed(1)}" y="${H - padB + 15}" text-anchor="middle" font-size="10" fill="#898781">${i + 1}</text>`;
   });
   $("mpChart").innerHTML = g;
   $("mpTip").style.display = "none";
@@ -604,7 +555,6 @@ let chartMode = localStorage.getItem("seasonality.chartMode") === "raw" ? "raw" 
 const seriesVis = { avg: true, cur: true };
 function renderChart(curveData) {
   lastCurveData = curveData;
-  const C = chromeC();
   const { avg, avgN, cur, curYear } = curveData;
   const W = 1000, H = 380, padL = 52, padR = 16, padT = 14, padB = 30;
   const all = [];
@@ -660,18 +610,18 @@ function renderChart(curveData) {
   let g = "";
   for (let k = Math.ceil(lo / step); k * step <= hi; k++) {
     const v = k * step, yy = y(v);
-    g += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="${C.grid}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
-    g += `<text x="${padL - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="${C.muted}">${(v * 100).toFixed(dec)}${normMode ? "" : "%"}</text>`;
+    g += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="#e1e0d9" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+    g += `<text x="${padL - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="#898781">${(v * 100).toFixed(dec)}${normMode ? "" : "%"}</text>`;
   }
   // x축: 월 눈금
   for (let m = 0; m < 12; m++) {
     const xx = x(CUM_DAYS[m] + 1);
-    g += `<line x1="${xx}" y1="${padT}" x2="${xx}" y2="${H - padB}" stroke="${C.soft}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
-    g += `<text x="${xx + 3}" y="${H - padB + 16}" font-size="11" fill="${C.muted}">${m + 1}월</text>`;
+    g += `<line x1="${xx}" y1="${padT}" x2="${xx}" y2="${H - padB}" stroke="#f1f0ec" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+    g += `<text x="${xx + 3}" y="${H - padB + 16}" font-size="11" fill="#898781">${m + 1}월</text>`;
   }
   // 0% 기준선 (정규화 모드에선 0이 라인별 최저점이라 의미 없음 → 생략)
   if (!normMode && lo < 0 && hi > 0)
-    g += `<line x1="${padL}" y1="${y(0)}" x2="${W - padR}" y2="${y(0)}" stroke="${C.axis}" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`;
+    g += `<line x1="${padL}" y1="${y(0)}" x2="${W - padR}" y2="${y(0)}" stroke="#c3c2b7" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`;
 
   for (const s of series) {
     let path = "";
@@ -681,7 +631,7 @@ function renderChart(curveData) {
     }
     g += `<path d="${path}" fill="none" stroke="${s.hex}" stroke-width="2.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
   }
-  g += `<line id="crosshair" x1="0" y1="${padT}" x2="0" y2="${H - padB}" stroke="${C.muted}" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="4 3" style="display:none"/>`;
+  g += `<line id="crosshair" x1="0" y1="${padT}" x2="0" y2="${H - padB}" stroke="#898781" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="4 3" style="display:none"/>`;
   $("chart").innerHTML = g;
   chartState = { series, x, y, padL, padR, W, H };
 }
@@ -830,13 +780,12 @@ function initPeriodSelects() {
 function switchTicker(sym) {
   $("tickerSelect").value = sym;
   state.ticker = sym;
-  try { localStorage.setItem("analysis.symbol", sym); } catch (e) {}
   initPeriodSelects();
   resetYears();
   refresh();
 }
 
-// 유니버스 종목은 정적 파일에서, 그 외 티커는 분석 서버(API)에서 가져온다.
+// API에서 수정종가를 받아 새 티커를 추가 (계절성 페이지의 즉시 검색)
 async function loadSymbol(raw) {
   const sym = raw.trim().toUpperCase();
   if (!sym) return;
@@ -845,26 +794,11 @@ async function loadSymbol(raw) {
   st.className = "";
   st.textContent = `${sym} 불러오는 중...`;
   try {
-    let entry = null;
-    if (UNIVERSE.has(sym)) {
-      entry = await fetchStatic(sym);
-    } else {
-      let res;
-      try {
-        const ctl = new AbortController();
-        const timer = setTimeout(() => ctl.abort(), 2500);
-        res = await fetch(`${API}/api/closes?symbol=${encodeURIComponent(sym)}`, { signal: ctl.signal });
-        clearTimeout(timer);
-      } catch (e) {
-        throw new Error("목록에 없는 종목입니다 — 목록 밖 티커는 분석 서버"
-          + "(python seasonality/server.py)를 켠 PC에서만 검색됩니다");
-      }
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      entry = { name: data.name, dates: data.dates, closes: data.closes };
-      $("tickerSelect").add(new Option(`${sym} · ${entry.name}`, sym));
-    }
-    SEASONALITY_DATA[sym] = entry;
+    const res = await fetch(`/api/closes?symbol=${encodeURIComponent(sym)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    SEASONALITY_DATA[sym] = { name: data.name, dates: data.dates, closes: data.closes };
+    $("tickerSelect").add(new Option(`${data.name} (${sym})`, sym));
     st.textContent = "";
     $("symSearch").value = "";
     switchTicker(sym);
@@ -874,48 +808,14 @@ async function loadSymbol(raw) {
   }
 }
 
-function buildTickerSelect() {
+function init() {
   const sel = $("tickerSelect");
-  sel.innerHTML = "";
-  let lastGroup = null, og = null;
-  for (const e of UNIVERSE.values()) {
-    if (e.g !== lastGroup) {
-      og = document.createElement("optgroup");
-      og.label = e.g;
-      sel.add(og);
-      lastGroup = e.g;
-    }
-    og.appendChild(new Option(`${e.s} · ${e.n}`, e.s));
-  }
-  $("symList").innerHTML = [...UNIVERSE.values()]
-    .map(e => `<option value="${e.s}">${e.n} (${e.g})</option>`).join("");
-}
-
-async function init() {
-  const sel = $("tickerSelect");
-  buildTickerSelect();
-  if (!UNIVERSE.size) {
-    $("loadStatus").className = "err";
-    $("loadStatus").textContent = "종목 목록(data/index.js)을 불러오지 못했습니다.";
-    return;
-  }
-  // 마지막으로 보던 종목(차트 탭과 공유) → 없으면 목록의 첫 종목
-  const want = (new URLSearchParams(location.search).get("symbol")
-                || localStorage.getItem("analysis.symbol") || "").toUpperCase();
-  const first = UNIVERSE.has(want) ? want : [...UNIVERSE.keys()][0];
-  try {
-    SEASONALITY_DATA[first] = await fetchStatic(first);
-  } catch (e) {
-    $("loadStatus").className = "err";
-    $("loadStatus").textContent = `${first} 데이터를 불러오지 못했습니다: ${e.message}`;
-    return;
-  }
-  sel.value = first;
-  state.ticker = first;
+  for (const [sym, d] of Object.entries(SEASONALITY_DATA)) sel.add(new Option(`${d.name} (${sym})`, sym));
+  state.ticker = sel.value;
   initPeriodSelects();
   resetYears();
 
-  sel.addEventListener("change", () => loadSymbol(sel.value));
+  sel.addEventListener("change", () => switchTicker(sel.value));
   $("symGo").addEventListener("click", () => loadSymbol($("symSearch").value));
   $("symSearch").addEventListener("keydown", e => { if (e.key === "Enter") loadSymbol($("symSearch").value); });
   $("startYear").addEventListener("change", ev => {
@@ -946,8 +846,6 @@ async function init() {
   setupChartHover();
   setupDailyHover();
   refresh();
-  // 목록 밖 티커를 보던 중이었다면(서버 있는 PC) 이어서 시도
-  if (want && want !== state.ticker && !UNIVERSE.has(want)) loadSymbol(want);
 }
 
 function placeTip(tip, box, ev) {
@@ -995,37 +893,6 @@ function setupDailyHover() {
   $("mpChart").addEventListener("mouseleave", () => { $("mpTip").style.display = "none"; });
 }
 init();
-// 알파노트 테마 토글(data-theme)·OS 테마 변경 시 차트 색을 다시 그린다
-new MutationObserver(() => refresh()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => refresh());
 </script>
-
-<nav class="bottomnav">
-  <a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a>
-  <a class="nav-cell" href="strategy.html"><span class="ni">📝</span><span class="nl">투자전략</span></a>
-  <a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a>
-  <a class="nav-cell active" href="chart.html"><span class="ni">📈</span><span class="nl">분석</span></a>
-  <a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">뉴스</span></a>
-</nav>
-<script>
-(function(){
-  try {
-    var t = localStorage.getItem('theme');
-    if(t){ document.documentElement.dataset.theme = t; }
-  } catch(e) {}
-})();
-</script>
-<style>
-  .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:2px;
-    background:color-mix(in srgb,var(--surface) 92%,transparent); backdrop-filter:blur(10px);
-    border-top:1px solid var(--grid); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); }
-  .bottomnav .nav-cell { display:flex; flex-direction:column; align-items:center; gap:3px; text-decoration:none; color:var(--muted);
-    padding:6px 4px; border-radius:12px; flex:1 1 0; max-width:96px; transition:color .15s,background .15s; }
-  .bottomnav .nav-cell:hover { color:var(--accent); }
-  .bottomnav .nav-cell.active { color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
-  .bottomnav .ni { font-size:20px; line-height:1; }
-  .bottomnav .nl { font-size:11px; font-weight:600; }
-  body { padding-bottom: 110px; }
-</style>
 </body>
 </html>

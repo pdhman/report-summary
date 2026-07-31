@@ -5,60 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>주식 차트</title>
 <script src="lib/lightweight-charts.standalone.production.js"></script>
-<script src="data/index.js"></script>
 <style>
   :root {
-    --page: #f6f7f9; --surface: #ffffff; --ink: #1a1d21; --ink-2: #4b5563;
-    --muted: #6b7280; --grid: #e6e8eb; --soft: #f1f3f5; --border: #e6e8eb;
-    --pos: #16a34a; --neg: #dc2626;
-    --accent: #3b5bdb; --tool: #eb6834;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --page: #0f1216; --surface: #171b21; --ink: #e8eaed; --ink-2: #c2c7cf;
-      --muted: #9aa2ad; --grid: #252b33; --soft: #1f2530; --border: #252b33;
-      --pos: #22c55e; --neg: #f87171; --accent: #748ffc;
-    }
-  }
-  :root[data-theme="dark"] {
-    --page: #0f1216; --surface: #171b21; --ink: #e8eaed; --ink-2: #c2c7cf;
-    --muted: #9aa2ad; --grid: #252b33; --soft: #1f2530; --border: #252b33;
-    --pos: #22c55e; --neg: #f87171; --accent: #748ffc;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --border: rgba(11,11,11,0.10);
+    --pos: #16a34a;
+    --neg: #dc2626;
+    --accent: #eb6834;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
     background: var(--page); color: var(--ink); padding: 24px 28px 40px;
   }
-  .pagehead { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-  .subtabs { display: flex; gap: 6px; }
-  .stab { text-decoration: none; font-size: 13px; font-weight: 700; padding: 8px 16px;
-    border-radius: 999px; border: 1px solid var(--grid); color: var(--muted); background: var(--surface); }
-  .stab:hover { border-color: var(--tool); color: var(--tool); }
-  .stab.on { background: var(--tool); border-color: var(--tool); color: #fff; }
-  .stab.on:hover { color: #fff; }
+  a.navlink { color: var(--muted); text-decoration: none; font-size: 13px; }
+  a.navlink:hover { color: var(--accent); }
   .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
   h1 { font-size: 20px; display: flex; align-items: center; gap: 8px; }
   .searchbox { display: flex; gap: 0; }
   .searchbox input {
     font-size: 14px; padding: 9px 14px; width: 280px;
     border: 1px solid var(--grid); border-right: none; border-radius: 10px 0 0 10px;
-    background: var(--surface); color: var(--ink); outline: none;
+    background: #fff; color: var(--ink); outline: none;
     font-family: Consolas, monospace; text-transform: uppercase;
   }
-  .searchbox input:focus { border-color: var(--tool); }
+  .searchbox input:focus { border-color: var(--accent); }
   .searchbox button {
     font-size: 14px; padding: 9px 18px; border: none; border-radius: 0 10px 10px 0;
-    background: var(--tool); color: #fff; font-weight: 700; cursor: pointer;
+    background: var(--accent); color: #fff; font-weight: 700; cursor: pointer;
   }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .chip {
     font-size: 12px; padding: 5px 11px; border-radius: 999px;
-    border: 1px solid var(--grid); background: var(--surface); color: var(--ink-2);
+    border: 1px solid var(--grid); background: #fff; color: var(--ink-2);
     cursor: pointer; user-select: none; font-family: Consolas, monospace;
   }
   .chip:hover { border-color: var(--muted); }
-  .chip.on { background: var(--tool); border-color: var(--tool); color: #fff; font-weight: 600; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   .card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 12px; padding: 16px 18px; margin-bottom: 14px;
@@ -74,15 +62,15 @@
   .right-tools { display: flex; gap: 6px; align-items: center; }
   button.plain {
     font-size: 12px; padding: 6px 12px; border-radius: 8px; cursor: pointer;
-    border: 1px solid var(--grid); background: var(--surface); color: var(--ink-2);
+    border: 1px solid var(--grid); background: #fff; color: var(--ink-2);
   }
   button.plain:hover { border-color: var(--muted); }
-  button.plain.on { background: var(--tool); border-color: var(--tool); color: #fff; font-weight: 600; }
+  button.plain.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   #chartWrap { position: relative; }
   #chartEl { width: 100%; height: 560px; }
   #legend {
     position: absolute; top: 8px; left: 10px; z-index: 5; pointer-events: none;
-    font-size: 12px; color: var(--ink-2); background: color-mix(in srgb, var(--surface) 85%, transparent);
+    font-size: 12px; color: var(--ink-2); background: rgba(252,252,251,0.85);
     border-radius: 6px; padding: 4px 8px; font-variant-numeric: tabular-nums;
   }
   #legend b { color: var(--ink); }
@@ -94,23 +82,21 @@
 </head>
 <body>
   <div class="topbar">
-    <div class="pagehead">
-      <h1>📊 분석</h1>
-      <div class="subtabs">
-        <a class="stab on" href="chart.html">📈 차트</a>
-        <a class="stab" href="seasonality.html">☀️ 계절성</a>
-      </div>
-    </div>
+    <h1>📈 주식 차트 <a class="navlink" href="/">☀️ 계절성 분석으로 →</a></h1>
     <div>
       <div class="searchbox">
-        <input id="symInput" list="symList" placeholder="티커 입력 (예: TQQQ, AAPL, 005930.KS)" spellcheck="false">
-        <datalist id="symList"></datalist>
+        <input id="symInput" placeholder="티커 입력 (예: AAPL, 005930.KS, BTC-USD)" spellcheck="false">
         <button id="goBtn">조회</button>
       </div>
-      <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap">
-        <select id="universeSelect" style="font-size:13px; padding:7px 10px; border:1px solid var(--grid);
-          border-radius:8px; background:var(--surface); color:var(--ink); max-width:280px"></select>
-        <div class="chips" id="presets"></div>
+      <div class="chips" id="presets" style="margin-top:8px">
+        <span class="chip" data-s="SPY">SPY</span>
+        <span class="chip" data-s="QQQ">QQQ</span>
+        <span class="chip" data-s="AAPL">AAPL</span>
+        <span class="chip" data-s="NVDA">NVDA</span>
+        <span class="chip" data-s="TSLA">TSLA</span>
+        <span class="chip" data-s="005930.KS">005930.KS</span>
+        <span class="chip" data-s="069500.KS">069500.KS</span>
+        <span class="chip" data-s="BTC-USD">BTC-USD</span>
       </div>
     </div>
   </div>
@@ -157,8 +143,6 @@
 
 <script>
 "use strict";
-// 분석 서버(Flask, 8766) API — 8766에서 열면 상대경로, 그 외(8778·file://)는 절대경로
-const API = location.port === "8766" ? "" : "http://localhost:8766";
 const $ = id => document.getElementById(id);
 const fmtN = (v, d=2) => v == null ? "·" : v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 const fmtVol = v => v >= 1e9 ? (v/1e9).toFixed(2)+"B" : v >= 1e6 ? (v/1e6).toFixed(2)+"M" : v >= 1e3 ? (v/1e3).toFixed(1)+"K" : String(v);
@@ -173,23 +157,14 @@ let curSymbol = null, curMeta = {};
 const maSeries = {};      // "S20" / "E9" → line series
 let activePeriod = "1Y", logScale = false;
 
-// 현재 테마의 CSS 변수로 차트 색 구성 (테마 전환 시 applyOptions로 갱신)
-function chartTheme() {
-  const cs = getComputedStyle(document.body);
-  const v = n => cs.getPropertyValue(n).trim();
-  return {
-    layout: { background: { color: v("--surface") }, textColor: v("--ink-2"),
-              fontFamily: 'Consolas, "Malgun Gothic", monospace' },
-    grid: { vertLines: { color: v("--soft") }, horzLines: { color: v("--soft") } },
-    rightPriceScale: { borderColor: v("--grid") },
-    timeScale: { borderColor: v("--grid"), rightOffset: 3 },
-  };
-}
-
 function initChart() {
   chart = LightweightCharts.createChart($("chartEl"), {
-    ...chartTheme(),
+    layout: { background: { color: "#fcfcfb" }, textColor: "#52514e",
+              fontFamily: 'Consolas, "Malgun Gothic", monospace' },
+    grid: { vertLines: { color: "#f1f0ec" }, horzLines: { color: "#f1f0ec" } },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor: "#e1e0d9" },
+    timeScale: { borderColor: "#e1e0d9", rightOffset: 3 },
     autoSize: true,
   });
   candleSeries = chart.addCandlestickSeries({
@@ -279,45 +254,6 @@ function applyPeriod() {
   chart.timeScale().setVisibleRange({ from: fromStr, to: bars[bars.length - 1].t });
 }
 
-// 유니버스 종목은 data/<티커>.json 을 그때그때 내려받는다 (서버 불필요)
-const UNIVERSE = new Map((typeof TICKER_INDEX !== "undefined" ? TICKER_INDEX : []).map(e => [e.s, e]));
-const iso = n => `${String(n).slice(0,4)}-${String(n).slice(4,6)}-${String(n).slice(6)}`;
-
-async function fromStatic(symbol) {
-  if (!UNIVERSE.has(symbol)) return null;
-  try {
-    const res = await fetch(`data/${encodeURIComponent(symbol.replace("^", "_"))}.json`);
-    if (!res.ok) return null;
-    const d = await res.json();
-    return {
-      symbol, name: d.name, currency: d.currency || "", isStatic: true,
-      bars: d.bars.map(b => ({ t: iso(b[0]), o: b[1], h: b[2], l: b[3], c: b[4], v: b[5] })),
-    };
-  } catch (e) { return null; }
-}
-
-// 유니버스에 있으면 정적 파일이 가장 빠르고 확실하다.
-// 그 외 티커는 분석 서버(API)가 켜져 있을 때만 조회된다.
-async function fetchBars(symbol) {
-  if (UNIVERSE.has(symbol)) {
-    const stat = await fromStatic(symbol);
-    if (stat) return stat;
-  }
-  try {
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 2500);
-    const res = await fetch(`${API}/api/ohlcv?symbol=${encodeURIComponent(symbol)}`, { signal: ctl.signal });
-    clearTimeout(timer);
-    const data = await res.json();
-    if (res.ok) return data;
-    throw new Error(data.error || `HTTP ${res.status}`);
-  } catch (e) {
-    if (e instanceof Error && /찾을 수 없|HTTP/.test(e.message)) throw e;
-  }
-  throw new Error(`${symbol}: 목록에 없는 종목입니다. 목록 밖 티커는 분석 서버`
-    + `(python seasonality/server.py)를 켠 PC에서만 검색됩니다.`);
-}
-
 async function load(symbol) {
   symbol = symbol.trim().toUpperCase();
   if (!symbol) return;
@@ -325,7 +261,9 @@ async function load(symbol) {
   $("status").className = "";
   $("status").textContent = `${symbol} 불러오는 중...`;
   try {
-    const data = await fetchBars(symbol);
+    const res = await fetch(`/api/ohlcv?symbol=${encodeURIComponent(symbol)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     curSymbol = symbol; curMeta = data;
     bars = data.bars;
     barByTime = new Map();
@@ -349,14 +287,12 @@ async function load(symbol) {
     $("phPx").textContent = `${fmtN(lastB.c)} ${data.currency}`;
     $("phChg").textContent = `${chg >= 0 ? "▲" : "▼"} ${fmtN(Math.abs(chg))} (${chg >= 0 ? "+" : ""}${chgPct.toFixed(2)}%)`;
     $("phChg").className = "chg " + (chg >= 0 ? "up" : "down");
-    $("phDate").textContent = `${bars[0].t} ~ ${lastB.t} · ${bars.length.toLocaleString()}일`
-      + (data.isStatic ? " · 사전 수집 데이터" : "");
+    $("phDate").textContent = `${bars[0].t} ~ ${lastB.t} · ${bars.length.toLocaleString()}일`;
     $("status").style.display = "none";
     $("symInput").value = symbol;
-    try { localStorage.setItem("analysis.symbol", symbol); } catch (e) {}
+    localStorage.setItem("chart.symbol", symbol);
     document.title = `${symbol} 차트`;
     document.querySelectorAll("#presets .chip").forEach(c => c.classList.toggle("on", c.dataset.s === symbol));
-    $("universeSelect").value = UNIVERSE.has(symbol) ? symbol : "";
   } catch (e) {
     $("status").className = "err";
     $("status").textContent = `오류: ${e.message}`;
@@ -375,39 +311,13 @@ function exportCSV() {
   URL.revokeObjectURL(a.href);
 }
 
-const QUICK = ["SPY", "QQQ", "TQQQ", "069500.KS", "005930.KS"];
-
-function buildPresets() {
-  // 자주 보는 종목은 칩으로, 전체 유니버스는 그룹 셀렉트와 자동완성으로 제공
-  $("presets").innerHTML = QUICK.filter(s => UNIVERSE.has(s))
-    .map(s => `<span class="chip" data-s="${s}">${s}</span>`).join("");
-
-  const sel = $("universeSelect");
-  let lastGroup = null, og = null;
-  sel.innerHTML = "";
-  sel.add(new Option(`전체 목록 (${UNIVERSE.size}종목)…`, ""));
-  for (const e of UNIVERSE.values()) {
-    if (e.g !== lastGroup) {
-      og = document.createElement("optgroup");
-      og.label = e.g;
-      sel.add(og);
-      lastGroup = e.g;
-    }
-    og.appendChild(new Option(`${e.s} · ${e.n}`, e.s));
-  }
-  $("symList").innerHTML = [...UNIVERSE.values()]
-    .map(e => `<option value="${e.s}">${e.n} (${e.g})</option>`).join("");
-}
-
 function init() {
   initChart();
-  buildPresets();
   buildMAButtons();
   $("goBtn").addEventListener("click", () => load($("symInput").value));
   $("symInput").addEventListener("keydown", e => { if (e.key === "Enter") load($("symInput").value); });
   document.querySelectorAll("#presets .chip").forEach(c =>
     c.addEventListener("click", () => load(c.dataset.s)));
-  $("universeSelect").addEventListener("change", ev => { if (ev.target.value) load(ev.target.value); });
   document.querySelectorAll("#periodBtns .chip").forEach(c =>
     c.addEventListener("click", () => {
       activePeriod = c.dataset.p;
@@ -417,8 +327,7 @@ function init() {
   $("linBtn").addEventListener("click", () => setScale(false));
   $("logBtn").addEventListener("click", () => setScale(true));
   $("csvBtn").addEventListener("click", exportCSV);
-  load(new URLSearchParams(location.search).get("symbol")
-       || localStorage.getItem("analysis.symbol") || "SPY");
+  load(localStorage.getItem("chart.symbol") || "SPY");
 }
 
 function setScale(log) {
@@ -429,39 +338,6 @@ function setScale(log) {
 }
 
 init();
-// 알파노트 테마 토글(data-theme)·OS 테마 변경 시 차트 색 갱신
-new MutationObserver(() => chart && chart.applyOptions(chartTheme()))
-  .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)")
-  .addEventListener("change", () => chart && chart.applyOptions(chartTheme()));
 </script>
-
-<nav class="bottomnav">
-  <a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a>
-  <a class="nav-cell" href="strategy.html"><span class="ni">📝</span><span class="nl">투자전략</span></a>
-  <a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a>
-  <a class="nav-cell active" href="chart.html"><span class="ni">📈</span><span class="nl">분석</span></a>
-  <a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">뉴스</span></a>
-</nav>
-<script>
-(function(){
-  try {
-    var t = localStorage.getItem('theme');
-    if(t){ document.documentElement.dataset.theme = t; }
-  } catch(e) {}
-})();
-</script>
-<style>
-  .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:2px;
-    background:color-mix(in srgb,var(--surface) 92%,transparent); backdrop-filter:blur(10px);
-    border-top:1px solid var(--grid); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); }
-  .bottomnav .nav-cell { display:flex; flex-direction:column; align-items:center; gap:3px; text-decoration:none; color:var(--muted);
-    padding:6px 4px; border-radius:12px; flex:1 1 0; max-width:96px; transition:color .15s,background .15s; }
-  .bottomnav .nav-cell:hover { color:var(--accent); }
-  .bottomnav .nav-cell.active { color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
-  .bottomnav .ni { font-size:20px; line-height:1; }
-  .bottomnav .nl { font-size:11px; font-weight:600; }
-  body { padding-bottom: 110px; }
-</style>
 </body>
 </html>
