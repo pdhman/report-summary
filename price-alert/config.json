@@ -1,5 +1,5 @@
 {
-  "thresholds": [3.0, 5.0, 7.0],
+  "thresholds": [5.0, 7.0, 10.0],
   "market_days": [0, 1, 2, 3, 4],
   "market_start": "09:00",
   "market_end": "15:35",
