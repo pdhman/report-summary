@@ -78,8 +78,19 @@ if ($LASTEXITCODE -ne 0) {
             "[git] ERROR: pull --rebase failed before rebase started - manual check needed" | Out-File $out -Append -Encoding utf8
         }
     }
-    & git -C $proj push origin main 2>&1 | Out-File $out -Append -Encoding utf8
-    if ($LASTEXITCODE -eq 0) {
+    # 봇 커밋이 fetch~push 사이에 들어오면 push 가 경쟁 실패한다
+    # ("cannot lock ref", 2026-08-03 실사고). pull 후 최대 3회 재시도.
+    # $pushed 플래그 필수: 루프 마지막 명령이 pull 이라 $LASTEXITCODE 로
+    # 판정하면 3회 모두 실패해도 성공으로 오판한다.
+    $pushed = $false
+    for ($try = 1; $try -le 3; $try++) {
+        & git -C $proj push origin main 2>&1 | Out-File $out -Append -Encoding utf8
+        if ($LASTEXITCODE -eq 0) { $pushed = $true; break }
+        "[git] push rejected (attempt $try/3) - retrying" | Out-File $out -Append -Encoding utf8
+        Start-Sleep -Seconds 5
+        & git -C $proj pull --rebase -X theirs origin main 2>&1 | Out-File $out -Append -Encoding utf8
+    }
+    if ($pushed) {
         "[git] GitHub push OK" | Out-File $out -Append -Encoding utf8
         # push 이벤트가 배포를 못 거는 경우가 있어 명시적으로 배포 트리거
         & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $proj 'trigger_deploy.ps1')

@@ -59,8 +59,19 @@ try {
                 exit 1
             }
         }
-        git push origin main 2>&1 | Add-Content -Path $log -Encoding UTF8
-        if ($LASTEXITCODE -ne 0) { Write-Log 'ERROR: git push failed'; exit 1 }
+        # 봇 커밋이 fetch~push 사이에 들어오면 push 가 경쟁 실패한다
+        # ("cannot lock ref", 2026-08-03 실사고). pull 후 최대 3회 재시도.
+        # $pushed 플래그 필수: 루프 마지막 명령이 pull 이라 $LASTEXITCODE 로
+        # 판정하면 3회 모두 실패해도 성공으로 오판한다.
+        $pushed = $false
+        for ($try = 1; $try -le 3; $try++) {
+            git push origin main 2>&1 | Add-Content -Path $log -Encoding UTF8
+            if ($LASTEXITCODE -eq 0) { $pushed = $true; break }
+            Write-Log ("push rejected (attempt {0}/3) - retrying" -f $try)
+            Start-Sleep -Seconds 5
+            git pull --rebase -X theirs origin main 2>&1 | Add-Content -Path $log -Encoding UTF8
+        }
+        if (-not $pushed) { Write-Log 'ERROR: git push failed after 3 attempts'; exit 1 }
         Write-Log 'OK: pushed new blog content'
         # push 이벤트가 배포를 못 거는 경우가 있어 명시적으로 배포 트리거
         & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $proj 'trigger_deploy.ps1')
