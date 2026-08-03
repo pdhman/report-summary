@@ -786,10 +786,11 @@ TEMPLATE = r"""<!DOCTYPE html>
     <p class="desc">돈을 내는 쪽의 성장이 꺾이는가: Hyperscaler 매출과 클라우드 부문 성장률</p>
     <div class="cards">
       <div class="card"><h3>Hyperscaler 전사 매출 YoY (%)</h3>
-        <p class="note">yfinance 분기 손익계산서 — 실행할수록 히스토리 누적</p>
+        <p class="note">yfinance + SEC EDGAR 백필(2023Q1~) — 실행할수록 히스토리 누적</p>
         <div id="ch-rev"></div></div>
       <div class="card"><h3>클라우드 부문 매출 YoY (%)</h3>
-        <p class="note">Azure·AWS·Google Cloud — 실적발표 후 manual_data.json 수동 입력</p>
+        <p class="note">manual_data.json 수동 입력 — AWS=순수 부문 · Google Cloud=GCP+Workspace ·
+          Azure='Azure 및 기타 클라우드' 성장률(달러 미공시) · Meta=클라우드 사업 없음</p>
         <div id="ch-cloud"></div></div>
     </div>
   </section>

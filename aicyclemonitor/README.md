@@ -16,6 +16,14 @@
 > **왜 B200 병행 추적인가**: H100 가격 하락은 세대교체 감가와 섞여 해석이 애매하지만,
 > 최신 세대(B200) 임대가 하락은 순수한 공급과잉 신호다.
 >
+> **클라우드 부문 YoY의 정의**: AWS는 순수 클라우드 부문(달러 공시), Google Cloud는
+> GCP+Workspace를 묶은 부문(달러 공시), Azure는 MS가 달러를 공시하지 않아
+> 'Azure 및 기타 클라우드 서비스' 성장률(%)만 존재 — 셋 다 각사 공식 공시 기준.
+> Meta는 클라우드 사업이 없어 전사 매출로만 추적(차트는 3사).
+>
+> 전사 매출 분기 히스토리는 SEC EDGAR XBRL API(data.sec.gov, 무료·무키)로 2023Q1부터
+> 백필함. yfinance가 최근 5~6개 분기만 주므로 과거 분기는 EDGAR가 원본.
+>
 > 2026-01~07 월말 히스토리는 500.farm Grafana(Prometheus) API에서 소급 수집함
 > (`vastai_ondemand_price_median_dollars{verified="yes",rented="yes|no"}` —
 > `/vastai/grafana.v2/api/datasources/uid/EdgV2xcnz/resources/api/v1/query`, 익명 접근.
