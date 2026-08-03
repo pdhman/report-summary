@@ -67,6 +67,7 @@
   .tile .sub { font-size: 12px; color: var(--muted); margin-top: 5px; }
   .tile .sub b { font-weight: 600; color: var(--ink-2); }
   .up { color: var(--div-buy); } .dn { color: var(--div-sell); }
+  .tile .sub b.up { color: var(--div-buy); } .tile .sub b.dn { color: var(--div-sell); }
   .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; position: relative; }
   .card h2 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
   .card .sub { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
@@ -162,6 +163,7 @@ const DETAIL_KR = { fin_invest:"금융투자", insurance:"보험", invest_trust:
 let state = { market: "kospi", period: "all", table: false, overlay: true };
 
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const signColor = v => v > 0 ? css("--div-buy") : v < 0 ? css("--div-sell") : null;
 const comma = v => Math.round(v).toLocaleString("ko-KR");
 const signed = v => (v > 0 ? "+" : "") + comma(v);
 const compact = v => Math.abs(v) >= 10000 ? (v/10000).toFixed(1).replace(/\.0$/,"") + "조" : comma(v);
@@ -246,8 +248,8 @@ function attachHover(container, ttEl, dates, xOf, rows){
     cross.setAttribute("x1", xOf(best)); cross.setAttribute("x2", xOf(best));
     cross.setAttribute("visibility", "visible");
     ttEl.innerHTML = `<div class="tt-date">${dates[best]}</div>` +
-      rows(best).map(([k, v, c]) =>
-        `<div class="row"><span class="k">${c ? `<i style="background:${c}"></i>` : ""}${k}</span><span class="v">${v}</span></div>`).join("");
+      rows(best).map(([k, v, c, vc]) =>
+        `<div class="row"><span class="k">${c ? `<i style="background:${c}"></i>` : ""}${k}</span><span class="v"${vc ? ` style="color:${vc}"` : ""}>${v}</span></div>`).join("");
     ttEl.style.display = "block";
     const card = container.closest(".card").getBoundingClientRect();
     let lx = ev.clientX - card.left + 16;
@@ -305,7 +307,7 @@ function drawCumulative(m, lo, hi){
       fill: color, stroke: css("--surface-1"), "stroke-width": 2 }));
   }
   attachHover(c, document.getElementById("ttCum"), dates, x,
-    i => series.map(s => [s.name, signed(s.cum[i]) + "억", css(s.cvar)])
+    i => series.map(s => [s.name, signed(s.cum[i]) + "억", css(s.cvar), signColor(s.cum[i])])
       .concat(closeVis && closeVis[i] != null
         ? [[m.indexName, closeVis[i].toLocaleString("ko-KR"), idxColor]] : []));
 }
@@ -377,7 +379,8 @@ function drawDaily(m, lo, hi){
   for (const p of panels)
     attachHover(p.c, tt, dates, p.x,
       i => SERIES3.map(s => [s.name, signed(m[s.key][lo + i]) + "억",
-        m[s.key][lo + i] >= 0 ? css("--div-buy") : css("--div-sell")]));
+        m[s.key][lo + i] >= 0 ? css("--div-buy") : css("--div-sell"),
+        signColor(m[s.key][lo + i])]));
 }
 
 /* ---------- tiles / table ---------- */
@@ -392,8 +395,8 @@ function drawTiles(m, lo){
     box.insertAdjacentHTML("beforeend", `
       <div class="tile">
         <div class="lbl">${s.name} 순매수 (${dt})</div>
-        <div class="val ${v>=0?"up":"dn"}">${signed(v)}<span style="font-size:14px"> 억</span></div>
-        <div class="sub">${cumLabel} <b>${signed(cum)}억</b></div>
+        <div class="val ${v>0?"up":v<0?"dn":""}">${signed(v)}<span style="font-size:14px"> 억</span></div>
+        <div class="sub">${cumLabel} <b class="${cum>0?"up":cum<0?"dn":""}">${signed(cum)}억</b></div>
       </div>`);
   }
   const close = m.close[li];
@@ -403,7 +406,7 @@ function drawTiles(m, lo){
     <div class="tile">
       <div class="lbl">${m.indexName} 종가 (${dt})</div>
       <div class="val">${close == null ? "-" : close.toLocaleString("ko-KR")}</div>
-      <div class="sub">${pct == null ? "" : `전일比 <b class="${pct>=0?"up":"dn"}">${pct>=0?"+":""}${pct.toFixed(2)}%</b>`}</div>
+      <div class="sub">${pct == null ? "" : `전일 대비 <b class="${pct>0?"up":pct<0?"dn":""}">${pct>0?"+":""}${pct.toFixed(2)}%</b>`}</div>
     </div>`);
 }
 
