@@ -6,8 +6,8 @@
 ================================================================================
 "호황은 어떻게 끝나는가" — 3가지 종료 경로를 무료 데이터로 추적하는 모니터.
 
-  [1] 공급과잉 (1999년형) : GPU 임대가격(vast.ai), 데이터센터 REIT(DLR/EQIX),
-                            데이터센터 공실률(CBRE 반기 보고서 → 수동 입력)
+  [1] 공급과잉 (1999년형) : GPU 임대가격(500.farm, H100·B200 '임대중' 중앙값),
+                            데이터센터 REIT(DLR/EQIX), 공실률(CBRE → 수동 입력)
   [2] 수요둔화 (2022년형) : Hyperscaler(MSFT/GOOGL/AMZN/META) 분기 매출 YoY,
                             클라우드 부문(Azure/AWS/GCP) YoY (실적발표 → 수동 입력)
   [3] 레버리지 (2008년형) : BBB·HY 신용 스프레드(FRED), 네오클라우드 주가
@@ -50,6 +50,7 @@ OUTPUT_HTML = os.path.join(BASE_DIR, "dashboard.html")
 # 설정
 # ──────────────────────────────────────────────────────────────────────────────
 NEOCLOUD = ["CRWV", "NBIS", "IREN", "APLD"]       # 네오클라우드 (GPU 클라우드)
+GPU_MODELS = ["H100 SXM", "B200"]                  # 임대가 추적 대상 (구세대 + 최신세대)
 DC_REIT = ["DLR", "EQIX"]                          # 데이터센터 REIT
 PRIVATE_CREDIT = ["BIZD", "PBDC"]                  # BDC/사모신용 상장 프록시
 HYPERSCALER = ["MSFT", "GOOGL", "AMZN", "META"]
@@ -62,7 +63,7 @@ PRICE_LOOKBACK = "2y"
 
 # 경계 임계값 (신호등 판정 기준 — 취향에 맞게 조정)
 TH = {
-    "gpu_rent_chg_90d": -20.0,     # GPU 임대가 90일 변화율(%) 이 값 이하 → 경계
+    "gpu_rent_chg_90d": -20.0,     # GPU 임대중 중앙값 90일 변화율(%) — H100·B200 공통 임계값
     "dc_reit_chg_180d": -15.0,     # DC REIT 6개월 수익률(%) 이 값 이하 → 경계
     "vacancy_pct": 5.0,            # 데이터센터 공실률(%) 이 값 이상 → 경계
     "hs_yoy_consec_slowdown": 2,   # 합산 매출 YoY 연속 둔화 분기 수 → 경계
@@ -208,67 +209,66 @@ def fetch_fred(series_id):
     return s[s.index >= cutoff]
 
 
-def _gpu_median_vastai():
-    """vast.ai 공개 검색 API — H100 SXM 가용 오퍼의 $/GPU/hr 중앙값"""
-    import requests
-    q = {"gpu_name": {"eq": "H100 SXM"}, "rentable": {"eq": True},
-         "num_gpus": {"gte": 1}, "order": [["dph_total", "asc"]], "limit": 200}
-    r = requests.get("https://console.vast.ai/api/v0/bundles",
-                     params={"q": json.dumps(q)}, timeout=30,
-                     headers={"User-Agent": "Mozilla/5.0"})
-    r.raise_for_status()
-    offers = r.json().get("offers", [])
-    prices = sorted(o["dph_total"] / max(o.get("num_gpus", 1), 1)
-                    for o in offers if o.get("dph_total"))
-    if not prices:
-        raise ValueError("no offers")
-    return prices[len(prices) // 2], "vast.ai"
-
-
-def _gpu_median_500farm():
-    """500.farm(vast.ai 커뮤니티 미러) — vast.ai 직접 접속이 403일 때 폴백.
-    H100 SXM '가용(available)' 오퍼의 $/GPU/hr 중앙값"""
+def _gpu_stats_500farm():
+    """500.farm(vast.ai 통계 미러) — 모델별 verified 중앙값($/GPU/hr).
+    '임대중(rented)'이 체결가 근사(1차 지표), '가용(available)'은 잔존 매물 호가(참고).
+    vast.ai 직접 API는 로컬·GitHub 러너 모두 403이라 미러가 기본 소스."""
     import requests
     r = requests.get("https://500.farm/vastai-exporter/gpu-stats", timeout=30,
                      headers={"User-Agent": "Mozilla/5.0"})
     r.raise_for_status()
+    out = {}
     for m in r.json().get("models", []):
-        if m.get("name") == "H100 SXM":
-            avail = m.get("stats", {}).get("available", {})
-            for k in ("verified", "all", "unverified"):
-                rows = avail.get(k) or []
-                if rows and rows[0].get("price_median"):
-                    return float(rows[0]["price_median"]), "500.farm"
-    raise ValueError("H100 SXM not found in 500.farm gpu-stats")
+        if m.get("name") in GPU_MODELS:
+            st = m.get("stats", {})
+
+            def med(sec):
+                for k in ("verified", "all", "unverified"):
+                    rows = st.get(sec, {}).get(k) or []
+                    if rows and rows[0].get("price_median"):
+                        return round(float(rows[0]["price_median"]), 3)
+                return None
+
+            out[m["name"]] = (med("rented"), med("available"))
+    if not out:
+        raise ValueError("대상 GPU 모델을 찾지 못함")
+    return out
 
 
 def fetch_gpu_rental():
-    """H100 시간당 임대가 중앙값을 CSV에 누적.
-    vast.ai 직접 → 실패 시 500.farm 미러 폴백. 둘 다 실패하면 기존 히스토리만 사용."""
-    median = src = None
+    """모델별(H100 SXM·B200) 임대중/가용 중앙값을 CSV에 누적.
+    같은 날짜·모델 행은 최신 값으로 덮어쓴다. 수집 실패 시 기존 히스토리만 사용."""
+    hist = read_gpu_history()
     try:
-        median, src = _gpu_median_vastai()
-    except Exception as e:
-        log(f"vast.ai 직접 수집 실패({e}) → 500.farm 미러 폴백")
-        try:
-            median, src = _gpu_median_500farm()
-        except Exception as e2:
-            log(f"500.farm 수집도 실패(건너뜀): {e2}")
-    if median is not None:
+        stats = _gpu_stats_500farm()
         today = date.today().isoformat()
-        rows = read_gpu_history()
-        if not rows or rows[-1][0] != today:
-            with open(GPU_HISTORY_CSV, "a", newline="", encoding="utf-8") as f:
-                csv.writer(f).writerow([today, round(median, 3)])
-        log(f"GPU 임대가(H100 SXM 중앙값, {src}): ${median:.2f}/hr → {GPU_HISTORY_CSV} 누적")
-    return read_gpu_history()
+        for model, vals in stats.items():
+            hist[(today, model)] = list(vals)
+        with open(GPU_HISTORY_CSV, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            for (d, model), (rented, avail) in sorted(hist.items()):
+                w.writerow([d, model,
+                            "" if rented is None else rented,
+                            "" if avail is None else avail])
+        log("GPU 임대가(500.farm): " + ", ".join(
+            f"{m} 임대중 ${r:.2f}/가용 ${a:.2f}" if r is not None and a is not None
+            else f"{m} 일부 누락" for m, (r, a) in stats.items()))
+    except Exception as e:
+        log(f"500.farm 수집 실패(기존 히스토리 사용): {e}")
+    return hist
 
 
 def read_gpu_history():
+    """CSV(date,model,rented,avail) → {(date, model): [rented, avail]}"""
+    out = {}
     if not os.path.exists(GPU_HISTORY_CSV):
-        return []
+        return out
     with open(GPU_HISTORY_CSV, encoding="utf-8") as f:
-        return [row for row in csv.reader(f) if row]
+        for row in csv.reader(f):
+            if len(row) >= 4:
+                out[(row[0], row[1])] = [float(row[2]) if row[2] else None,
+                                         float(row[3]) if row[3] else None]
+    return out
 
 
 def fetch_hyperscaler_revenue():
@@ -343,9 +343,15 @@ def collect_live():
                                      "values": [float(r[1]) for r in rows]}
                     log(f"FRED {sid}: 지난 캐시 사용 (마지막 {rows[-1][0]})")
 
-    # ── 공급과잉: GPU 임대가 + DC REIT ──
+    # ── 공급과잉: GPU 임대가(모델별 임대중/가용) + DC REIT ──
     gpu_hist = fetch_gpu_rental()
-    gpu = {"dates": [r[0] for r in gpu_hist], "values": [float(r[1]) for r in gpu_hist]}
+    gpu = {}
+    for model in GPU_MODELS:
+        items = sorted((d, v) for (d, mo), v in gpu_hist.items() if mo == model)
+        if items:
+            gpu[model] = {"dates": [d for d, _ in items],
+                          "rented": [v[0] for _, v in items],
+                          "avail": [v[1] for _, v in items]}
 
     def indexed(df_cols):
         """여러 종목을 시작=100으로 지수화 (이중축 회피)"""
@@ -365,12 +371,15 @@ def collect_live():
 
     # ── 지표 계산 ──
     metrics = {}
-    gpu_s = None
-    if gpu["dates"]:
-        gpu_s = pd.Series(gpu["values"],
-                          index=pd.to_datetime(gpu["dates"]))
-        metrics["gpu_rent_chg_90d"] = change_over_days(gpu_s, 90)
-        metrics["gpu_last"] = gpu["values"][-1]
+    for model, key in [("H100 SXM", "gpu"), ("B200", "b200")]:
+        obj = gpu.get(model, {})
+        pts = [(d, r) for d, r in zip(obj.get("dates", []), obj.get("rented", []))
+               if r is not None]
+        if pts:
+            s = pd.Series([r for _, r in pts],
+                          index=pd.to_datetime([d for d, _ in pts]))
+            metrics[f"{key}_rent_chg_90d"] = change_over_days(s, 90)
+            metrics[f"{key}_last"] = pts[-1][1]
     for t in DC_REIT + PRIVATE_CREDIT:
         metrics[f"{t}_chg_180d"] = change_over_days(px[t], 180)
     dd = {t: drawdown_from_52w_high(px[t]) for t in NEOCLOUD + [ORACLE]}
@@ -436,8 +445,9 @@ def collect_sample():
     def idx(vals):
         return [round(v / vals[0] * 100, 2) for v in vals]
 
-    # 공급: GPU 임대가 완만한 하락, DC REIT 횡보 후 하락
+    # 공급: GPU 임대중 가격 — H100 완만한 하락, B200 고점 후 소폭 하락. DC REIT 횡보 후 하락
     gpu_vals = peaked(2.4, 250, 2.6, 1.55, 0.008)
+    b200_vals = peaked(6.6, 300, 6.9, 5.8, 0.006)
     dlr = peaked(100, 300, 118, 96, 0.006)
     eqix = peaked(100, 280, 112, 90, 0.006)
 
@@ -488,7 +498,12 @@ def collect_sample():
         "generated_at": "2026-07-22 (예시 데이터)",
         "mode": "sample",
         "supply": {
-            "gpu_rental": pack(gpu_vals),
+            "gpu_rental": {
+                "H100 SXM": {"dates": sdates, "rented": sub(gpu_vals),
+                             "avail": sub([round(v * 1.35, 2) for v in gpu_vals])},
+                "B200": {"dates": sdates, "rented": sub(b200_vals),
+                         "avail": sub([round(v * 1.02, 2) for v in b200_vals])},
+            },
             "dc_reit_indexed": {"DLR": pack(idx(dlr)), "EQIX": pack(idx(eqix))},
             "vacancy": [
                 {"date": "2024-H2", "region": "북미 1차 시장", "vacancy_pct": 1.9, "source": "CBRE(예시)"},
@@ -511,6 +526,8 @@ def collect_sample():
         "metrics": {
             "gpu_rent_chg_90d": round((gpu_vals[-1] / gpu_vals[-90] - 1) * 100, 1),
             "gpu_last": gpu_vals[-1],
+            "b200_rent_chg_90d": round((b200_vals[-1] / b200_vals[-90] - 1) * 100, 1),
+            "b200_last": b200_vals[-1],
             "DLR_chg_180d": round((dlr[-1] / dlr[-180] - 1) * 100, 1),
             "EQIX_chg_180d": round((eqix[-1] / eqix[-180] - 1) * 100, 1),
             "BIZD_chg_180d": round((bizd[-1] / bizd[-180] - 1) * 100, 1),
@@ -543,7 +560,10 @@ def judge(data):
         })
 
     v = m.get("gpu_rent_chg_90d")
-    add("공급", "GPU 임대가 90일 변화 (H100, vast.ai)", v, "%",
+    add("공급", "H100 임대가(임대중) 90일 변화 (500.farm)", v, "%",
+        f"{TH['gpu_rent_chg_90d']}% 이하", v is not None and v <= TH["gpu_rent_chg_90d"])
+    v = m.get("b200_rent_chg_90d")
+    add("공급", "B200 임대가(임대중) 90일 변화 (500.farm)", v, "%",
         f"{TH['gpu_rent_chg_90d']}% 이하", v is not None and v <= TH["gpu_rent_chg_90d"])
     for t in DC_REIT:
         v = m.get(f"{t}_chg_180d")
@@ -749,8 +769,8 @@ TEMPLATE = r"""<!DOCTYPE html>
     <h2>① 공급과잉 — 1999년형</h2>
     <p class="desc">인프라가 실수요보다 많이 깔리고 있는가: GPU 임대가격, 데이터센터 REIT, 공실률</p>
     <div class="cards">
-      <div class="card"><h3>H100 GPU 시간당 임대가 ($/hr)</h3>
-        <p class="note">vast.ai 중앙값 — 실행할 때마다 자동 누적 (하락 가속 = 공급과잉 신호)</p>
+      <div class="card"><h3>GPU 시간당 임대가 ($/hr, 임대중 중앙값)</h3>
+        <p class="note">500.farm(vast.ai 미러) 체결가 근사 — B200 하락 = 순수 공급과잉 신호, H100은 세대교체 감가 포함</p>
         <div id="ch-gpu"></div></div>
       <div class="card"><h3>데이터센터 REIT 주가 (시작=100)</h3>
         <p class="note">DLR·EQIX — 임대수요·공실 기대를 선반영하는 프록시</p>
@@ -801,7 +821,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 
   <footer>
     데이터: Yahoo Finance(주가·분기매출) · FRED fredgraph.csv(신용 스프레드, 직접 차단 시 allorigins 프록시 폴백) ·
-    vast.ai 공개 API(GPU 임대가, 403 시 500.farm 미러 폴백) ·
+    500.farm=vast.ai 통계 미러(GPU 임대중/가용 중앙값) ·
     CBRE 반기 보고서(공실률, 수동) · 각사 실적발표(클라우드 부문 YoY, 수동)<br>
     개별 회사채 스프레드(오라클 CDS/채권)와 사모신용 실측 데이터는 무료 소스가 없어 BBB OAS·BDC 프록시로 대체.
   </footer>
@@ -976,7 +996,7 @@ function renderAll(){
   const tiles=[
     {label:'① 공급과잉 신호', st:ps['공급'],
      value:m.gpu_rent_chg_90d!=null?fmt(m.gpu_rent_chg_90d)+'%':'—',
-     delta:'GPU 임대가 90일 변화 (H100)'},
+     delta:'H100 임대중 90일 변화'+(m.b200_rent_chg_90d!=null?' · B200 '+fmt(m.b200_rent_chg_90d)+'%':'')},
     {label:'② 수요둔화 신호', st:ps['수요'],
      value:(()=>{const ry=DATA.demand.revenue_yoy;const vs=Object.values(ry).map(o=>o.yoy[o.yoy.length-1]).filter(v=>v!=null);
        return vs.length?fmt(vs.reduce((a,b)=>a+b,0)/vs.length)+'%':'—';})(),
@@ -989,9 +1009,19 @@ function renderAll(){
     `<div class="tile"><div class="label">${t.label} ${badge(t.st)}</div>
      <div class="value">${t.value}</div><div class="delta">${t.delta}</div></div>`).join('');
 
-  // ① 공급
-  const g=DATA.supply.gpu_rental;
-  lineChart('ch-gpu', g&&g.dates.length?[{name:'H100 $/hr',dates:g.dates,values:g.values}]:[], {unit:'$'});
+  // ① 공급 — 모델별 임대중 중앙값 (공통 날짜축 정렬, H100 가용 호가는 참고선)
+  const g=DATA.supply.gpu_rental||{};
+  const gDates=[...new Set([].concat(...Object.keys(g).map(mo=>g[mo].dates)))].sort();
+  const gAlign=(mo,key)=>{const idx={};g[mo].dates.forEach((d,i)=>idx[d]=g[mo][key][i]);
+    return gDates.map(d=>idx[d]??null);};
+  const gSeries=[];
+  Object.keys(g).forEach(mo=>{
+    if((g[mo].rented||[]).some(v=>v!=null))
+      gSeries.push({name:mo+' 임대중',dates:gDates,values:gAlign(mo,'rented')});
+  });
+  if(g['H100 SXM']&&(g['H100 SXM'].avail||[]).some(v=>v!=null))
+    gSeries.push({name:'H100 가용 호가',dates:gDates,values:gAlign('H100 SXM','avail')});
+  lineChart('ch-gpu',gSeries,{labels:gDates,unit:'$'});
   const reit=DATA.supply.dc_reit_indexed||{};
   lineChart('ch-reit', Object.keys(reit).map(k=>({name:k,dates:reit[k].dates,values:reit[k].values})));
   const vac=DATA.supply.vacancy||[];

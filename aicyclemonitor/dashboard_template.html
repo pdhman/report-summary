@@ -102,8 +102,8 @@
     <h2>① 공급과잉 — 1999년형</h2>
     <p class="desc">인프라가 실수요보다 많이 깔리고 있는가: GPU 임대가격, 데이터센터 REIT, 공실률</p>
     <div class="cards">
-      <div class="card"><h3>H100 GPU 시간당 임대가 ($/hr)</h3>
-        <p class="note">vast.ai 중앙값 — 실행할 때마다 자동 누적 (하락 가속 = 공급과잉 신호)</p>
+      <div class="card"><h3>GPU 시간당 임대가 ($/hr, 임대중 중앙값)</h3>
+        <p class="note">500.farm(vast.ai 미러) 체결가 근사 — B200 하락 = 순수 공급과잉 신호, H100은 세대교체 감가 포함</p>
         <div id="ch-gpu"></div></div>
       <div class="card"><h3>데이터센터 REIT 주가 (시작=100)</h3>
         <p class="note">DLR·EQIX — 임대수요·공실 기대를 선반영하는 프록시</p>
@@ -154,7 +154,7 @@
 
   <footer>
     데이터: Yahoo Finance(주가·분기매출) · FRED fredgraph.csv(신용 스프레드, 직접 차단 시 allorigins 프록시 폴백) ·
-    vast.ai 공개 API(GPU 임대가, 403 시 500.farm 미러 폴백) ·
+    500.farm=vast.ai 통계 미러(GPU 임대중/가용 중앙값) ·
     CBRE 반기 보고서(공실률, 수동) · 각사 실적발표(클라우드 부문 YoY, 수동)<br>
     개별 회사채 스프레드(오라클 CDS/채권)와 사모신용 실측 데이터는 무료 소스가 없어 BBB OAS·BDC 프록시로 대체.
   </footer>
@@ -329,7 +329,7 @@ function renderAll(){
   const tiles=[
     {label:'① 공급과잉 신호', st:ps['공급'],
      value:m.gpu_rent_chg_90d!=null?fmt(m.gpu_rent_chg_90d)+'%':'—',
-     delta:'GPU 임대가 90일 변화 (H100)'},
+     delta:'H100 임대중 90일 변화'+(m.b200_rent_chg_90d!=null?' · B200 '+fmt(m.b200_rent_chg_90d)+'%':'')},
     {label:'② 수요둔화 신호', st:ps['수요'],
      value:(()=>{const ry=DATA.demand.revenue_yoy;const vs=Object.values(ry).map(o=>o.yoy[o.yoy.length-1]).filter(v=>v!=null);
        return vs.length?fmt(vs.reduce((a,b)=>a+b,0)/vs.length)+'%':'—';})(),
@@ -342,9 +342,19 @@ function renderAll(){
     `<div class="tile"><div class="label">${t.label} ${badge(t.st)}</div>
      <div class="value">${t.value}</div><div class="delta">${t.delta}</div></div>`).join('');
 
-  // ① 공급
-  const g=DATA.supply.gpu_rental;
-  lineChart('ch-gpu', g&&g.dates.length?[{name:'H100 $/hr',dates:g.dates,values:g.values}]:[], {unit:'$'});
+  // ① 공급 — 모델별 임대중 중앙값 (공통 날짜축 정렬, H100 가용 호가는 참고선)
+  const g=DATA.supply.gpu_rental||{};
+  const gDates=[...new Set([].concat(...Object.keys(g).map(mo=>g[mo].dates)))].sort();
+  const gAlign=(mo,key)=>{const idx={};g[mo].dates.forEach((d,i)=>idx[d]=g[mo][key][i]);
+    return gDates.map(d=>idx[d]??null);};
+  const gSeries=[];
+  Object.keys(g).forEach(mo=>{
+    if((g[mo].rented||[]).some(v=>v!=null))
+      gSeries.push({name:mo+' 임대중',dates:gDates,values:gAlign(mo,'rented')});
+  });
+  if(g['H100 SXM']&&(g['H100 SXM'].avail||[]).some(v=>v!=null))
+    gSeries.push({name:'H100 가용 호가',dates:gDates,values:gAlign('H100 SXM','avail')});
+  lineChart('ch-gpu',gSeries,{labels:gDates,unit:'$'});
   const reit=DATA.supply.dc_reit_indexed||{};
   lineChart('ch-reit', Object.keys(reit).map(k=>({name:k,dates:reit[k].dates,values:reit[k].values})));
   const vac=DATA.supply.vacancy||[];
