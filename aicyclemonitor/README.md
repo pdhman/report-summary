@@ -15,6 +15,11 @@
 > 편향되고(실측 +40%) 표본도 적다. 임대중 중앙값이 체결가에 가깝고 표본이 4배.
 > **왜 B200 병행 추적인가**: H100 가격 하락은 세대교체 감가와 섞여 해석이 애매하지만,
 > 최신 세대(B200) 임대가 하락은 순수한 공급과잉 신호다.
+>
+> 2026-01~07 월말 히스토리는 500.farm Grafana(Prometheus) API에서 소급 수집함
+> (`vastai_ondemand_price_median_dollars{verified="yes",rented="yes|no"}` —
+> `/vastai/grafana.v2/api/datasources/uid/EdgV2xcnz/resources/api/v1/query`, 익명 접근.
+> 과거 구간을 다시 채울 일이 있으면 이 API로 임의 시점 조회 가능).
 
 ## 사용법
 
