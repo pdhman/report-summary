@@ -30,7 +30,8 @@ python ai_cycle_monitor.py --sample   # 네트워크 없이 예시 데이터로 
 수집 → `reports/aicycle.html` 로 복사 → 히스토리 CSV 커밋 → GitHub Pages 배포.
 
 - 대시보드 주소: **https://pdhman.github.io/report-summary/aicycle.html**
-- 미국 러너라 FRED·vast.ai 직접 접근 가능 (내장 폴백은 보험)
+- FRED·vast.ai는 러너(데이터센터 IP)에서도 차단됨 — 내장 폴백
+  (allorigins 프록시 + FRED 로컬 캐시, 500.farm 미러)이 실제 수집 경로
 - `aicyclemonitor/` 변경을 push 하면 즉시 재실행·재배포 (수동 실행 버튼도 있음)
 - 히스토리 CSV·`manual_data.json` 은 누적·공유를 위해 repo에 포함 (git 제외 아님)
 - 실적 시즌마다 `manual_data.json` 의 클라우드 YoY·공실률을 갱신하고 push 하면 반영

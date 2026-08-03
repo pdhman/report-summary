@@ -36,7 +36,8 @@ jobs:
       - name: Install dependencies
         run: pip install yfinance pandas requests
 
-      # 미국 러너라 FRED·vast.ai 직접 접근 가능 — 스크립트 내장 폴백은 보험으로만 동작
+      # FRED·vast.ai는 러너(데이터센터 IP)에서도 차단 — 스크립트 내장 폴백
+      # (allorigins 프록시 + FRED 캐시, 500.farm 미러)이 실제 수집을 담당
       - name: Run monitor
         env:
           PYTHONUTF8: "1"
