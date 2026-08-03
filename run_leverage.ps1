@@ -51,10 +51,21 @@ try {
         git commit -m ("leverage: {0:yyyy-MM-dd} 수집" -f (Get-Date)) 2>&1 | Add-Content -Path $log -Encoding UTF8
         git pull --rebase -X theirs origin main 2>&1 | Add-Content -Path $log -Encoding UTF8
         if ($LASTEXITCODE -ne 0) {
-            # 생성물 충돌로 리베이스가 멈추면 로컬 본을 채택해 무인 복구
-            git checkout --theirs -- . 2>&1 | Add-Content -Path $log -Encoding UTF8
-            git add -A 2>&1 | Add-Content -Path $log -Encoding UTF8
-            git -c core.editor=true rebase --continue 2>&1 | Add-Content -Path $log -Encoding UTF8
+            if (Test-Path (Join-Path $proj '.git/rebase-merge')) {
+                # 생성물 충돌로 리베이스가 멈춘 경우에만 로컬 본을 채택해 무인 복구.
+                # add -A 금지: 추적 외 개인 파일까지 스테이징해 공개 저장소로
+                # 유출될 수 있다 (2026-08-03 run_flows 실사고). 충돌은 추적
+                # 파일에서만 발생하므로 add -u 로 충분하다.
+                git checkout --theirs -- . 2>&1 | Add-Content -Path $log -Encoding UTF8
+                git add -u 2>&1 | Add-Content -Path $log -Encoding UTF8
+                git -c core.editor=true rebase --continue 2>&1 | Add-Content -Path $log -Encoding UTF8
+            }
+            else {
+                # 리베이스 시작 전 실패(예: unstaged changes)는 무인 복구 대상이
+                # 아니다 - 작업 트리를 건드리지 말고 수동 확인으로 넘긴다.
+                Write-Log 'ERROR: pull --rebase failed before rebase started - manual check needed'
+                exit 1
+            }
         }
         git push origin main 2>&1 | Add-Content -Path $log -Encoding UTF8
         if ($LASTEXITCODE -ne 0) { Write-Log 'ERROR: git push failed'; exit 1 }

@@ -66,10 +66,17 @@ if ($LASTEXITCODE -ne 0) {
     & git -C $proj commit -m "screener: report $(Get-Date -Format 'yyyy-MM-dd')" 2>&1 | Out-File $out -Append -Encoding utf8
     & git -C $proj pull --rebase -X theirs origin main 2>&1 | Out-File $out -Append -Encoding utf8
     if ($LASTEXITCODE -ne 0) {
-        # 생성물 충돌로 리베이스가 멈추면 로컬 본을 채택해 무인 복구
-        & git -C $proj checkout --theirs -- . 2>&1 | Out-File $out -Append -Encoding utf8
-        & git -C $proj add -A 2>&1 | Out-File $out -Append -Encoding utf8
-        & git -C $proj -c core.editor=true rebase --continue 2>&1 | Out-File $out -Append -Encoding utf8
+        if (Test-Path (Join-Path $proj '.git/rebase-merge')) {
+            # 생성물 충돌로 리베이스가 멈춘 경우에만 로컬 본을 채택해 무인 복구.
+            # add -A 금지: 추적 외 개인 파일까지 스테이징해 공개 저장소로
+            # 유출될 수 있다 (2026-08-03 run_flows 실사고). add -u 로 충분하다.
+            & git -C $proj checkout --theirs -- . 2>&1 | Out-File $out -Append -Encoding utf8
+            & git -C $proj add -u 2>&1 | Out-File $out -Append -Encoding utf8
+            & git -C $proj -c core.editor=true rebase --continue 2>&1 | Out-File $out -Append -Encoding utf8
+        }
+        else {
+            "[git] ERROR: pull --rebase failed before rebase started - manual check needed" | Out-File $out -Append -Encoding utf8
+        }
     }
     & git -C $proj push origin main 2>&1 | Out-File $out -Append -Encoding utf8
     if ($LASTEXITCODE -eq 0) {

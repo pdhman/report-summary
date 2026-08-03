@@ -43,6 +43,22 @@ try {
         git commit -m ("blog: {0:yyyy-MM-dd} auto update" -f (Get-Date)) 2>&1 | Add-Content -Path $log -Encoding UTF8
         # generated files may conflict with bot commits; prefer our fresh build
         git pull --rebase -X theirs origin main 2>&1 | Add-Content -Path $log -Encoding UTF8
+        if ($LASTEXITCODE -ne 0) {
+            if (Test-Path (Join-Path $proj '.git/rebase-merge')) {
+                # rebase stopped on generated-file conflict: adopt local build.
+                # add -u only (tracked files) - add -A would stage untracked
+                # personal files into this public repo (run_flows incident 2026-08-03)
+                git checkout --theirs -- . 2>&1 | Add-Content -Path $log -Encoding UTF8
+                git add -u 2>&1 | Add-Content -Path $log -Encoding UTF8
+                git -c core.editor=true rebase --continue 2>&1 | Add-Content -Path $log -Encoding UTF8
+            }
+            else {
+                # pull failed before rebase started (e.g. unstaged changes):
+                # do not touch the working tree, leave for manual check
+                Write-Log 'ERROR: pull --rebase failed before rebase started - manual check needed'
+                exit 1
+            }
+        }
         git push origin main 2>&1 | Add-Content -Path $log -Encoding UTF8
         if ($LASTEXITCODE -ne 0) { Write-Log 'ERROR: git push failed'; exit 1 }
         Write-Log 'OK: pushed new blog content'
