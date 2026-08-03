@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수급동향 대시보드</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --ink-1: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --s-indiv: #2a78d6;   /* 개인 (slot 1 blue) */
+    --s-forgn: #eb6834;   /* 외국인 (slot 2 orange) */
+    --s-inst:  #1baf7a;   /* 기관 (slot 3 aqua) */
+    --s-index: #4a3aa7;   /* 지수 (slot 7 violet) */
+    --div-buy:  #e34948;  /* 순매수(+) */
+    --div-sell: #2a78d6;  /* 순매도(-) */
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --ink-1: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --s-indiv: #3987e5;
+    --s-forgn: #d95926;
+    --s-inst:  #199e70;
+    --s-index: #9085e9;
+    --div-buy:  #e66767;
+    --div-sell: #3987e5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    background: var(--page); color: var(--ink-1);
+    padding: 20px; max-width: 1180px; margin: 0 auto;
+  }
+  header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+  h1 { font-size: 20px; font-weight: 700; }
+  .meta { font-size: 12px; color: var(--muted); }
+  .spacer { flex: 1; }
+  button {
+    font: inherit; font-size: 13px; color: var(--ink-2);
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer;
+  }
+  button:hover { border-color: var(--baseline); }
+  button.on { color: var(--ink-1); font-weight: 700; border-color: var(--baseline); }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .filters .group { display: flex; gap: 4px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+  .filters .group button { border: none; background: transparent; border-radius: 7px; }
+  .filters .group button.on { background: var(--page); box-shadow: inset 0 0 0 1px var(--border); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .tile .lbl { font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+  .tile .val { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+  .tile .sub { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .tile .sub b { font-weight: 600; color: var(--ink-2); }
+  .up { color: var(--div-buy); } .dn { color: var(--div-sell); }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; position: relative; }
+  .card h2 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+  .card .sub { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .legend { display: flex; gap: 16px; font-size: 12px; color: var(--ink-2); margin-bottom: 8px; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .card .ctl { position: absolute; top: 14px; right: 16px; }
+  .panel-title { font-size: 12px; font-weight: 700; color: var(--ink-2); margin: 10px 0 2px; }
+  svg { display: block; width: 100%; }
+  .tooltip {
+    position: absolute; pointer-events: none; display: none; z-index: 10;
+    background: var(--surface-1); border: 1px solid var(--baseline); border-radius: 8px;
+    padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    min-width: 150px;
+  }
+  .tooltip .tt-date { font-weight: 700; margin-bottom: 4px; }
+  .tooltip .row { display: flex; justify-content: space-between; gap: 14px; }
+  .tooltip .row .k { color: var(--ink-2); display: inline-flex; align-items: center; gap: 5px; }
+  .tooltip .row .k i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .tooltip .row .v { font-variant-numeric: tabular-nums; }
+  .tablewrap { overflow: auto; max-height: 480px; }
+  table { border-collapse: collapse; font-size: 12px; width: 100%; white-space: nowrap; }
+  th, td { padding: 5px 10px; text-align: right; font-variant-numeric: tabular-nums; }
+  th { position: sticky; top: 0; background: var(--surface-1); color: var(--ink-2); font-weight: 700; border-bottom: 1px solid var(--baseline); }
+  td:first-child, th:first-child { text-align: left; }
+  tr:nth-child(even) td { background: color-mix(in srgb, var(--page) 55%, transparent); }
+  #tableCard { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>수급동향 대시보드</h1>
+  <span class="meta" id="metaInfo"></span>
+  <span class="spacer"></span>
+  <button id="btnTheme">다크모드</button>
+</header>
+
+<div class="filters">
+  <div class="group" id="marketTabs"></div>
+  <div class="group" id="periodTabs"></div>
+  <span class="spacer"></span>
+  <button id="btnTable">표 보기</button>
+</div>
+
+<div class="tiles" id="tiles"></div>
+
+<div class="card">
+  <h2>누적 순매수 <span class="sub" id="cumSub"></span></h2>
+  <button id="btnOverlay" class="ctl on">지수 겹쳐보기</button>
+  <div class="sub" id="cumDesc">연초(1/2)부터 누적, 억원</div>
+  <div class="legend">
+    <span><i style="background:var(--s-indiv)"></i>개인</span>
+    <span><i style="background:var(--s-forgn)"></i>외국인</span>
+    <span><i style="background:var(--s-inst)"></i>기관</span>
+    <span id="legIndex" style="display:none"><i style="background:var(--s-index)"></i><span id="legIndexName"></span></span>
+  </div>
+  <div id="cumChart"></div>
+  <div class="tooltip" id="ttCum"></div>
+</div>
+
+<div class="card">
+  <h2 id="idxTitle">지수</h2>
+  <div class="sub">종가 기준</div>
+  <div id="idxChart"></div>
+  <div class="tooltip" id="ttIdx"></div>
+</div>
+
+<div class="card">
+  <h2>일별 순매수</h2>
+  <div class="sub">억원 · <span class="up">빨강 = 순매수</span>, <span class="dn">파랑 = 순매도</span></div>
+  <div id="dailyCharts"></div>
+  <div class="tooltip" id="ttDaily"></div>
+</div>
+
+<div class="card" id="tableCard">
+  <h2>데이터 표 <span class="sub">(최근일부터, 억원)</span></h2>
+  <div class="tablewrap" id="tableWrap"></div>
+</div>
+
+<script src="flow_data.js"></script>
+<script>
+const D = window.FLOW_DATA;
+const MARKETS = [["kospi","코스피"],["kosdaq","코스닥"],["futures","선물"]];
+const PERIODS = [["20","최근 20일"],["60","최근 60일"],["all","전체(연초~)"]];
+const SERIES3 = [
+  { key: "individual", name: "개인",   cvar: "--s-indiv" },
+  { key: "foreign",    name: "외국인", cvar: "--s-forgn" },
+  { key: "inst_total", name: "기관",   cvar: "--s-inst"  },
+];
+const DETAIL_KR = { fin_invest:"금융투자", insurance:"보험", invest_trust:"투신(사모)",
+  bank:"은행", other_fin:"기타금융", pension:"연기금등", other_corp:"기타법인" };
+
+let state = { market: "kospi", period: "all", table: false, overlay: true };
+
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const comma = v => Math.round(v).toLocaleString("ko-KR");
+const signed = v => (v > 0 ? "+" : "") + comma(v);
+const compact = v => Math.abs(v) >= 10000 ? (v/10000).toFixed(1).replace(/\.0$/,"") + "조" : comma(v);
+const mmdd = s => { const [,m,d] = s.split("-"); return `${+m}/${+d}`; };
+
+function cumsum(a){ let s=0; return a.map(v=>s+=v); }
+
+/* ---------- filters ---------- */
+function makeTabs(el, items, get, set){
+  el.innerHTML = "";
+  for (const [k, label] of items){
+    const b = document.createElement("button");
+    b.textContent = label;
+    if (get() === k) b.classList.add("on");
+    b.onclick = () => { set(k); render(); };
+    el.appendChild(b);
+  }
+}
+
+/* ---------- svg helpers ---------- */
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs){
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function niceTicks(min, max, n){
+  const span = max - min || 1;
+  const step0 = span / n;
+  const mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1,2,2.5,5,10].map(m=>m*mag).find(s=>span/s <= n) || 10*mag;
+  const t0 = Math.ceil(min/step)*step, out = [];
+  for (let t=t0; t<=max+1e-9; t+=step) out.push(Math.round(t*100)/100);
+  return out;
+}
+function monthTicks(dates){
+  const out = [];
+  let prev = "";
+  dates.forEach((d,i)=>{ const m = d.slice(0,7); if (m !== prev){ out.push([i, `${+d.slice(5,7)}월`]); prev = m; } });
+  return out.length > 1 ? out.slice(1).concat([[0, `${+dates[0].slice(5,7)}월`]]).sort((a,b)=>a[0]-b[0]) : out;
+}
+
+/* base chart frame: returns {svg, x, y, plot} */
+function frame(container, height, yMin, yMax, dates){
+  container.innerHTML = "";
+  const W = container.clientWidth || 1080, H = height;
+  const M = { t: 10, r: 14, b: 22, l: 56 };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H });
+  const iw = W - M.l - M.r, ih = H - M.t - M.b;
+  const x = i => M.l + (dates.length === 1 ? iw/2 : i / (dates.length - 1) * iw);
+  const y = v => M.t + (1 - (v - yMin) / (yMax - yMin || 1)) * ih;
+  // gridlines + y ticks
+  for (const t of niceTicks(yMin, yMax, 5)){
+    svg.appendChild(el("line", { x1: M.l, x2: W - M.r, y1: y(t), y2: y(t),
+      stroke: t === 0 ? css("--baseline") : css("--grid"), "stroke-width": 1 }));
+    const lbl = el("text", { x: M.l - 8, y: y(t) + 4, "text-anchor": "end",
+      "font-size": 11, fill: css("--muted") });
+    lbl.textContent = compact(t);
+    svg.appendChild(lbl);
+  }
+  // x month ticks
+  for (const [i, name] of monthTicks(dates)){
+    const lbl = el("text", { x: x(i), y: H - 6, "text-anchor": "middle",
+      "font-size": 11, fill: css("--muted") });
+    lbl.textContent = name;
+    svg.appendChild(lbl);
+  }
+  container.appendChild(svg);
+  return { svg, x, y, W, H, M };
+}
+
+function attachHover(container, ttEl, dates, xOf, rows){
+  const svg = container.querySelector("svg");
+  const cross = el("line", { y1: 10, y2: svg.viewBox.baseVal.height - 22,
+    stroke: css("--baseline"), "stroke-width": 1, "stroke-dasharray": "none", visibility: "hidden" });
+  svg.appendChild(cross);
+  svg.onmousemove = ev => {
+    const r = svg.getBoundingClientRect();
+    const px = (ev.clientX - r.left) * (svg.viewBox.baseVal.width / r.width);
+    let best = 0, bd = 1e9;
+    for (let i = 0; i < dates.length; i++){ const d = Math.abs(xOf(i) - px); if (d < bd){ bd = d; best = i; } }
+    cross.setAttribute("x1", xOf(best)); cross.setAttribute("x2", xOf(best));
+    cross.setAttribute("visibility", "visible");
+    ttEl.innerHTML = `<div class="tt-date">${dates[best]}</div>` +
+      rows(best).map(([k, v, c]) =>
+        `<div class="row"><span class="k">${c ? `<i style="background:${c}"></i>` : ""}${k}</span><span class="v">${v}</span></div>`).join("");
+    ttEl.style.display = "block";
+    const card = container.closest(".card").getBoundingClientRect();
+    let lx = ev.clientX - card.left + 16;
+    if (lx + 190 > card.width) lx = ev.clientX - card.left - 190;
+    ttEl.style.left = lx + "px";
+    ttEl.style.top = (ev.clientY - card.top + 14) + "px";
+  };
+  svg.onmouseleave = () => { ttEl.style.display = "none"; cross.setAttribute("visibility", "hidden"); };
+}
+
+function linePath(pts){
+  return pts.map((p,i)=>(i?"L":"M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+}
+
+/* ---------- charts ---------- */
+function drawCumulative(m, lo, hi){
+  const dates = m.dates.slice(lo, hi);
+  // 기간 필터 적용 시 구간 시작을 0으로 리베이스해서 기간 내 수급을 비교
+  const series = SERIES3.map(s => ({ ...s, cum: cumsum(m[s.key].slice(lo, hi)) }));
+  document.getElementById("cumDesc").textContent = state.period === "all"
+    ? "연초(1/2)부터 누적, 억원"
+    : `최근 ${state.period}거래일 누적 (기간 시작 = 0), 억원`;
+  const all = series.flatMap(s => s.cum);
+  const yMin = Math.min(0, ...all), yMax = Math.max(0, ...all);
+  const c = document.getElementById("cumChart");
+  const { svg, x, y } = frame(c, 300, yMin, yMax, dates);
+
+  // 지수 오버레이: 차트 세로 범위에 min-max 스케일링 (실제 값은 툴팁에)
+  let closeVis = null;
+  const idxColor = css("--s-index");
+  if (state.overlay){
+    const cl = m.close.slice(lo, hi);
+    const vals = cl.filter(v => v != null);
+    if (vals.length){
+      closeVis = cl;
+      const cmin = Math.min(...vals), cmax = Math.max(...vals);
+      const map = v => y(yMin + (v - cmin) / (cmax - cmin || 1) * (yMax - yMin));
+      const pts = cl.map((v,i)=> v == null ? null : [x(i), map(v)]).filter(Boolean);
+      svg.appendChild(el("path", { d: linePath(pts), fill: "none", stroke: idxColor,
+        "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round", opacity: 0.85 }));
+      const lp = pts[pts.length - 1];
+      svg.appendChild(el("circle", { cx: lp[0], cy: lp[1], r: 4.5,
+        fill: idxColor, stroke: css("--surface-1"), "stroke-width": 2 }));
+    }
+  }
+  document.getElementById("legIndex").style.display = closeVis ? "inline-flex" : "none";
+  document.getElementById("legIndexName").textContent = m.indexName + " 지수";
+
+  for (const s of series){
+    const color = css(s.cvar);
+    svg.appendChild(el("path", { d: linePath(s.cum.map((v,i)=>[x(i), y(v)])),
+      fill: "none", stroke: color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    const li = s.cum.length - 1;
+    svg.appendChild(el("circle", { cx: x(li), cy: y(s.cum[li]), r: 4.5,
+      fill: color, stroke: css("--surface-1"), "stroke-width": 2 }));
+  }
+  attachHover(c, document.getElementById("ttCum"), dates, x,
+    i => series.map(s => [s.name, signed(s.cum[i]) + "억", css(s.cvar)])
+      .concat(closeVis && closeVis[i] != null
+        ? [[m.indexName, closeVis[i].toLocaleString("ko-KR"), idxColor]] : []));
+}
+
+function drawIndex(m, lo, hi){
+  const dates = m.dates.slice(lo, hi);
+  const close = m.close.slice(lo, hi).map(v => v == null ? null : v);
+  const vals = close.filter(v => v != null);
+  document.getElementById("idxTitle").textContent = m.indexName + " 지수";
+  if (!vals.length){ document.getElementById("idxChart").innerHTML = ""; return; }
+  const pad = (Math.max(...vals) - Math.min(...vals)) * 0.08 || 1;
+  const yMin = Math.min(...vals) - pad, yMax = Math.max(...vals) + pad;
+  const c = document.getElementById("idxChart");
+  const { svg, x, y, H, M } = frame(c, 220, yMin, yMax, dates);
+  const pts = close.map((v,i)=> v == null ? null : [x(i), y(v)]).filter(Boolean);
+  const color = css("--s-index");
+  const base = H - M.b;
+  svg.appendChild(el("path", {
+    d: linePath(pts) + ` L ${pts[pts.length-1][0].toFixed(1)} ${base} L ${pts[0][0].toFixed(1)} ${base} Z`,
+    fill: color, opacity: 0.1, stroke: "none" }));
+  svg.appendChild(el("path", { d: linePath(pts), fill: "none", stroke: color,
+    "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+  const li = pts.length - 1;
+  svg.appendChild(el("circle", { cx: pts[li][0], cy: pts[li][1], r: 4.5,
+    fill: color, stroke: css("--surface-1"), "stroke-width": 2 }));
+  attachHover(c, document.getElementById("ttIdx"), dates, x,
+    i => [[m.indexName, close[i] == null ? "-" : close[i].toLocaleString("ko-KR"), color]]);
+}
+
+function roundedBar(xc, w, y0, y1, r){
+  // y0 = baseline, y1 = data end; rounded at data end, square at baseline
+  const top = Math.min(y0, y1), h = Math.abs(y0 - y1);
+  const rr = Math.min(r, w/2, h);
+  const x0 = xc - w/2, x1 = xc + w/2;
+  if (h < 0.75) return el("line", { x1: x0, x2: x1, y1: y0, y2: y0, stroke: "none" });
+  let d;
+  if (y1 < y0)  // 양수: 위가 둥글게
+    d = `M${x0} ${y0} L${x0} ${top+rr} Q${x0} ${top} ${x0+rr} ${top} L${x1-rr} ${top} Q${x1} ${top} ${x1} ${top+rr} L${x1} ${y0} Z`;
+  else {        // 음수: 아래가 둥글게
+    const bot = top + h;
+    d = `M${x0} ${y0} L${x1} ${y0} L${x1} ${bot-rr} Q${x1} ${bot} ${x1-rr} ${bot} L${x0+rr} ${bot} Q${x0} ${bot} ${x0} ${bot-rr} Z`;
+  }
+  return el("path", { d });
+}
+
+function drawDaily(m, lo, hi){
+  const dates = m.dates.slice(lo, hi);
+  const wrap = document.getElementById("dailyCharts");
+  wrap.innerHTML = "";
+  const panels = [];
+  for (const s of SERIES3){
+    const vals = m[s.key].slice(lo, hi);
+    const t = document.createElement("div");
+    t.className = "panel-title"; t.textContent = s.name;
+    const c = document.createElement("div");
+    wrap.appendChild(t); wrap.appendChild(c);
+    const yMax = Math.max(...vals, 0), yMin = Math.min(...vals, 0);
+    const padd = (yMax - yMin) * 0.06 || 1;
+    const { svg, x, y } = frame(c, 130, yMin - padd, yMax + padd, dates);
+    const bw = Math.max(1.5, Math.min(18, (x(1) - x(0) || 20) - 2));
+    vals.forEach((v, i) => {
+      const bar = roundedBar(x(i), bw, y(0), y(v), 2.5);
+      bar.setAttribute("fill", v >= 0 ? css("--div-buy") : css("--div-sell"));
+      svg.appendChild(bar);
+    });
+    panels.push({ c, x });
+  }
+  const tt = document.getElementById("ttDaily");
+  for (const p of panels)
+    attachHover(p.c, tt, dates, p.x,
+      i => SERIES3.map(s => [s.name, signed(m[s.key][lo + i]) + "억",
+        m[s.key][lo + i] >= 0 ? css("--div-buy") : css("--div-sell")]));
+}
+
+/* ---------- tiles / table ---------- */
+function drawTiles(m, lo){
+  const li = m.dates.length - 1;
+  const dt = mmdd(m.dates[li]);
+  const cumLabel = state.period === "all" ? "연초누적" : `${state.period}일누적`;
+  const box = document.getElementById("tiles");
+  box.innerHTML = "";
+  for (const s of SERIES3){
+    const v = m[s.key][li], cum = m[s.key].slice(lo).reduce((a,b)=>a+b,0);
+    box.insertAdjacentHTML("beforeend", `
+      <div class="tile">
+        <div class="lbl">${s.name} 순매수 (${dt})</div>
+        <div class="val ${v>=0?"up":"dn"}">${signed(v)}<span style="font-size:14px"> 억</span></div>
+        <div class="sub">${cumLabel} <b>${signed(cum)}억</b></div>
+      </div>`);
+  }
+  const close = m.close[li];
+  const prev = m.close[li-1];
+  const pct = (close != null && prev != null) ? (close/prev - 1) * 100 : null;
+  box.insertAdjacentHTML("beforeend", `
+    <div class="tile">
+      <div class="lbl">${m.indexName} 종가 (${dt})</div>
+      <div class="val">${close == null ? "-" : close.toLocaleString("ko-KR")}</div>
+      <div class="sub">${pct == null ? "" : `전일比 <b class="${pct>=0?"up":"dn"}">${pct>=0?"+":""}${pct.toFixed(2)}%</b>`}</div>
+    </div>`);
+}
+
+function drawTable(m){
+  const wrap = document.getElementById("tableWrap");
+  const cols = [["individual","개인"],["foreign","외국인"],["inst_total","기관계"],
+    ...Object.entries(DETAIL_KR).map(([k,v])=>[k,v])];
+  let html = "<table><thead><tr><th>날짜</th>" +
+    cols.map(([,n])=>`<th>${n}</th>`).join("") + `<th>${m.indexName}</th></tr></thead><tbody>`;
+  for (let i = m.dates.length - 1; i >= 0; i--){
+    html += `<tr><td>${m.dates[i]}</td>` +
+      cols.map(([k])=>{ const v = m[k][i];
+        return `<td class="${v>0?"up":v<0?"dn":""}">${comma(v)}</td>`; }).join("") +
+      `<td>${m.close[i] == null ? "-" : m.close[i].toLocaleString("ko-KR")}</td></tr>`;
+  }
+  wrap.innerHTML = html + "</tbody></table>";
+}
+
+/* ---------- main ---------- */
+function render(){
+  const m = D.markets[state.market];
+  const n = m.dates.length;
+  const lo = state.period === "all" ? 0 : Math.max(0, n - +state.period);
+  document.getElementById("metaInfo").textContent =
+    `최근 거래일 ${m.dates[n-1]} · 갱신 ${D.generated} · 단위 억원`;
+  makeTabs(document.getElementById("marketTabs"), MARKETS, ()=>state.market, k=>state.market=k);
+  makeTabs(document.getElementById("periodTabs"), PERIODS, ()=>state.period, k=>state.period=k);
+  drawTiles(m, lo);
+  drawCumulative(m, lo, n);
+  drawIndex(m, lo, n);
+  drawDaily(m, lo, n);
+  document.getElementById("tableCard").style.display = state.table ? "block" : "none";
+  if (state.table) drawTable(m);
+  document.getElementById("btnTable").classList.toggle("on", state.table);
+  document.getElementById("btnOverlay").classList.toggle("on", state.overlay);
+}
+
+document.getElementById("btnTable").onclick = () => { state.table = !state.table; render(); };
+document.getElementById("btnOverlay").onclick = () => { state.overlay = !state.overlay; render(); };
+document.getElementById("btnTheme").onclick = () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("flow-theme", next);
+  document.getElementById("btnTheme").textContent = next === "dark" ? "라이트모드" : "다크모드";
+  render();
+};
+(function initTheme(){
+  const saved = localStorage.getItem("flow-theme");
+  const dark = saved ? saved === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  document.getElementById("btnTheme").textContent = dark ? "라이트모드" : "다크모드";
+})();
+let rzT; addEventListener("resize", () => { clearTimeout(rzT); rzT = setTimeout(render, 150); });
+render();
+</script>
+</body>
+</html>

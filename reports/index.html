@@ -2,7 +2,7 @@
   <header>
     <div class="eyebrow">데일리 대시보드</div>
     <h1>알파노트</h1>
-    <div class="date">2026-08-03 <span class="gen">(갱신 14:45)</span></div>
+    <div class="date">2026-08-03 <span class="gen">(갱신 14:50)</span></div>
   </header>
   <div class="cards">
     <a class="scard" href="briefs.html">
@@ -45,6 +45,12 @@
       <div class="sc-head"><span class="sc-icon">📈</span><span class="sc-title">분석 도구</span>
         <span class="sc-date">차트 · 계절성</span></div>
       <div class="sc-body"><div class="krow"><span class="k-name">주식 차트</span><span class="k-val">캔들 · 이동평균 · Log</span></div><div class="krow"><span class="k-name">계절성 분석</span><span class="k-val">월별 통계 · 최적 진입 · 히트맵</span></div></div>
+      <div class="sc-more">자세히 →</div>
+    </a>
+    <a class="scard" href="flow.html">
+      <div class="sc-head"><span class="sc-icon">💰</span><span class="sc-title">수급 동향</span>
+        <span class="sc-date">2026-08-03 · 코스피</span></div>
+      <div class="sc-body"><div class="krow"><span class="k-name">개인</span><span class="k-val up">+39,689억</span></div><div class="krow"><span class="k-name">외국인</span><span class="k-val down">-25,377억</span></div><div class="krow"><span class="k-name">기관</span><span class="k-val down">-15,278억</span></div><div class="krow"><span class="k-name">선물 외국인</span><span class="k-val down">-7,220억</span></div></div>
       <div class="sc-more">자세히 →</div>
     </a></div>
   <footer><p class="muted">본 페이지의 모든 정보는 자동 수집·생성된 참고 자료입니다. 투자 판단과 그 결과에 대한 책임은 이용자 본인에게 있습니다.</p></footer>
@@ -147,6 +153,7 @@ function _tgTheme(){
   .k-name { color:var(--muted); flex:0 0 auto; }
   .k-val { font-weight:600; text-align:right; }
   .k-val.up { color:var(--up); font-variant-numeric:tabular-nums; }
+  .k-val.down { color:var(--accent); font-variant-numeric:tabular-nums; }
   .k-diff { font-weight:600; font-size:12.5px; font-variant-numeric:tabular-nums; color:var(--muted); }
   .k-diff.up { color:var(--up); }
   .k-diff.down { color:var(--accent); }

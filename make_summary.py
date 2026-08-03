@@ -229,6 +229,47 @@ def card_sectors():
     return {"date": date, "title": title, "lead": lead, "adjust": adjust}
 
 
+def card_flows():
+    """수급 동향: 최근 거래일 투자자별 순매수 + 대시보드 페이지(flow.html) 재생성.
+
+    수급모니터링/ 의 CSV·dashboard_data.js 는 로컬 작업(수급동향_1740_수집)이
+    매일 갱신·푸시한다. 여기서는 대시보드를 reports/ 경로로 복사만 한다.
+    """
+    import csv
+    flow_dir = os.path.join(BASE, "수급모니터링")
+
+    def last_row(name):
+        path = os.path.join(flow_dir, "data", name)
+        if not os.path.exists(path):
+            return None
+        with open(path, encoding="utf-8-sig") as f:
+            rows = list(csv.DictReader(f))
+        return rows[-1] if rows else None
+
+    k = last_row("kospi.csv")
+    if not k:
+        return None
+
+    # 대시보드를 사이트 경로로 복사 (데이터 파일 참조만 교체)
+    html = open(os.path.join(flow_dir, "dashboard.html"), encoding="utf-8").read()
+    html = html.replace('src="dashboard_data.js"', 'src="flow_data.js"')
+    with open(os.path.join(OUT_DIR, "flow.html"), "w", encoding="utf-8") as f:
+        f.write(html)
+    with open(os.path.join(flow_dir, "dashboard_data.js"), encoding="utf-8") as f:
+        data_js = f.read()
+    with open(os.path.join(OUT_DIR, "flow_data.js"), "w", encoding="utf-8") as f:
+        f.write(data_js)
+
+    fut = last_row("futures.csv")
+    return {
+        "date": k["date"],
+        "indiv": int(k["individual"]),
+        "forgn": int(k["foreign"]),
+        "inst": int(k["inst_total"]),
+        "fut_forgn": int(fut["foreign"]) if fut else None,
+    }
+
+
 # ---------------------------------------------------------------- 렌더링
 def _card(href, icon, title, date, body):
     return f"""
@@ -340,6 +381,24 @@ def build():
         '<div class="krow"><span class="k-name">계절성 분석</span>'
         '<span class="k-val">월별 통계 · 최적 진입 · 히트맵</span></div>'))
 
+    c = None
+    try:
+        c = card_flows()
+    except Exception as e:
+        print(f"[요약] 수급 카드 실패: {e}")
+    if c:
+        def _frow(name, v):
+            cls = "up" if v > 0 else ("down" if v < 0 else "")
+            sign = "+" if v > 0 else ""
+            return (f'<div class="krow"><span class="k-name">{name}</span>'
+                    f'<span class="k-val {cls}">{sign}{v:,}억</span></div>')
+        body = (_frow("개인", c["indiv"]) + _frow("외국인", c["forgn"])
+                + _frow("기관", c["inst"]))
+        if c["fut_forgn"] is not None:
+            body += _frow("선물 외국인", c["fut_forgn"])
+        cards.append(_card("flow.html", "💰", "수급 동향",
+                           f'{c["date"]} · 코스피', body))
+
     import pytz
     today = datetime.datetime.now(pytz.timezone("Asia/Seoul"))   # 러너(UTC)에서도 KST 표기
     body_html = f"""<div class="wrap">
@@ -394,6 +453,7 @@ def build():
   .k-name {{ color:var(--muted); flex:0 0 auto; }}
   .k-val {{ font-weight:600; text-align:right; }}
   .k-val.up {{ color:var(--up); font-variant-numeric:tabular-nums; }}
+  .k-val.down {{ color:var(--accent); font-variant-numeric:tabular-nums; }}
   .k-diff {{ font-weight:600; font-size:12.5px; font-variant-numeric:tabular-nums; color:var(--muted); }}
   .k-diff.up {{ color:var(--up); }}
   .k-diff.down {{ color:var(--accent); }}
