@@ -9,7 +9,12 @@ $ErrorActionPreference = 'Continue'
 $env:PYTHONUTF8 = '1'
 $env:PYTHONIOENCODING = 'utf-8'
 
-$py      = 'C:\Users\SAMSUNG\AppData\Local\Programs\Python\Python311\python.exe'
+$py = 'C:\Users\SAMSUNG\AppData\Local\Programs\Python\Python311\python.exe'
+if (-not (Test-Path $py)) {  # 다른 PC(포터블)에서는 PATH의 python 사용
+    $cmd = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $cmd) { $cmd = Get-Command py -ErrorAction SilentlyContinue }
+    if ($cmd) { $py = $cmd.Source }
+}
 $script  = Join-Path $PSScriptRoot 'alert_monitor.py'
 $logDir  = Join-Path (Split-Path $PSScriptRoot -Parent) 'logs'
 $logFile = Join-Path $logDir ("price_alert_{0:yyyyMMdd}.log" -f (Get-Date))

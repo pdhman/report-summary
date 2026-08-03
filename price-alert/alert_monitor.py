@@ -48,7 +48,23 @@ def in_market_hours(cfg, now):
 
 
 def load_holdings(data_js):
-    """data.js → [{name, code}] (코드 중복 제거, code 없는 종목은 경고 후 스킵)."""
+    """감시 종목 목록 → [{name, code}].
+
+    1순위: prop-dashboard/data.js (이 PC의 원본 기록)
+    2순위: price-alert/holdings.json — data.js가 없는 다른 PC용 포터블 모드.
+           형식: [{"name": "KODEX 200", "code": "069500"}, ...]
+    """
+    if not os.path.exists(data_js):
+        alt = os.path.join(HERE, "holdings.json")
+        if not os.path.exists(alt):
+            log(f"ERROR: {data_js} 도 {alt} 도 없음 — 감시 종목을 알 수 없습니다")
+            return []
+        log("포터블 모드: holdings.json 사용")
+        with open(alt, encoding="utf-8") as f:
+            items = json.load(f)
+        return [{"name": i.get("name", i["code"]), "code": str(i["code"])}
+                for i in items if i.get("code")]
+
     sys.path.insert(0, os.path.dirname(data_js))
     import propdata as P  # noqa: N812
     _, data = P.load(data_js)

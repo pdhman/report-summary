@@ -49,6 +49,21 @@ python price-alert/alert_monitor.py --force     # 장시간 가드 무시하고 
 - `thresholds`: 알림 단계(%). 예: `[2, 4, 6, 10]`
 - `market_start`/`market_end`: 감시 시간대 (KST)
 
+## 다른 PC에서 쓰기 (포터블)
+
+1. `price-alert` 폴더를 통째로 복사 (Python 3.8+ 만 있으면 됨 — pip 설치 불필요)
+2. 그 PC에는 prop-dashboard가 없으므로 감시 종목을 `holdings.json`에 직접 적는다:
+   ```json
+   [
+     {"name": "KODEX 200", "code": "069500"},
+     {"name": "달바글로벌", "code": "483650"}
+   ]
+   ```
+   (data.js가 없으면 자동으로 이 파일을 읽는다. 종목이 바뀌면 직접 수정할 것)
+3. 카카오 인증: `python kakao_auth.py` → REST API 키 입력 → 브라우저 동의
+   (같은 카카오 앱을 그대로 쓰면 되고, 콘솔 설정을 다시 할 필요는 없다)
+4. 스케줄 등록: `powershell -NoProfile -ExecutionPolicy Bypass -File register_task.ps1`
+
 ## 문제 해결
 
 - **알림이 안 옴 + 로그에 `NEEDS_REAUTH`**: refresh token 만료(약 2개월 미사용 시).
