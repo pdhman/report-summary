@@ -193,6 +193,16 @@ function lineChart(elId, series, opts={}){
   host.innerHTML='';
   series=series.filter(s=>s&&s.values&&s.values.length);
   if(!series.length){host.innerHTML='<div class="empty">데이터 없음 — 스크립트 실행 또는 manual_data.json 입력 필요</div>';return;}
+  // 시리즈별 기간이 다르면(상장 시점 차이 등) 날짜 합집합 축으로 재정렬
+  // — 첫 시리즈가 짧을 때 나머지가 플롯 영역 밖까지 그려지는 문제 방지
+  if(!opts.labels&&series.length>1){
+    const d0=series[0].dates;
+    if(series.some(s=>s.dates.length!==d0.length||s.dates[0]!==d0[0]||s.dates[s.dates.length-1]!==d0[d0.length-1])){
+      const all=[...new Set([].concat(...series.map(s=>s.dates)))].sort();
+      series=series.map(s=>{const idx={};s.dates.forEach((d,i)=>idx[d]=s.values[i]);
+        return {name:s.name,dates:all,values:all.map(d=>idx[d]??null)};});
+    }
+  }
   const labels=opts.labels||series[0].dates;
   const unit=opts.unit||'';
   // 범례 (2개 이상 시리즈면 항상)
@@ -308,8 +318,10 @@ function hbarChart(elId, items, unit='%'){
     svg.appendChild(svgEl('path',{d:p,fill:SLOT[0]}));
     const lb=svgEl('text',{x:M.l-6,y:y+15,'text-anchor':'end','font-size':11.5,fill:INK.secondary});
     lb.textContent=it.label;svg.appendChild(lb);
-    const vl=svgEl('text',{x:x1-6,y:y+15,'text-anchor':'end','font-size':11,fill:INK.secondary,
-      style:'font-variant-numeric:tabular-nums'});
+    // 막대가 길어 왼쪽 축 라벨과 겹치면 값 라벨을 막대 안쪽에 표시
+    const inside=(x1-6)<(M.l+44);
+    const vl=svgEl('text',{x:inside?x1+6:x1-6,y:y+15,'text-anchor':inside?'start':'end','font-size':11,
+      fill:inside?INK.surface:INK.secondary,style:'font-variant-numeric:tabular-nums'});
     vl.textContent=fmt(it.value)+unit;svg.appendChild(vl);
   });
 }
