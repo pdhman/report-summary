@@ -1,0 +1,77 @@
+name: Weekly AI Cycle Monitor
+
+on:
+  schedule:
+    # UTC 일 23:41 = KST 월요일 08:41 (정각은 러너 지연이 잦아 41분으로 비껴둠)
+    - cron: "41 23 * * 0"
+  workflow_dispatch: {} # 깃허브에서 수동 실행 버튼 제공
+  push:
+    branches: [main]
+    paths:
+      - "aicyclemonitor/**"
+      - ".github/workflows/weekly-aicycle.yml"
+
+# 히스토리 CSV 커밋(contents) + GitHub Pages 배포(pages, id-token)
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: weekly-aicycle
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install yfinance pandas requests
+
+      # 미국 러너라 FRED·vast.ai 직접 접근 가능 — 스크립트 내장 폴백은 보험으로만 동작
+      - name: Run monitor
+        env:
+          PYTHONUTF8: "1"
+        run: python aicyclemonitor/ai_cycle_monitor.py
+
+      - name: Publish dashboard into reports/
+        run: cp aicyclemonitor/dashboard.html reports/aicycle.html
+
+      - name: Commit history + dashboard
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add aicyclemonitor reports/aicycle.html
+          if git diff --staged --quiet; then
+            echo "변경 없음 — 커밋 건너뜀"
+          else
+            git commit -m "aicycle: $(date -u +%Y-%m-%d) 주간 갱신 [skip ci]"
+            # daily-insights 등 다른 워크플로우와 push 경쟁 시 리베이스 후 재시도,
+            # 그래도 밀리면 배포는 계속 진행한다 — 실패로 처리하지 않음.
+            git pull --rebase -X theirs origin main || true
+            git push || echo "push 건너뜀 (동시 실행이 먼저 커밋함) — 배포는 계속"
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: reports
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

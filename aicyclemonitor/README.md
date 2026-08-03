@@ -24,14 +24,27 @@ python ai_cycle_monitor.py --sample   # 네트워크 없이 예시 데이터로 
 - GPU 임대가·분기 매출은 실행할 때마다 로컬 CSV에 누적 (히스토리 축적)
 - 경계 임계값은 `ai_cycle_monitor.py` 상단 `TH` 딕셔너리에서 조정
 
-## 주 1회 자동 실행 (Windows)
+## 주 1회 자동 실행 (GitHub Actions — 기본)
+
+`.github/workflows/weekly-aicycle.yml` 이 **매주 월요일 08:41 KST** 에 미국 러너에서 실행:
+수집 → `reports/aicycle.html` 로 복사 → 히스토리 CSV 커밋 → GitHub Pages 배포.
+
+- 대시보드 주소: **https://pdhman.github.io/report-summary/aicycle.html**
+- 미국 러너라 FRED·vast.ai 직접 접근 가능 (내장 폴백은 보험)
+- `aicyclemonitor/` 변경을 push 하면 즉시 재실행·재배포 (수동 실행 버튼도 있음)
+- 히스토리 CSV·`manual_data.json` 은 누적·공유를 위해 repo에 포함 (git 제외 아님)
+- 실적 시즌마다 `manual_data.json` 의 클라우드 YoY·공실률을 갱신하고 push 하면 반영
+
+### (대안) Windows 로컬 실행
 
 `register_weekly_task.bat` 실행 → 매주 월요일 08:30 작업 스케줄러 등록.
 (`run_monitor.bat`가 실제 실행 + `monitor_log.txt` 로그 기록)
+Actions 자동화가 기본이므로 로컬 스케줄러는 등록하지 않아도 된다.
 
 ## 파일 구성
 
 - `ai_cycle_monitor.py` — 수집·계산·렌더링 (단일 파일, 템플릿 내장)
 - `dashboard_template.html` — 대시보드 템플릿 (같은 폴더에 있으면 내장본보다 우선 적용)
-- `run_monitor.bat` / `register_weekly_task.bat` — Windows 자동화
-- 생성물: `dashboard.html`, `gpu_rental_history.csv`, `revenue_history.csv` (git 제외)
+- `run_monitor.bat` / `register_weekly_task.bat` — Windows 자동화 (대안 경로)
+- 데이터: `manual_data.json`, `gpu_rental_history.csv`, `revenue_history.csv`, `fred_*_history.csv` (repo 포함)
+- 생성물: `dashboard.html` (git 제외, 배포본은 `reports/aicycle.html`)
