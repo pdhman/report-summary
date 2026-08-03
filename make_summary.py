@@ -250,9 +250,21 @@ def card_flows():
     if not k:
         return None
 
-    # 대시보드를 사이트 경로로 복사 (데이터 파일 참조만 교체)
+    # 대시보드를 사이트 경로로 복사: 데이터 참조 교체 + 하단 내비 주입 +
+    # 테마 저장 키를 사이트 공용('theme')으로 통일
     html = open(os.path.join(flow_dir, "dashboard.html"), encoding="utf-8").read()
     html = html.replace('src="dashboard_data.js"', 'src="flow_data.js"')
+    html = html.replace("flow-theme", "theme")
+    # 내비 CSS 가 쓰는 사이트 변수(--panel 등)를 대시보드에 없으므로 채워 넣는다
+    nav_shim = (
+        "<style>\n"
+        "  :root { --panel:#ffffff; --line:#e6e8eb; --accent:#3b5bdb; --muted:#6b7280; }\n"
+        '  :root[data-theme="dark"] { --panel:#171b21; --line:#252b33; '
+        "--accent:#748ffc; --muted:#9aa2ad; }\n"
+        "</style>"
+    )
+    html = html.replace(
+        "</body>", site_nav.nav_html("flow") + nav_shim + site_nav.NAV_CSS + "</body>")
     with open(os.path.join(OUT_DIR, "flow.html"), "w", encoding="utf-8") as f:
         f.write(html)
     with open(os.path.join(flow_dir, "dashboard_data.js"), encoding="utf-8") as f:

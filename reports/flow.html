@@ -447,12 +447,12 @@ document.getElementById("btnTheme").onclick = () => {
   const cur = document.documentElement.getAttribute("data-theme");
   const next = cur === "dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", next);
-  localStorage.setItem("flow-theme", next);
+  localStorage.setItem("theme", next);
   document.getElementById("btnTheme").textContent = next === "dark" ? "라이트모드" : "다크모드";
   render();
 };
 (function initTheme(){
-  const saved = localStorage.getItem("flow-theme");
+  const saved = localStorage.getItem("theme");
   const dark = saved ? saved === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
   document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
   document.getElementById("btnTheme").textContent = dark ? "라이트모드" : "다크모드";
@@ -460,5 +460,74 @@ document.getElementById("btnTheme").onclick = () => {
 let rzT; addEventListener("resize", () => { clearTimeout(rzT); rzT = setTimeout(render, 150); });
 render();
 </script>
-</body>
+<nav class="bottomnav"><a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a><a class="nav-cell" href="strategy.html"><span class="ni">📝</span><span class="nl">투자전략</span></a><a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a><a class="nav-cell" href="chart.html"><span class="ni">📈</span><span class="nl">분석</span></a><a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">뉴스</span></a></nav><script>
+function _tgCur(){
+  var t = document.documentElement.dataset.theme;
+  if(t) return t;
+  return (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+function _tgSync(){
+  var b = document.getElementById('theme-toggle');
+  if(b) b.textContent = _tgCur() === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19';
+}
+function _tgTheme(){
+  var next = _tgCur() === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('theme', next); } catch(e) {}
+  _tgSync();
+}
+(function(){
+  try {
+    var t = localStorage.getItem('theme');
+    if(t){ document.documentElement.dataset.theme = t; }
+  } catch(e) {}
+  _tgSync();
+})();
+</script>
+<style>
+  #theme-toggle { position:fixed; top:14px; right:14px; z-index:60; width:38px; height:38px;
+    border-radius:50%; border:1px solid var(--line); background:var(--panel); font-size:16px;
+    line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.12); transition:border-color .15s; padding:0; }
+  #theme-toggle:hover { border-color:var(--accent); }
+</style><script>
+(function(){
+  if(!/^https?:$/.test(location.protocol)) return;   // file:// 등에서는 동작 안 함
+  var POLL = 5 * 60 * 1000;                          // 5분마다 확인
+  var tag = null;
+  function stamp(res){
+    return res.headers.get('etag') || res.headers.get('last-modified')
+        || res.headers.get('content-length');
+  }
+  function check(){
+    fetch(location.pathname, { method:'HEAD', cache:'no-store' }).then(function(res){
+      if(!res.ok) return;
+      var s = stamp(res);
+      if(!s) return;                  // 판별 정보가 없으면 새로고침하지 않는다
+      if(tag === null){ tag = s; return; }   // 첫 확인은 기준값만 기록
+      if(s !== tag){ location.reload(); }
+    }).catch(function(){});
+  }
+  window.__checkUpdate = check;       // 콘솔에서 즉시 확인용
+  check();
+  setInterval(check, POLL);
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') check();
+  });
+})();
+</script><style>
+  :root { --panel:#ffffff; --line:#e6e8eb; --accent:#3b5bdb; --muted:#6b7280; }
+  :root[data-theme="dark"] { --panel:#171b21; --line:#252b33; --accent:#748ffc; --muted:#9aa2ad; }
+</style><style>
+  .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:2px;
+    background:color-mix(in srgb,var(--panel) 92%,transparent); backdrop-filter:blur(10px);
+    border-top:1px solid var(--line); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); }
+  .bottomnav .nav-cell { display:flex; flex-direction:column; align-items:center; gap:3px; text-decoration:none; color:var(--muted);
+    padding:6px 4px; border-radius:12px; flex:1 1 0; max-width:96px; transition:color .15s,background .15s; }
+  .bottomnav .nav-cell:hover { color:var(--accent); }
+  .bottomnav .nav-cell.active { color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  .bottomnav .ni { font-size:20px; line-height:1; }
+  .bottomnav .nl { font-size:11px; font-weight:600; }
+  body { padding-bottom:92px; }
+</style></body>
 </html>
