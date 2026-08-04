@@ -5,7 +5,7 @@
 | 축 | 역사적 유형 | 추적 지표 | 소스 |
 |---|---|---|---|
 | ① 공급과잉 | 1999 닷컴 | GPU 임대가(H100·B200 임대중 중앙값), DC REIT(DLR·EQIX), 공실률 | 500.farm(vast.ai 미러) · Yahoo · CBRE(수동) |
-| ② 수요둔화 | 2022 긴축 | Hyperscaler 매출 YoY, 클라우드 부문 YoY, NVDA DC 매출 YoY, 5사 연간 capex(컨센서스) | Yahoo·SEC · 실적발표·Bloomberg(수동) |
+| ② 수요둔화 | 2022 긴축 | Hyperscaler 매출 YoY, 클라우드 부문 YoY, NVDA DC 매출 YoY, 5사 연간 capex(컨센서스 vs 실적·런레이트) | Yahoo·SEC(자동) · 실적발표·Bloomberg(수동) |
 | ③ 레버리지 | 2008 금융위기 | BBB·HY OAS, 네오클라우드 주가, BDC 프록시, CRWV 분기 capex | FRED(→allorigins 폴백) · Yahoo · SEC |
 
 > FRED는 로컬·GitHub 러너 모두 직접 접근이 차단이라 allorigins 프록시 + 로컬 캐시 폴백을 내장.
@@ -31,6 +31,13 @@
 >
 > 전사 매출 분기 히스토리는 SEC EDGAR XBRL API(data.sec.gov, 무료·무키)로 2023Q1부터
 > 백필함. yfinance가 최근 5~6개 분기만 주므로 과거 분기는 EDGAR가 원본.
+>
+> **5사 연간 capex 카드의 자동/수동 구분**: 분기 capex 실적은 SEC XBRL에서 자동 수집
+> (YTD 차분, 역년 합산 + 최근 2개 분기 ×2 런레이트). Bloomberg 컨센서스(E)만 무료
+> API가 없어 수동. 경계 판정은 컨센서스가 아니라 **런레이트 vs 직전 4분기 합**(같은
+> SEC 기준끼리)으로 자동 계산 — 0% 이하(가속 멈춤)면 경계라, 컨센서스를 안 고쳐도
+> 실행 둔화는 체크리스트에서 자동 감지된다. SEC 현금 capex와 Bloomberg 합계는
+> 집계 정의가 소폭(~8%) 달라 직접 비교 경계선은 두지 않음.
 >
 > 2026-01~07 월말 히스토리는 500.farm Grafana(Prometheus) API에서 소급 수집함
 > (`vastai_ondemand_price_median_dollars{verified="yes",rented="yes|no"}` —

@@ -130,8 +130,9 @@
           (실적 발표 후 manual_data.json 수동 입력, 라벨=회계분기 말월)</p>
         <div id="ch-nvda"></div></div>
       <div class="card"><h3>5대 Hyperscaler 연간 capex ($B)</h3>
-        <p class="note">GOOGL+MSFT+AMZN+META+ORCL 합산 — E=Bloomberg 컨센서스(수동 입력).
-          컨센서스 하향 조정 = 수요 축 조기 경보</p>
+        <p class="note">GOOGL+MSFT+AMZN+META+ORCL — 컨센서스(Bloomberg, 수동·E)와
+          SEC 실적·최근2Q×2 런레이트(자동). 경계 판정은 런레이트가 직전 4분기 합 아래로 꺾이는지(가속 멈춤).
+          SEC 현금 capex 기준이라 Bloomberg 합계와 정의가 소폭 다름</p>
         <div id="ch-capex"></div></div>
     </div>
   </section>
@@ -418,7 +419,10 @@ function renderAll(){
   }
   const cap=DATA.demand.capex_total||{};
   if(cap.labels&&cap.labels.length){
-    lineChart('ch-capex',[{name:'5사 capex',dates:cap.labels,values:cap.values}],{labels:cap.labels,unit:'B',h:190});
+    const capSeries=[{name:'컨센서스',dates:cap.labels,values:cap.values}];
+    if(cap.actual&&cap.actual.some(v=>v!=null))
+      capSeries.push({name:'실적·런레이트(SEC)',dates:cap.labels,values:cap.actual});
+    lineChart('ch-capex',capSeries,{labels:cap.labels,unit:'B',h:190});
   } else {
     document.getElementById('ch-capex').innerHTML=
       '<div class="empty">manual_data.json 의 hyperscaler_capex_total_bil 에 연간 capex($B)를 입력하세요</div>';

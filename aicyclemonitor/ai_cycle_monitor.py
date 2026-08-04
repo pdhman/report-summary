@@ -45,6 +45,12 @@ MANUAL_JSON = os.path.join(BASE_DIR, "manual_data.json")
 GPU_HISTORY_CSV = os.path.join(BASE_DIR, "gpu_rental_history.csv")
 REVENUE_CACHE_CSV = os.path.join(BASE_DIR, "revenue_history.csv")
 CRWV_CAPEX_CSV = os.path.join(BASE_DIR, "crwv_capex_history.csv")
+HS_CAPEX_CSV = os.path.join(BASE_DIR, "hyperscaler_capex_history.csv")
+CAPEX_CIK = {"GOOGL": "0001652044", "MSFT": "0000789019", "AMZN": "0001018724",
+             "META": "0001326801", "ORCL": "0001341439"}
+CAPEX_CONCEPTS = ["PaymentsToAcquirePropertyPlantAndEquipment",
+                  "PaymentsToAcquireProductiveAssets",
+                  "PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets"]
 OUTPUT_HTML = os.path.join(BASE_DIR, "dashboard.html")
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -70,6 +76,7 @@ TH = {
     "hs_yoy_consec_slowdown": 2,   # 합산 매출 YoY 연속 둔화 분기 수 → 경계
     "cloud_yoy_floor": 20.0,       # 클라우드 부문 YoY(%) 이 값 미만 → 경계
     "nvda_dc_yoy_floor": 20.0,     # NVIDIA DC 매출 YoY(%) 이 값 미만 → 경계 (공급자 프록시)
+    "capex_runrate_vs_ttm": 0.0,   # 5사 capex 런레이트(최근2Q×2)가 직전 4분기 합 이하(가속 멈춤) → 경계
     "bbb_oas_level": 200.0,        # BBB OAS(bp) 이 값 이상 → 경계
     "bbb_oas_chg_90d": 50.0,       # BBB OAS 90일 상승폭(bp) 이 값 이상 → 경계
     "neocloud_drawdown": -50.0,    # 네오클라우드 평균 52주 낙폭(%) → 경계
@@ -300,37 +307,48 @@ def fetch_hyperscaler_revenue():
     return cache
 
 
+def _sec_quarterly_series(cik, concepts):
+    """SEC XBRL 현금흐름 항목 → {분기말: 분기값}.
+    10-Q 현금흐름은 회계연도 시작 기점 YTD 누적이라, 같은 시작일을 가진 값들 중
+    분기말이 한 분기 간격인 쌍의 차분으로 분기값을 복원한다
+    (회계연도가 1월 시작이 아닌 MSFT·ORCL 도 동일하게 처리됨)."""
+    import requests
+    entries = []
+    for c in concepts:  # 태그를 갈아탄 회사(예: AMZN 2017)를 위해 전부 병합
+        r = requests.get(f"https://data.sec.gov/api/xbrl/companyconcept/CIK{cik}/us-gaap/{c}.json",
+                         timeout=30, headers={"User-Agent": "aicyclemonitor personal research"})
+        if r.status_code == 200:
+            entries += r.json().get("units", {}).get("USD", [])
+    best = {}  # (start, end) -> (filed, val) — 같은 기간은 최신 공시 우선
+    for e in entries:
+        if e.get("start") and e.get("end") and e.get("val") is not None:
+            k = (e["start"], e["end"])
+            if k not in best or e.get("filed", "") > best[k][0]:
+                best[k] = (e.get("filed", ""), float(e["val"]))
+    by_start = {}
+    for (s, en), (_, v) in best.items():
+        by_start.setdefault(s, {})[en] = v
+    q = {}
+    for s, ends in by_start.items():
+        es = sorted(ends)
+        for i, en in enumerate(es):
+            dur = (date.fromisoformat(en) - date.fromisoformat(s)).days
+            if 80 <= dur <= 100:  # 분기 단독값
+                q[en] = ends[en]
+            elif i > 0 and 80 <= (date.fromisoformat(en) - date.fromisoformat(es[i - 1])).days <= 100:
+                q[en] = ends[en] - ends[es[i - 1]]  # YTD 차분
+    return q
+
+
 def fetch_crwv_capex():
-    """CoreWeave 분기 capex(현금흐름표 유형자산취득)를 SEC XBRL에서 수집해 CSV 누적.
-    10-Q 현금흐름은 연초 기점 YTD 누적이라, 같은 해 직전 분기말 YTD와의 차분으로
-    분기값을 만든다(직전 분기말이 없으면 건너뜀). 실패 시 기존 캐시 사용."""
+    """CoreWeave 분기 capex를 SEC XBRL에서 수집해 CSV 누적. 실패 시 기존 캐시 사용."""
     cache = {}
     if os.path.exists(CRWV_CAPEX_CSV):
         with open(CRWV_CAPEX_CSV, encoding="utf-8") as f:
             for d, v in csv.reader(f):
                 cache[d] = float(v)
     try:
-        import requests
-        url = ("https://data.sec.gov/api/xbrl/companyconcept/CIK0001769628"
-               "/us-gaap/PaymentsToAcquirePropertyPlantAndEquipment.json")
-        r = requests.get(url, timeout=30,
-                         headers={"User-Agent": "aicyclemonitor personal research"})
-        r.raise_for_status()
-        best = {}  # (start, end) -> (filed, val) — 같은 기간은 최신 공시 우선
-        for e in r.json().get("units", {}).get("USD", []):
-            if e.get("start") and e.get("end") and e.get("val") is not None:
-                k = (e["start"], e["end"])
-                if k not in best or e.get("filed", "") > best[k][0]:
-                    best[k] = (e.get("filed", ""), float(e["val"]))
-        ytd = {en: v for (s, en), (_, v) in best.items() if s[5:] == "01-01"}
-        ends = sorted(ytd)
-        for i, en in enumerate(ends):
-            prev = ends[i - 1] if i and ends[i - 1][:4] == en[:4] else None
-            if prev is None:
-                if en[5:7] == "03":  # 1분기는 YTD가 곧 분기값
-                    cache[en] = ytd[en]
-            elif 80 <= (date.fromisoformat(en) - date.fromisoformat(prev)).days <= 100:
-                cache[en] = ytd[en] - ytd[prev]
+        cache.update(_sec_quarterly_series("0001769628", CAPEX_CONCEPTS[:1]))
         with open(CRWV_CAPEX_CSV, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             for d, v in sorted(cache.items()):
@@ -340,6 +358,27 @@ def fetch_crwv_capex():
             log(f"CRWV capex(SEC): 최근 {last} ${cache[last]/1e9:.1f}B, 총 {len(cache)}개 분기")
     except Exception as e:
         log(f"CRWV capex 수집 실패(기존 캐시 사용): {e}")
+    return cache
+
+
+def fetch_hyperscaler_capex():
+    """5대 하이퍼스케일러 분기 capex(SEC)를 CSV에 누적 → {(ticker, 분기말): 값}"""
+    cache = {}
+    if os.path.exists(HS_CAPEX_CSV):
+        with open(HS_CAPEX_CSV, encoding="utf-8") as f:
+            for t, d, v in csv.reader(f):
+                cache[(t, d)] = float(v)
+    for t, cik in CAPEX_CIK.items():
+        try:
+            for en, v in _sec_quarterly_series(cik, CAPEX_CONCEPTS).items():
+                if en >= "2023-01-01":
+                    cache[(t, en)] = v
+        except Exception as e:
+            log(f"{t} capex 수집 실패(캐시 사용): {e}")
+    with open(HS_CAPEX_CSV, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        for (t, d), v in sorted(cache.items()):
+            w.writerow([t, d, v])
     return cache
 
 
@@ -428,13 +467,33 @@ def collect_live():
     for kk in nvda_dc:  # 초기 하이퍼성장(+400%대)이 축을 짓누르지 않게 최근 8개 분기만
         nvda_dc[kk] = nvda_dc[kk][-8:]
 
-    # ── 수요: 5대 하이퍼스케일러 연간 capex 합산 (Bloomberg 컨센서스, 2025년부터 표시) ──
+    # ── 수요: 5대 하이퍼스케일러 연간 capex — 컨센서스(수동) vs 실적·런레이트(SEC 자동) ──
     cap = manual.get("hyperscaler_capex_total_bil", {}) or {}
     capex_total = {"labels": [], "values": []}
     for k in sorted(cap.keys()):
         if k[:4] >= "2025":
             capex_total["labels"].append(k)
             capex_total["values"].append(cap[k])
+    hs_cx = fetch_hyperscaler_capex()
+    # 역년(분기말 기준) 합산: 5사 모두 4개 분기가 있는 해만 '실적'으로 인정
+    peryear = {}
+    for (t, en), v in hs_cx.items():
+        peryear.setdefault(en[:4], {}).setdefault(t, []).append(v)
+    annual = {y: round(sum(sum(vs) for vs in d.values()) / 1e9, 1)
+              for y, d in peryear.items()
+              if len(d) == 5 and all(len(vs) == 4 for vs in d.values())}
+    # 런레이트: 5사 각자 최근 2개 분기 합 ×2 (당해 실행 속도의 연율화)
+    runrate = None
+    latest2 = [sorted(en for (tk, en) in hs_cx if tk == t)[-2:] for t in CAPEX_CIK]
+    if all(len(qs) == 2 for qs in latest2):
+        runrate = round(sum(hs_cx[(t, en)] for t, qs in zip(CAPEX_CIK, latest2)
+                            for en in qs) * 2 / 1e9, 1)
+    this_year = str(date.today().year)
+    capex_total["actual"] = [annual.get(lb[:4]) if lb[:4] != this_year
+                             else (runrate if runrate else annual.get(lb[:4]))
+                             for lb in capex_total["labels"]]
+    if annual or runrate:
+        log(f"5사 capex(SEC): 연간 실적 {annual}, 런레이트 ${runrate}B/yr")
 
     # ── 레버리지: CoreWeave 분기 capex (GPU 담보부채로 조달하는 buildout) ──
     crwv_cx = sorted(fetch_crwv_capex().items())
@@ -467,6 +526,13 @@ def collect_live():
         metrics["bbb_chg_90d_bp"] = round(float(s.iloc[-1]) - float(past.iloc[-1]), 0) if not past.empty else None
     metrics["nvda_dc_yoy_last"] = nvda_dc["yoy"][-1] if nvda_dc["yoy"] else None
     metrics["nvda_dc_last_bil"] = nvda_dc["values"][-1] if nvda_dc["values"] else None
+    metrics["capex_runrate_bil"] = runrate
+    # 같은 SEC 기준끼리 비교: 런레이트 vs 직전 4분기 합 — 가속이 멈추면(≤0%) 경계.
+    # (컨센서스와의 직접 비교는 집계 정의 차이·램프업 편향으로 가짜 신호가 남)
+    ttm4 = [sorted(en for (tk, en) in hs_cx if tk == t)[-4:] for t in CAPEX_CIK]
+    if runrate and all(len(qs) == 4 for qs in ttm4):
+        ttm = sum(hs_cx[(t, en)] for t, qs in zip(CAPEX_CIK, ttm4) for en in qs) / 1e9
+        metrics["capex_runrate_vs_ttm"] = pct(runrate, ttm)
     if crwv_cx:
         last_d, last_v = crwv_cx[-1]
         prev = [v for d, v in crwv_cx
@@ -602,7 +668,8 @@ def collect_sample():
                         "yoy": [112.0, 93.4, 73.1, 56.5, 66.5, 75.1, 92.3],
                         "values": [30.8, 35.6, 39.1, 41.1, 51.2, 62.3, 75.2]},
             "capex_total": {"labels": ["2025", "2026E", "2027E", "2028E"],
-                            "values": [446.4, 813.1, 1119.6, 1267.1]},
+                            "values": [446.4, 813.1, 1119.6, 1267.1],
+                            "actual": [446.4, 802.0, None, None]},
         },
         "leverage": {
             "spreads": {"BBB_OAS": pack(bbb), "HY_OAS": pack(hy)},
@@ -629,6 +696,8 @@ def collect_sample():
             "nvda_dc_last_bil": 75.2,
             "crwv_capex_yoy": 449.3,
             "crwv_capex_last_bil": 7.7,
+            "capex_runrate_bil": 802.0,
+            "capex_runrate_vs_ttm": 16.0,
             "bbb_last": bbb[-1],
             "bbb_chg_90d_bp": round(bbb[-1] - bbb[-90], 0),
         },
@@ -702,6 +771,9 @@ def judge(data):
     v = m.get("nvda_dc_yoy_last")
     add("수요", "NVIDIA DC 매출 YoY (공급자 프록시, 수동)", v, "%",
         f"{TH['nvda_dc_yoy_floor']}% 미만", v is not None and v < TH["nvda_dc_yoy_floor"])
+    v = m.get("capex_runrate_vs_ttm")
+    add("수요", "5사 capex 런레이트 vs 직전 4분기 (SEC 자동)", v, "%",
+        f"{TH['capex_runrate_vs_ttm']:.0f}% 이하 (가속 멈춤)", v is not None and v <= TH["capex_runrate_vs_ttm"])
 
     v = m.get("bbb_last")
     add("레버리지", "BBB 회사채 OAS 수준 (FRED)", v, "bp",
@@ -898,8 +970,9 @@ TEMPLATE = r"""<!DOCTYPE html>
           (실적 발표 후 manual_data.json 수동 입력, 라벨=회계분기 말월)</p>
         <div id="ch-nvda"></div></div>
       <div class="card"><h3>5대 Hyperscaler 연간 capex ($B)</h3>
-        <p class="note">GOOGL+MSFT+AMZN+META+ORCL 합산 — E=Bloomberg 컨센서스(수동 입력).
-          컨센서스 하향 조정 = 수요 축 조기 경보</p>
+        <p class="note">GOOGL+MSFT+AMZN+META+ORCL — 컨센서스(Bloomberg, 수동·E)와
+          SEC 실적·최근2Q×2 런레이트(자동). 경계 판정은 런레이트가 직전 4분기 합 아래로 꺾이는지(가속 멈춤).
+          SEC 현금 capex 기준이라 Bloomberg 합계와 정의가 소폭 다름</p>
         <div id="ch-capex"></div></div>
     </div>
   </section>
@@ -1186,7 +1259,10 @@ function renderAll(){
   }
   const cap=DATA.demand.capex_total||{};
   if(cap.labels&&cap.labels.length){
-    lineChart('ch-capex',[{name:'5사 capex',dates:cap.labels,values:cap.values}],{labels:cap.labels,unit:'B',h:190});
+    const capSeries=[{name:'컨센서스',dates:cap.labels,values:cap.values}];
+    if(cap.actual&&cap.actual.some(v=>v!=null))
+      capSeries.push({name:'실적·런레이트(SEC)',dates:cap.labels,values:cap.actual});
+    lineChart('ch-capex',capSeries,{labels:cap.labels,unit:'B',h:190});
   } else {
     document.getElementById('ch-capex').innerHTML=
       '<div class="empty">manual_data.json 의 hyperscaler_capex_total_bil 에 연간 capex($B)를 입력하세요</div>';
