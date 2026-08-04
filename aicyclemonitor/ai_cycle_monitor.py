@@ -534,10 +534,10 @@ def collect_sample():
         "META": [18.9, 20.6, 16.1, 21.6, 20.2, 18.4, 15.9, 13.5],
     }
     cloud_yoy = {
-        "2025Q3": {"Azure": 33.0, "AWS": 19.0, "Google Cloud": 32.0},
-        "2025Q4": {"Azure": 31.0, "AWS": 17.5, "Google Cloud": 30.0},
-        "2026Q1": {"Azure": 28.0, "AWS": 16.0, "Google Cloud": 27.0},
-        "2026Q2": {"Azure": 25.5, "AWS": 14.5, "Google Cloud": 24.0},
+        "2025Q3": {"Azure": 33.0, "AWS": 19.0, "Google Cloud": 32.0, "OCI": 52.0},
+        "2025Q4": {"Azure": 31.0, "AWS": 17.5, "Google Cloud": 30.0, "OCI": 47.0},
+        "2026Q1": {"Azure": 28.0, "AWS": 16.0, "Google Cloud": 27.0, "OCI": 41.0},
+        "2026Q2": {"Azure": 25.5, "AWS": 14.5, "Google Cloud": 24.0, "OCI": 34.0},
     }
 
     # 레버리지: 스프레드 저점 후 확대, 네오클라우드 급락
@@ -880,7 +880,7 @@ TEMPLATE = r"""<!DOCTYPE html>
         <div id="ch-rev"></div></div>
       <div class="card"><h3>클라우드 부문 매출 YoY (%)</h3>
         <p class="note">manual_data.json 수동 입력 — AWS=순수 부문 · Google Cloud=GCP+Workspace ·
-          Azure='Azure 및 기타 클라우드' 성장률(달러 미공시) · Meta=클라우드 사업 없음</p>
+          Azure='Azure 및 기타 클라우드' 성장률(달러 미공시) · OCI=오라클 IaaS 부문(회계분기 1개월 시차) · Meta=클라우드 사업 없음</p>
         <div id="ch-cloud"></div></div>
       <div class="card"><h3>NVIDIA 데이터센터 매출 YoY (%)</h3>
         <p class="note">공급자 측 총 AI 인프라 투자 프록시 — 하이퍼스케일러·중국·비상장 누가 사든 여기로 흐름
