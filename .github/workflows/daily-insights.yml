@@ -16,6 +16,9 @@ on:
     # 소스/코드 변경 시에만 재배포. 봇이 만드는 reports/ 커밋은 제외해 무한루프 방지.
     paths:
       - "**.py"
+      # aicyclemonitor 는 전용 워크플로우(weekly-aicycle)가 배포 — 여기서 제외해
+      # 두 워크플로우가 동시에 Pages를 배포하며 서로 덮어쓰는 경쟁을 방지
+      - "!aicyclemonitor/**"
       - "requirements.txt"
       - ".github/workflows/daily-insights.yml"
       - "briefs/**" # 시황 브리핑 붙여넣고 푸시하면 자동 배포
