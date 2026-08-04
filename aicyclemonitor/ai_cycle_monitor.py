@@ -428,6 +428,14 @@ def collect_live():
     for kk in nvda_dc:  # 초기 하이퍼성장(+400%대)이 축을 짓누르지 않게 최근 8개 분기만
         nvda_dc[kk] = nvda_dc[kk][-8:]
 
+    # ── 수요: 5대 하이퍼스케일러 연간 capex 합산 (Bloomberg 컨센서스, 2025년부터 표시) ──
+    cap = manual.get("hyperscaler_capex_total_bil", {}) or {}
+    capex_total = {"labels": [], "values": []}
+    for k in sorted(cap.keys()):
+        if k[:4] >= "2025":
+            capex_total["labels"].append(k)
+            capex_total["values"].append(cap[k])
+
     # ── 레버리지: CoreWeave 분기 capex (GPU 담보부채로 조달하는 buildout) ──
     crwv_cx = sorted(fetch_crwv_capex().items())
     crwv_capex = {"labels": [f"{d[:4]}Q{(int(d[5:7]) - 1) // 3 + 1}" for d, _ in crwv_cx],
@@ -478,6 +486,7 @@ def collect_live():
             "revenue_yoy": rev_yoy,
             "cloud_yoy": manual.get("cloud_segment_yoy", {}),
             "nvda_dc": nvda_dc,
+            "capex_total": capex_total,
         },
         "leverage": {
             "spreads": spreads,
@@ -592,6 +601,8 @@ def collect_sample():
             "nvda_dc": {"labels": ["2024-10", "2025-01", "2025-04", "2025-07", "2025-10", "2026-01", "2026-04"],
                         "yoy": [112.0, 93.4, 73.1, 56.5, 66.5, 75.1, 92.3],
                         "values": [30.8, 35.6, 39.1, 41.1, 51.2, 62.3, 75.2]},
+            "capex_total": {"labels": ["2025", "2026E", "2027E", "2028E"],
+                            "values": [446.4, 813.1, 1119.6, 1267.1]},
         },
         "leverage": {
             "spreads": {"BBB_OAS": pack(bbb), "HY_OAS": pack(hy)},
@@ -886,6 +897,10 @@ TEMPLATE = r"""<!DOCTYPE html>
         <p class="note">공급자 측 총 AI 인프라 투자 프록시 — 하이퍼스케일러·중국·비상장 누가 사든 여기로 흐름
           (실적 발표 후 manual_data.json 수동 입력, 라벨=회계분기 말월)</p>
         <div id="ch-nvda"></div></div>
+      <div class="card"><h3>5대 Hyperscaler 연간 capex ($B)</h3>
+        <p class="note">GOOGL+MSFT+AMZN+META+ORCL 합산 — E=Bloomberg 컨센서스(수동 입력).
+          컨센서스 하향 조정 = 수요 축 조기 경보</p>
+        <div id="ch-capex"></div></div>
     </div>
   </section>
 
@@ -1168,6 +1183,13 @@ function renderAll(){
   } else {
     document.getElementById('ch-nvda').innerHTML=
       '<div class="empty">manual_data.json 의 nvda_dc_revenue_bil 에 분기 매출($B)을 입력하세요</div>';
+  }
+  const cap=DATA.demand.capex_total||{};
+  if(cap.labels&&cap.labels.length){
+    lineChart('ch-capex',[{name:'5사 capex',dates:cap.labels,values:cap.values}],{labels:cap.labels,unit:'B',h:190});
+  } else {
+    document.getElementById('ch-capex').innerHTML=
+      '<div class="empty">manual_data.json 의 hyperscaler_capex_total_bil 에 연간 capex($B)를 입력하세요</div>';
   }
 
   // ③ 레버리지
