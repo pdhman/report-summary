@@ -148,6 +148,9 @@
       <div class="card"><h3>사모신용/BDC 프록시 (시작=100)</h3>
         <p class="note">BIZD·PBDC — 사모대출 시장의 상장 그림자</p>
         <div id="ch-bdc"></div></div>
+      <div class="card"><h3>CoreWeave 분기 capex ($B)</h3>
+        <p class="note">SEC 현금흐름표(YTD 차분) — GPU 담보부채로 조달하는 buildout, 급감 = 자금줄 경색 신호</p>
+        <div id="ch-crwv"></div></div>
     </div>
   </section>
 
@@ -422,6 +425,12 @@ function renderAll(){
   hbarChart('ch-dd',Object.keys(dd).map(k=>({label:k,value:dd[k]})).sort((a,b)=>a.value-b.value));
   const bdc=DATA.leverage.private_credit_indexed||{};
   lineChart('ch-bdc',Object.keys(bdc).map(k=>({name:k,dates:bdc[k].dates,values:bdc[k].values})));
+  const cwc=DATA.leverage.crwv_capex||{};
+  if(cwc.labels&&cwc.labels.length){
+    lineChart('ch-crwv',[{name:'CRWV capex',dates:cwc.labels,values:cwc.values}],{labels:cwc.labels,unit:'B',h:190});
+  } else {
+    document.getElementById('ch-crwv').innerHTML='<div class="empty">SEC 수집 대기</div>';
+  }
 
   // 경계 신호 표
   const rows=(DATA.alerts||[]).map(a=>

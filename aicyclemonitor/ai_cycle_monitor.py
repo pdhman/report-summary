@@ -44,6 +44,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MANUAL_JSON = os.path.join(BASE_DIR, "manual_data.json")
 GPU_HISTORY_CSV = os.path.join(BASE_DIR, "gpu_rental_history.csv")
 REVENUE_CACHE_CSV = os.path.join(BASE_DIR, "revenue_history.csv")
+CRWV_CAPEX_CSV = os.path.join(BASE_DIR, "crwv_capex_history.csv")
 OUTPUT_HTML = os.path.join(BASE_DIR, "dashboard.html")
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -72,6 +73,7 @@ TH = {
     "bbb_oas_level": 200.0,        # BBB OAS(bp) 이 값 이상 → 경계
     "bbb_oas_chg_90d": 50.0,       # BBB OAS 90일 상승폭(bp) 이 값 이상 → 경계
     "neocloud_drawdown": -50.0,    # 네오클라우드 평균 52주 낙폭(%) → 경계
+    "crwv_capex_yoy": 0.0,         # CRWV 분기 capex YoY(%) 이 값 이하(감소 전환) → 경계
     "orcl_drawdown": -40.0,        # 오라클 52주 낙폭(%) → 경계
     "bdc_chg_180d": -15.0,         # BDC 프록시 6개월 수익률(%) → 경계
 }
@@ -298,6 +300,49 @@ def fetch_hyperscaler_revenue():
     return cache
 
 
+def fetch_crwv_capex():
+    """CoreWeave 분기 capex(현금흐름표 유형자산취득)를 SEC XBRL에서 수집해 CSV 누적.
+    10-Q 현금흐름은 연초 기점 YTD 누적이라, 같은 해 직전 분기말 YTD와의 차분으로
+    분기값을 만든다(직전 분기말이 없으면 건너뜀). 실패 시 기존 캐시 사용."""
+    cache = {}
+    if os.path.exists(CRWV_CAPEX_CSV):
+        with open(CRWV_CAPEX_CSV, encoding="utf-8") as f:
+            for d, v in csv.reader(f):
+                cache[d] = float(v)
+    try:
+        import requests
+        url = ("https://data.sec.gov/api/xbrl/companyconcept/CIK0001769628"
+               "/us-gaap/PaymentsToAcquirePropertyPlantAndEquipment.json")
+        r = requests.get(url, timeout=30,
+                         headers={"User-Agent": "aicyclemonitor personal research"})
+        r.raise_for_status()
+        best = {}  # (start, end) -> (filed, val) — 같은 기간은 최신 공시 우선
+        for e in r.json().get("units", {}).get("USD", []):
+            if e.get("start") and e.get("end") and e.get("val") is not None:
+                k = (e["start"], e["end"])
+                if k not in best or e.get("filed", "") > best[k][0]:
+                    best[k] = (e.get("filed", ""), float(e["val"]))
+        ytd = {en: v for (s, en), (_, v) in best.items() if s[5:] == "01-01"}
+        ends = sorted(ytd)
+        for i, en in enumerate(ends):
+            prev = ends[i - 1] if i and ends[i - 1][:4] == en[:4] else None
+            if prev is None:
+                if en[5:7] == "03":  # 1분기는 YTD가 곧 분기값
+                    cache[en] = ytd[en]
+            elif 80 <= (date.fromisoformat(en) - date.fromisoformat(prev)).days <= 100:
+                cache[en] = ytd[en] - ytd[prev]
+        with open(CRWV_CAPEX_CSV, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            for d, v in sorted(cache.items()):
+                w.writerow([d, v])
+        if cache:
+            last = sorted(cache)[-1]
+            log(f"CRWV capex(SEC): 최근 {last} ${cache[last]/1e9:.1f}B, 총 {len(cache)}개 분기")
+    except Exception as e:
+        log(f"CRWV capex 수집 실패(기존 캐시 사용): {e}")
+    return cache
+
+
 def revenue_yoy_series(cache):
     """분기 매출 캐시 → 티커별 YoY 시계열 {ticker: {"quarters":[...], "yoy":[...]}}"""
     out = {}
@@ -383,6 +428,11 @@ def collect_live():
     for kk in nvda_dc:  # 초기 하이퍼성장(+400%대)이 축을 짓누르지 않게 최근 8개 분기만
         nvda_dc[kk] = nvda_dc[kk][-8:]
 
+    # ── 레버리지: CoreWeave 분기 capex (GPU 담보부채로 조달하는 buildout) ──
+    crwv_cx = sorted(fetch_crwv_capex().items())
+    crwv_capex = {"labels": [f"{d[:4]}Q{(int(d[5:7]) - 1) // 3 + 1}" for d, _ in crwv_cx],
+                  "values": [round(v / 1e9, 2) for _, v in crwv_cx]}
+
     # ── 지표 계산 ──
     metrics = {}
     for model, key in [("H100 SXM", "gpu"), ("B200", "b200")]:
@@ -409,6 +459,12 @@ def collect_live():
         metrics["bbb_chg_90d_bp"] = round(float(s.iloc[-1]) - float(past.iloc[-1]), 0) if not past.empty else None
     metrics["nvda_dc_yoy_last"] = nvda_dc["yoy"][-1] if nvda_dc["yoy"] else None
     metrics["nvda_dc_last_bil"] = nvda_dc["values"][-1] if nvda_dc["values"] else None
+    if crwv_cx:
+        last_d, last_v = crwv_cx[-1]
+        prev = [v for d, v in crwv_cx
+                if d[:4] == str(int(last_d[:4]) - 1) and d[5:7] == last_d[5:7]]
+        metrics["crwv_capex_yoy"] = pct(last_v, prev[0]) if prev else None
+        metrics["crwv_capex_last_bil"] = round(last_v / 1e9, 1)
 
     data = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -429,6 +485,7 @@ def collect_live():
             "private_credit_indexed": indexed(PRIVATE_CREDIT),
             "orcl_indexed": indexed([ORACLE]),
             "drawdowns": dd,
+            "crwv_capex": crwv_capex,
         },
         "metrics": metrics,
     }
@@ -542,6 +599,9 @@ def collect_sample():
             "private_credit_indexed": {"BIZD": pack(idx(bizd)), "PBDC": pack(idx(pbdc))},
             "orcl_indexed": {"ORCL": pack(idx(orcl))},
             "drawdowns": dd,
+            "crwv_capex": {"labels": ["2024Q1", "2024Q2", "2024Q3", "2024Q4",
+                                      "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1"],
+                           "values": [1.7, 2.0, 2.2, 2.8, 1.4, 2.5, 2.4, 4.1, 7.7]},
         },
         "metrics": {
             "gpu_rent_chg_90d": round((gpu_vals[-1] / gpu_vals[-90] - 1) * 100, 1),
@@ -556,6 +616,8 @@ def collect_sample():
             "orcl_dd": dd["ORCL"],
             "nvda_dc_yoy_last": 92.3,
             "nvda_dc_last_bil": 75.2,
+            "crwv_capex_yoy": 449.3,
+            "crwv_capex_last_bil": 7.7,
             "bbb_last": bbb[-1],
             "bbb_chg_90d_bp": round(bbb[-1] - bbb[-90], 0),
         },
@@ -646,6 +708,9 @@ def judge(data):
         v = m.get(f"{t}_chg_180d")
         add("레버리지", f"{t} 6개월 수익률 (BDC/사모신용 프록시)", v, "%",
             f"{TH['bdc_chg_180d']}% 이하", v is not None and v <= TH["bdc_chg_180d"])
+    v = m.get("crwv_capex_yoy")
+    add("레버리지", "CoreWeave 분기 capex YoY (SEC)", v, "%",
+        f"{TH['crwv_capex_yoy']:.0f}% 이하 (감소 전환)", v is not None and v <= TH["crwv_capex_yoy"])
 
     pillar_status = {}
     for p in ["공급", "수요", "레버리지"]:
@@ -840,6 +905,9 @@ TEMPLATE = r"""<!DOCTYPE html>
       <div class="card"><h3>사모신용/BDC 프록시 (시작=100)</h3>
         <p class="note">BIZD·PBDC — 사모대출 시장의 상장 그림자</p>
         <div id="ch-bdc"></div></div>
+      <div class="card"><h3>CoreWeave 분기 capex ($B)</h3>
+        <p class="note">SEC 현금흐름표(YTD 차분) — GPU 담보부채로 조달하는 buildout, 급감 = 자금줄 경색 신호</p>
+        <div id="ch-crwv"></div></div>
     </div>
   </section>
 
@@ -1114,6 +1182,12 @@ function renderAll(){
   hbarChart('ch-dd',Object.keys(dd).map(k=>({label:k,value:dd[k]})).sort((a,b)=>a.value-b.value));
   const bdc=DATA.leverage.private_credit_indexed||{};
   lineChart('ch-bdc',Object.keys(bdc).map(k=>({name:k,dates:bdc[k].dates,values:bdc[k].values})));
+  const cwc=DATA.leverage.crwv_capex||{};
+  if(cwc.labels&&cwc.labels.length){
+    lineChart('ch-crwv',[{name:'CRWV capex',dates:cwc.labels,values:cwc.values}],{labels:cwc.labels,unit:'B',h:190});
+  } else {
+    document.getElementById('ch-crwv').innerHTML='<div class="empty">SEC 수집 대기</div>';
+  }
 
   // 경계 신호 표
   const rows=(DATA.alerts||[]).map(a=>

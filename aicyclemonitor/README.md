@@ -6,7 +6,7 @@
 |---|---|---|---|
 | ① 공급과잉 | 1999 닷컴 | GPU 임대가(H100·B200 임대중 중앙값), DC REIT(DLR·EQIX), 공실률 | 500.farm(vast.ai 미러) · Yahoo · CBRE(수동) |
 | ② 수요둔화 | 2022 긴축 | Hyperscaler 매출 YoY, 클라우드 부문 YoY, NVDA DC 매출 YoY | Yahoo·SEC · 실적발표(수동) |
-| ③ 레버리지 | 2008 금융위기 | BBB·HY OAS, 네오클라우드 주가, BDC 프록시 | FRED(→allorigins 폴백) · Yahoo |
+| ③ 레버리지 | 2008 금융위기 | BBB·HY OAS, 네오클라우드 주가, BDC 프록시, CRWV 분기 capex | FRED(→allorigins 폴백) · Yahoo · SEC |
 
 > FRED는 로컬·GitHub 러너 모두 직접 접근이 차단이라 allorigins 프록시 + 로컬 캐시 폴백을 내장.
 > GPU 임대가는 vast.ai 직접 API가 어디서든 403이라 통계 미러(500.farm)를 기본 소스로 사용.
