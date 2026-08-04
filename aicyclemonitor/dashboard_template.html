@@ -125,6 +125,10 @@
         <p class="note">manual_data.json 수동 입력 — AWS=순수 부문 · Google Cloud=GCP+Workspace ·
           Azure='Azure 및 기타 클라우드' 성장률(달러 미공시) · Meta=클라우드 사업 없음</p>
         <div id="ch-cloud"></div></div>
+      <div class="card"><h3>NVIDIA 데이터센터 매출 YoY (%)</h3>
+        <p class="note">공급자 측 총 AI 인프라 투자 프록시 — 하이퍼스케일러·중국·비상장 누가 사든 여기로 흐름
+          (실적 발표 후 manual_data.json 수동 입력, 라벨=회계분기 말월)</p>
+        <div id="ch-nvda"></div></div>
     </div>
   </section>
 
@@ -346,7 +350,7 @@ function renderAll(){
     {label:'② 수요둔화 신호', st:ps['수요'],
      value:(()=>{const ry=DATA.demand.revenue_yoy;const vs=Object.values(ry).map(o=>o.yoy[o.yoy.length-1]).filter(v=>v!=null);
        return vs.length?fmt(vs.reduce((a,b)=>a+b,0)/vs.length)+'%':'—';})(),
-     delta:'Hyperscaler 평균 매출 YoY (최근 분기)'},
+     delta:'Hyperscaler 평균 매출 YoY'+(m.nvda_dc_yoy_last!=null?' · NVDA DC +'+fmt(m.nvda_dc_yoy_last)+'% ($'+fmt(m.nvda_dc_last_bil)+'B)':'')},
     {label:'③ 레버리지 신호', st:ps['레버리지'],
      value:m.bbb_last!=null?fmt(m.bbb_last,0)+'bp':'—',
      delta:`BBB OAS · 90일 ${m.bbb_chg_90d_bp>=0?'+':''}${fmt(m.bbb_chg_90d_bp,0)}bp · 네오클라우드 낙폭 ${fmt(m.neocloud_dd_avg)}%`},
@@ -397,6 +401,13 @@ function renderAll(){
   } else {
     document.getElementById('ch-cloud').innerHTML=
       '<div class="empty">manual_data.json 의 cloud_segment_yoy 에 분기 실적을 입력하세요</div>';
+  }
+  const nv=DATA.demand.nvda_dc||{};
+  if(nv.labels&&nv.labels.length){
+    lineChart('ch-nvda',[{name:'NVDA DC',dates:nv.labels,values:nv.yoy}],{labels:nv.labels,unit:'%'});
+  } else {
+    document.getElementById('ch-nvda').innerHTML=
+      '<div class="empty">manual_data.json 의 nvda_dc_revenue_bil 에 분기 매출($B)을 입력하세요</div>';
   }
 
   // ③ 레버리지

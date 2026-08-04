@@ -68,6 +68,7 @@ TH = {
     "vacancy_pct": 5.0,            # 데이터센터 공실률(%) 이 값 이상 → 경계
     "hs_yoy_consec_slowdown": 2,   # 합산 매출 YoY 연속 둔화 분기 수 → 경계
     "cloud_yoy_floor": 20.0,       # 클라우드 부문 YoY(%) 이 값 미만 → 경계
+    "nvda_dc_yoy_floor": 20.0,     # NVIDIA DC 매출 YoY(%) 이 값 미만 → 경계 (공급자 프록시)
     "bbb_oas_level": 200.0,        # BBB OAS(bp) 이 값 이상 → 경계
     "bbb_oas_chg_90d": 50.0,       # BBB OAS 90일 상승폭(bp) 이 값 이상 → 경계
     "neocloud_drawdown": -50.0,    # 네오클라우드 평균 52주 낙폭(%) → 경계
@@ -369,6 +370,19 @@ def collect_live():
     rev_cache = fetch_hyperscaler_revenue()
     rev_yoy = revenue_yoy_series(rev_cache)
 
+    # ── 수요(공급자 프록시): NVIDIA DC 부문 매출 — 세그먼트라 XBRL에 없어 수동 입력 ──
+    nv = manual.get("nvda_dc_revenue_bil", {}) or {}
+    nvda_dc = {"labels": [], "yoy": [], "values": []}
+    for k in sorted(nv.keys()):
+        y, mth = k.split("-")
+        prev = f"{int(y) - 1}-{mth}"
+        if nv.get(prev):
+            nvda_dc["labels"].append(k)
+            nvda_dc["yoy"].append(pct(nv[k], nv[prev]))
+            nvda_dc["values"].append(nv[k])
+    for kk in nvda_dc:  # 초기 하이퍼성장(+400%대)이 축을 짓누르지 않게 최근 8개 분기만
+        nvda_dc[kk] = nvda_dc[kk][-8:]
+
     # ── 지표 계산 ──
     metrics = {}
     for model, key in [("H100 SXM", "gpu"), ("B200", "b200")]:
@@ -393,6 +407,8 @@ def collect_live():
         metrics["bbb_last"] = float(s.iloc[-1])
         past = s[s.index <= s.index[-1] - timedelta(days=90)]
         metrics["bbb_chg_90d_bp"] = round(float(s.iloc[-1]) - float(past.iloc[-1]), 0) if not past.empty else None
+    metrics["nvda_dc_yoy_last"] = nvda_dc["yoy"][-1] if nvda_dc["yoy"] else None
+    metrics["nvda_dc_last_bil"] = nvda_dc["values"][-1] if nvda_dc["values"] else None
 
     data = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -405,6 +421,7 @@ def collect_live():
         "demand": {
             "revenue_yoy": rev_yoy,
             "cloud_yoy": manual.get("cloud_segment_yoy", {}),
+            "nvda_dc": nvda_dc,
         },
         "leverage": {
             "spreads": spreads,
@@ -515,6 +532,9 @@ def collect_sample():
         "demand": {
             "revenue_yoy": {t: {"quarters": quarters, "yoy": v} for t, v in rev_yoy.items()},
             "cloud_yoy": cloud_yoy,
+            "nvda_dc": {"labels": ["2024-10", "2025-01", "2025-04", "2025-07", "2025-10", "2026-01", "2026-04"],
+                        "yoy": [112.0, 93.4, 73.1, 56.5, 66.5, 75.1, 92.3],
+                        "values": [30.8, 35.6, 39.1, 41.1, 51.2, 62.3, 75.2]},
         },
         "leverage": {
             "spreads": {"BBB_OAS": pack(bbb), "HY_OAS": pack(hy)},
@@ -534,6 +554,8 @@ def collect_sample():
             "PBDC_chg_180d": round((pbdc[-1] / pbdc[-180] - 1) * 100, 1),
             "neocloud_dd_avg": round(statistics.mean([dd[t] for t in neo]), 1),
             "orcl_dd": dd["ORCL"],
+            "nvda_dc_yoy_last": 92.3,
+            "nvda_dc_last_bil": 75.2,
             "bbb_last": bbb[-1],
             "bbb_chg_90d_bp": round(bbb[-1] - bbb[-90], 0),
         },
@@ -604,6 +626,9 @@ def judge(data):
             f"{TH['cloud_yoy_floor']}% 미만", worst < TH["cloud_yoy_floor"])
     else:
         add("수요", "클라우드 부문 YoY (수동 입력 대기)", None, "%", f"{TH['cloud_yoy_floor']}% 미만", False)
+    v = m.get("nvda_dc_yoy_last")
+    add("수요", "NVIDIA DC 매출 YoY (공급자 프록시, 수동)", v, "%",
+        f"{TH['nvda_dc_yoy_floor']}% 미만", v is not None and v < TH["nvda_dc_yoy_floor"])
 
     v = m.get("bbb_last")
     add("레버리지", "BBB 회사채 OAS 수준 (FRED)", v, "bp",
@@ -792,6 +817,10 @@ TEMPLATE = r"""<!DOCTYPE html>
         <p class="note">manual_data.json 수동 입력 — AWS=순수 부문 · Google Cloud=GCP+Workspace ·
           Azure='Azure 및 기타 클라우드' 성장률(달러 미공시) · Meta=클라우드 사업 없음</p>
         <div id="ch-cloud"></div></div>
+      <div class="card"><h3>NVIDIA 데이터센터 매출 YoY (%)</h3>
+        <p class="note">공급자 측 총 AI 인프라 투자 프록시 — 하이퍼스케일러·중국·비상장 누가 사든 여기로 흐름
+          (실적 발표 후 manual_data.json 수동 입력, 라벨=회계분기 말월)</p>
+        <div id="ch-nvda"></div></div>
     </div>
   </section>
 
@@ -1013,7 +1042,7 @@ function renderAll(){
     {label:'② 수요둔화 신호', st:ps['수요'],
      value:(()=>{const ry=DATA.demand.revenue_yoy;const vs=Object.values(ry).map(o=>o.yoy[o.yoy.length-1]).filter(v=>v!=null);
        return vs.length?fmt(vs.reduce((a,b)=>a+b,0)/vs.length)+'%':'—';})(),
-     delta:'Hyperscaler 평균 매출 YoY (최근 분기)'},
+     delta:'Hyperscaler 평균 매출 YoY'+(m.nvda_dc_yoy_last!=null?' · NVDA DC +'+fmt(m.nvda_dc_yoy_last)+'% ($'+fmt(m.nvda_dc_last_bil)+'B)':'')},
     {label:'③ 레버리지 신호', st:ps['레버리지'],
      value:m.bbb_last!=null?fmt(m.bbb_last,0)+'bp':'—',
      delta:`BBB OAS · 90일 ${m.bbb_chg_90d_bp>=0?'+':''}${fmt(m.bbb_chg_90d_bp,0)}bp · 네오클라우드 낙폭 ${fmt(m.neocloud_dd_avg)}%`},
@@ -1064,6 +1093,13 @@ function renderAll(){
   } else {
     document.getElementById('ch-cloud').innerHTML=
       '<div class="empty">manual_data.json 의 cloud_segment_yoy 에 분기 실적을 입력하세요</div>';
+  }
+  const nv=DATA.demand.nvda_dc||{};
+  if(nv.labels&&nv.labels.length){
+    lineChart('ch-nvda',[{name:'NVDA DC',dates:nv.labels,values:nv.yoy}],{labels:nv.labels,unit:'%'});
+  } else {
+    document.getElementById('ch-nvda').innerHTML=
+      '<div class="empty">manual_data.json 의 nvda_dc_revenue_bil 에 분기 매출($B)을 입력하세요</div>';
   }
 
   // ③ 레버리지

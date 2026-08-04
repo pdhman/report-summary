@@ -5,7 +5,7 @@
 | 축 | 역사적 유형 | 추적 지표 | 소스 |
 |---|---|---|---|
 | ① 공급과잉 | 1999 닷컴 | GPU 임대가(H100·B200 임대중 중앙값), DC REIT(DLR·EQIX), 공실률 | 500.farm(vast.ai 미러) · Yahoo · CBRE(수동) |
-| ② 수요둔화 | 2022 긴축 | Hyperscaler 매출 YoY, 클라우드 부문 YoY | Yahoo · 실적발표(수동) |
+| ② 수요둔화 | 2022 긴축 | Hyperscaler 매출 YoY, 클라우드 부문 YoY, NVDA DC 매출 YoY | Yahoo·SEC · 실적발표(수동) |
 | ③ 레버리지 | 2008 금융위기 | BBB·HY OAS, 네오클라우드 주가, BDC 프록시 | FRED(→allorigins 폴백) · Yahoo |
 
 > FRED는 로컬·GitHub 러너 모두 직접 접근이 차단이라 allorigins 프록시 + 로컬 캐시 폴백을 내장.
@@ -20,6 +20,11 @@
 > GCP+Workspace를 묶은 부문(달러 공시), Azure는 MS가 달러를 공시하지 않아
 > 'Azure 및 기타 클라우드 서비스' 성장률(%)만 존재 — 셋 다 각사 공식 공시 기준.
 > Meta는 클라우드 사업이 없어 전사 매출로만 추적(차트는 3사).
+>
+> **NVDA DC 매출은 공급자 측 프록시로 별도 추적**: 5대 하이퍼스케일러 capex 합산이 놓치는
+> 비미국·비상장(코어위브, 중국 클라우드, Stargate 등) 투자까지 결국 NVIDIA 매출로 흐르므로,
+> 수요자 합산의 과소집계를 총량에서 교차검증하는 지표. 세그먼트 수치라 XBRL에 없어
+> 분기 실적 발표 후 manual_data.json 의 nvda_dc_revenue_bil 에 수동 입력(라벨=회계분기 말월).
 >
 > 전사 매출 분기 히스토리는 SEC EDGAR XBRL API(data.sec.gov, 무료·무키)로 2023Q1부터
 > 백필함. yfinance가 최근 5~6개 분기만 주므로 과거 분기는 EDGAR가 원본.
