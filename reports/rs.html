@@ -438,6 +438,32 @@ renderGroups(); renderSel(); renderStocks();
   } catch(e) {}
 })();
 </script>
+<script>
+(function(){
+  if(!/^https?:$/.test(location.protocol)) return;   // file:// 등에서는 동작 안 함
+  var POLL = 5 * 60 * 1000;                          // 5분마다 확인
+  var tag = null;
+  function stamp(res){
+    return res.headers.get('etag') || res.headers.get('last-modified')
+        || res.headers.get('content-length');
+  }
+  function check(){
+    fetch(location.pathname, { method:'HEAD', cache:'no-store' }).then(function(res){
+      if(!res.ok) return;
+      var s = stamp(res);
+      if(!s) return;                  // 판별 정보가 없으면 새로고침하지 않는다
+      if(tag === null){ tag = s; return; }   // 첫 확인은 기준값만 기록
+      if(s !== tag){ location.reload(); }
+    }).catch(function(){});
+  }
+  window.__checkUpdate = check;       // 콘솔에서 즉시 확인용
+  check();
+  setInterval(check, POLL);
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') check();
+  });
+})();
+</script>
 <style>
   .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:2px;
     background:color-mix(in srgb,var(--surface) 92%,transparent); backdrop-filter:blur(10px);
