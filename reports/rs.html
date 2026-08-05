@@ -114,6 +114,8 @@
   .pbtn:hover { border-color: var(--accent); color: var(--accent); }
   .pbtn.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
   .pbtn:disabled { opacity: .35; cursor: default; }
+  .acc .pager { padding: 10px 12px 14px; }
+  .acc .pager:empty { display: none; }
   .attrib { font-size: 11px; color: var(--muted); margin-top: 14px; }
   @media (max-width: 640px) { body { padding: 16px 12px 40px; } #q { width: 100%; } .frow .lbl { flex-basis: 100%; } }
 </style>
@@ -131,15 +133,15 @@
 
   <div class="acc" id="accSec">
     <div class="acc-head" onclick="toggleAcc('accSec')"><span class="tri">▶</span><span class="ttl">섹터 랭킹</span><span class="cnt" id="cntSec"></span></div>
-    <div class="acc-body tblwrap"><table id="tblSec"></table></div>
+    <div class="acc-body"><div class="tblwrap"><table id="tblSec"></table></div><div class="pager" id="pgSec"></div></div>
   </div>
   <div class="acc" id="accInd">
     <div class="acc-head" onclick="toggleAcc('accInd')"><span class="tri">▶</span><span class="ttl">업종 랭킹</span><span class="cnt" id="cntInd"></span></div>
-    <div class="acc-body tblwrap"><table id="tblInd"></table></div>
+    <div class="acc-body"><div class="tblwrap"><table id="tblInd"></table></div><div class="pager" id="pgInd"></div></div>
   </div>
   <div class="acc" id="accThm">
     <div class="acc-head" onclick="toggleAcc('accThm')"><span class="tri">▶</span><span class="ttl">테마 랭킹</span><span class="cnt" id="cntThm"></span></div>
-    <div class="acc-body tblwrap"><table id="tblThm"></table></div>
+    <div class="acc-body"><div class="tblwrap"><table id="tblThm"></table></div><div class="pager" id="pgThm"></div></div>
   </div>
 
   <div class="card">
@@ -209,8 +211,10 @@ const state = {
   sort: { col: RS, dir: -1 },
   page: 1,
   gsort: { sec: ["rs",-1], ind: ["rs",-1], thm: ["rs",-1] },
+  gpage: { sec: 1, ind: 1, thm: 1 },
 };
 const PAGE = 50;
+const GPAGE = 20;   // 랭킹 테이블 페이지당 행 수
 
 function signals(s) {
   const out = [];
@@ -242,8 +246,8 @@ function grpNum(v, best) {
 const GCOLS = [["name","이름"],["rs","평균 RS"],["r1","1M"],["r3","3M"],["r6","6M"],["r12","12M"],["n","종목수"],["p90","RS90+ 비중"]];
 
 function renderGroups() {
-  const defs = [["sec", D.sectors, "tblSec", "cntSec"], ["ind", D.industries, "tblInd", "cntInd"], ["thm", D.themes, "tblThm", "cntThm"]];
-  for (const [kind, arrAll, tid, cid] of defs) {
+  const defs = [["sec", D.sectors, "tblSec", "cntSec", "pgSec"], ["ind", D.industries, "tblInd", "cntInd", "pgInd"], ["thm", D.themes, "tblThm", "cntThm", "pgThm"]];
+  for (const [kind, arrAll, tid, cid, pid] of defs) {
     const rows = arrAll.map((g, i) => ({ ...g, _i: i })).filter(g => g.n >= state.minN);
     document.getElementById(cid).textContent = rows.length;
     const [sk, sd] = state.gsort[kind];
@@ -252,11 +256,15 @@ function renderGroups() {
       if (typeof av === "string") return sd * String(av).localeCompare(String(bv), "ko");
       return sd * ((av ?? -1e9) - (bv ?? -1e9));
     });
+    const pages = Math.max(1, Math.ceil(rows.length / GPAGE));
+    if (state.gpage[kind] > pages) state.gpage[kind] = pages;
+    const cur = state.gpage[kind];
+    const lo = (cur - 1) * GPAGE, hiEnd = Math.min(lo + GPAGE, rows.length);
     const sel = state.group && state.group.kind === kind ? state.group.idx : -1;
     let h = "<thead><tr>" + GCOLS.map(([k, lbl], ci) =>
       `<th class="${ci === 0 ? "l" : ""}" onclick="gsort('${kind}','${k}')">${lbl}${sk === k ? `<span class="arr">${sd < 0 ? " ▼" : " ▲"}</span>` : ""}</th>`
     ).join("") + "</tr></thead><tbody>";
-    for (const g of rows) {
+    for (const g of rows.slice(lo, hiEnd)) {
       h += `<tr class="grow${g._i === sel ? " sel" : ""}" onclick="pickGroup('${kind}',${g._i})">`
         + `<td class="l gname">${g.name}</td>`
         + `<td>${grpNum(g.rs)}</td><td>${grpNum(g.r1)}</td><td>${grpNum(g.r3)}</td>`
@@ -264,13 +272,16 @@ function renderGroups() {
         + `<td class="num">${g.n}</td><td class="num">${g.p90 != null ? g.p90.toFixed(1) + "%" : "–"}</td></tr>`;
     }
     document.getElementById(tid).innerHTML = h + "</tbody>";
+    document.getElementById(pid).innerHTML = pages > 1 ? pagerHTML(pages, cur, n => `gpageGo('${kind}',${n})`) : "";
   }
 }
 function gsort(kind, key) {
   const cur = state.gsort[kind];
   state.gsort[kind] = [key, cur[0] === key ? -cur[1] : (key === "name" ? 1 : -1)];
+  state.gpage[kind] = 1;
   renderGroups();
 }
+function gpageGo(kind, n) { state.gpage[kind] = n; renderGroups(); }
 function toggleAcc(id) { document.getElementById(id).classList.toggle("open"); }
 function pickGroup(kind, idx) {
   const src = kind === "sec" ? D.sectors : kind === "ind" ? D.industries : D.themes;
@@ -356,10 +367,9 @@ function ssort(col) {
   else state.sort = { col, dir: (col === NAME || col === CODE) ? 1 : -1 };
   renderStocks();
 }
-function renderPager(pages) {
-  const p = state.page;
+function pagerHTML(pages, p, click) {
   const btn = (label, to, on, dis) =>
-    `<button class="pbtn${on ? " on" : ""}" ${dis ? "disabled" : ""} onclick="goPage(${to})">${label}</button>`;
+    `<button class="pbtn${on ? " on" : ""}" ${dis ? "disabled" : ""} onclick="${click(to)}">${label}</button>`;
   let nums = [];
   const push = n => { if (n >= 1 && n <= pages && !nums.includes(n)) nums.push(n); };
   push(1); push(pages);
@@ -371,8 +381,11 @@ function renderPager(pages) {
     h += btn(n, n, n === p, false);
     prev = n;
   }
-  h += btn("다음 ›", p + 1, false, p >= pages);
-  document.getElementById("pager").innerHTML = pages > 1 ? h : "";
+  return h + btn("다음 ›", p + 1, false, p >= pages);
+}
+function renderPager(pages) {
+  document.getElementById("pager").innerHTML =
+    pages > 1 ? pagerHTML(pages, state.page, n => `goPage(${n})`) : "";
 }
 function goPage(n) { state.page = n; renderStocks(); document.getElementById("meta").scrollIntoView({ behavior: "smooth", block: "center" }); }
 
@@ -401,7 +414,11 @@ document.getElementById("capMin").addEventListener("input", e => {
   if (!isNaN(v)) { state.capMin = v; document.querySelectorAll("#capChips .chip").forEach(x => x.classList.remove("on")); }
   state.page = 1; renderStocks();
 });
-document.getElementById("minN").addEventListener("change", e => { state.minN = +e.target.value; renderGroups(); });
+document.getElementById("minN").addEventListener("change", e => {
+  state.minN = +e.target.value;
+  state.gpage = { sec: 1, ind: 1, thm: 1 };
+  renderGroups();
+});
 
 renderGroups(); renderSel(); renderStocks();
 </script>
