@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RS 스크리너</title>
+<script src="rs_data.js"></script>
+<style>
+  :root {
+    --page: #f6f7f9; --surface: #ffffff; --ink: #1a1d21; --ink-2: #4b5563;
+    --muted: #6b7280; --grid: #e6e8eb; --soft: #f1f3f5; --border: #e6e8eb;
+    --pos: #16a34a; --neg: #dc2626;
+    --accent: #3b5bdb; --tool: #eb6834;
+    --badge-hi: #e7f6ec; --badge-hi-ink: #15803d;
+    --badge-mid: #f1f3f5; --badge-mid-ink: #6b7280;
+    --badge-lo: #fdecec; --badge-lo-ink: #dc2626;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #0f1216; --surface: #171b21; --ink: #e8eaed; --ink-2: #c2c7cf;
+      --muted: #9aa2ad; --grid: #252b33; --soft: #1f2530; --border: #252b33;
+      --pos: #22c55e; --neg: #f87171; --accent: #748ffc;
+      --badge-hi: #12301d; --badge-hi-ink: #4ade80;
+      --badge-mid: #1f2530; --badge-mid-ink: #9aa2ad;
+      --badge-lo: #371a1c; --badge-lo-ink: #f87171;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #0f1216; --surface: #171b21; --ink: #e8eaed; --ink-2: #c2c7cf;
+    --muted: #9aa2ad; --grid: #252b33; --soft: #1f2530; --border: #252b33;
+    --pos: #22c55e; --neg: #f87171; --accent: #748ffc;
+    --badge-hi: #12301d; --badge-hi-ink: #4ade80;
+    --badge-mid: #1f2530; --badge-mid-ink: #9aa2ad;
+    --badge-lo: #371a1c; --badge-lo-ink: #f87171;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    background: var(--page); color: var(--ink); padding: 24px 28px 40px;
+  }
+  .pagehead { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
+  h1 { font-size: 22px; display: flex; align-items: center; gap: 8px; }
+  .subtabs { display: flex; gap: 6px; }
+  .stab { text-decoration: none; font-size: 13px; font-weight: 700; padding: 8px 16px;
+    border-radius: 999px; border: 1px solid var(--grid); color: var(--muted); background: var(--surface); }
+  .stab:hover { border-color: var(--tool); color: var(--tool); }
+  .stab.on { background: var(--tool); border-color: var(--tool); color: #fff; }
+  .stab.on:hover { color: #fff; }
+  .subtitle { color: var(--muted); font-size: 13px; margin: 6px 0 18px; }
+
+  .acc { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+  .acc-head { display: flex; align-items: center; gap: 10px; padding: 13px 16px; cursor: pointer; user-select: none; }
+  .acc-head:hover { background: var(--soft); }
+  .acc-head .tri { color: var(--muted); font-size: 11px; transition: transform .15s; }
+  .acc.open .acc-head .tri { transform: rotate(90deg); }
+  .acc-head .ttl { font-weight: 700; font-size: 14px; }
+  .acc-head .cnt { color: var(--muted); font-size: 12px; }
+  .acc-body { display: none; border-top: 1px solid var(--border); }
+  .acc.open .acc-body { display: block; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .frow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 5px 0; }
+  .frow .lbl { flex: 0 0 74px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chip { font-size: 12px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--grid);
+    background: var(--surface); color: var(--ink-2); cursor: pointer; user-select: none; }
+  .chip:hover { border-color: var(--muted); }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  input[type=text], input[type=number], select {
+    font-size: 13px; padding: 7px 11px; border: 1px solid var(--grid); border-radius: 8px;
+    background: var(--surface); color: var(--ink); outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  #q { width: 240px; }
+  .numin { width: 90px; }
+
+  .selchip { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600;
+    background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 999px; padding: 5px 12px; margin: 0 0 10px; cursor: pointer; }
+  .selchip .x { font-weight: 800; }
+
+  .meta { color: var(--muted); font-size: 12.5px; margin: 4px 2px 8px; }
+  .tblwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 9px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--grid); }
+  th { color: var(--muted); font-size: 11.5px; font-weight: 700; cursor: pointer; user-select: none;
+    position: sticky; top: 0; background: var(--surface); z-index: 2; }
+  th:hover { color: var(--accent); }
+  th .arr { font-size: 9px; }
+  th.l, td.l { text-align: left; }
+  tbody tr:hover { background: var(--soft); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.name a { color: var(--ink); text-decoration: none; font-weight: 600; }
+  td.name a:hover { color: var(--accent); text-decoration: underline; }
+  td .sub { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
+  .code { font-family: Consolas, monospace; color: var(--muted); font-size: 12px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .badge { display: inline-block; min-width: 46px; text-align: center; padding: 3px 7px;
+    border-radius: 6px; font-family: Consolas, monospace; font-size: 12px; font-weight: 600; }
+  .b-hi { background: var(--badge-hi); color: var(--badge-hi-ink); }
+  .b-mid { background: var(--badge-mid); color: var(--badge-mid-ink); }
+  .b-lo { background: var(--badge-lo); color: var(--badge-lo-ink); }
+  .g-hi { color: var(--pos); font-weight: 700; }
+  .g-lo { color: var(--neg); }
+  .sig { font-size: 14px; letter-spacing: 2px; }
+  .grow { cursor: pointer; }
+  .grow.sel { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .grow .gname { font-weight: 600; }
+
+  .pager { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 14px 0 2px; flex-wrap: wrap; }
+  .pbtn { font-size: 12.5px; padding: 6px 11px; border-radius: 8px; border: 1px solid var(--grid);
+    background: var(--surface); color: var(--ink-2); cursor: pointer; }
+  .pbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .pbtn.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  .pbtn:disabled { opacity: .35; cursor: default; }
+  .attrib { font-size: 11px; color: var(--muted); margin-top: 14px; }
+  @media (max-width: 640px) { body { padding: 16px 12px 40px; } #q { width: 100%; } .frow .lbl { flex-basis: 100%; } }
+</style>
+</head>
+<body>
+  <div class="pagehead">
+    <h1>📊 분석</h1>
+    <div class="subtabs">
+      <a class="stab" href="chart.html">📈 차트</a>
+      <a class="stab" href="seasonality.html">☀️ 계절성</a>
+      <a class="stab on" href="rs.html">🔥 RS</a>
+    </div>
+  </div>
+  <div class="subtitle">RS 스크리너 — 한국 전종목 상대강도 · 기준일 <b id="asof"></b> · 주 1회(금) 갱신</div>
+
+  <div class="acc" id="accSec">
+    <div class="acc-head" onclick="toggleAcc('accSec')"><span class="tri">▶</span><span class="ttl">섹터 랭킹</span><span class="cnt" id="cntSec"></span></div>
+    <div class="acc-body tblwrap"><table id="tblSec"></table></div>
+  </div>
+  <div class="acc" id="accInd">
+    <div class="acc-head" onclick="toggleAcc('accInd')"><span class="tri">▶</span><span class="ttl">업종 랭킹</span><span class="cnt" id="cntInd"></span></div>
+    <div class="acc-body tblwrap"><table id="tblInd"></table></div>
+  </div>
+  <div class="acc" id="accThm">
+    <div class="acc-head" onclick="toggleAcc('accThm')"><span class="tri">▶</span><span class="ttl">테마 랭킹</span><span class="cnt" id="cntThm"></span></div>
+    <div class="acc-body tblwrap"><table id="tblThm"></table></div>
+  </div>
+
+  <div class="card">
+    <div class="frow"><span class="lbl">검색</span>
+      <input type="text" id="q" placeholder="티커 / 종목명" autocomplete="off">
+    </div>
+    <div class="frow"><span class="lbl">RS 최소값</span>
+      <div class="chips" id="rsChips">
+        <span class="chip" data-v="0">전체</span><span class="chip" data-v="50">50+</span>
+        <span class="chip on" data-v="70">70+</span><span class="chip" data-v="80">80+</span>
+        <span class="chip" data-v="90">90+</span>
+      </div>
+      <input type="number" id="rsMin" class="numin" min="0" max="100" step="1" placeholder="직접입력">
+    </div>
+    <div class="frow"><span class="lbl">신호</span>
+      <div class="chips" id="sigChips">
+        <span class="chip on" data-v="">전체</span>
+        <span class="chip" data-v="hi">🔥 고점권</span>
+        <span class="chip" data-v="ma">📏 이평 근접</span>
+        <span class="chip" data-v="ext">⚠️ Extended</span>
+      </div>
+    </div>
+    <div class="frow"><span class="lbl">시장</span>
+      <div class="chips" id="mktChips">
+        <span class="chip on" data-v="">전체</span>
+        <span class="chip" data-v="0">코스피</span>
+        <span class="chip" data-v="1">코스닥</span>
+      </div>
+    </div>
+    <div class="frow"><span class="lbl">시가총액</span>
+      <div class="chips" id="capChips">
+        <span class="chip on" data-v="0">전체</span><span class="chip" data-v="500">500억+</span>
+        <span class="chip" data-v="1000">1000억+</span><span class="chip" data-v="5000">5000억+</span>
+        <span class="chip" data-v="10000">1조+</span><span class="chip" data-v="100000">10조+</span>
+      </div>
+      <input type="number" id="capMin" class="numin" min="0" step="100" placeholder="억원">
+      <span style="flex:1"></span>
+      <span class="lbl" style="flex:0 0 auto">분류 종목 수</span>
+      <select id="minN">
+        <option value="1">전체</option>
+        <option value="5">5+</option>
+        <option value="10" selected>10+ (기본)</option>
+        <option value="20">20+</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="selWrap"></div>
+  <div class="meta" id="meta"></div>
+  <div class="card" style="padding:4px 8px">
+    <div class="tblwrap"><table id="tblStk"></table></div>
+    <div class="pager" id="pager"></div>
+  </div>
+  <div class="attrib">종합 RS = 기간수익률 가중(1M 20% · 3M 40% · 6M 20% · 12M 20%) 시장 백분위 · 업종/테마 분류: 네이버금융 ·
+    신호: 🔥 52주 고점 -5% 이내 · 📏 MA200 ±5% · ⚠️ MA200 +60% 이상</div>
+
+<script>
+const D = window.RS_DATA || { asof: "-", sectors: [], industries: [], themes: [], stocks: [] };
+document.getElementById("asof").textContent = D.asof;
+
+// 종목 배열 인덱스
+const CODE=0, NAME=1, MKT=2, CAP=3, AMT=4, RS=5, R1=6, R3=7, R6=8, R12=9, HI=10, MA=11, SEC=12, IND=13, THM=14;
+
+const state = {
+  q: "", rsMin: 70, sig: "", mkt: "", capMin: 0, minN: 10,
+  group: null,               // {kind:'sec'|'ind'|'thm', idx, name}
+  sort: { col: RS, dir: -1 },
+  page: 1,
+  gsort: { sec: ["rs",-1], ind: ["rs",-1], thm: ["rs",-1] },
+};
+const PAGE = 50;
+
+function signals(s) {
+  const out = [];
+  if (s[HI] != null && s[HI] >= -5) out.push("hi");
+  if (s[MA] != null && Math.abs(s[MA]) <= 5) out.push("ma");
+  if (s[MA] != null && s[MA] >= 60) out.push("ext");
+  return out;
+}
+const SIG_EMOJI = { hi: "🔥", ma: "📏", ext: "⚠️" };
+const SIG_TIP = { hi: "52주 고점 -5% 이내", ma: "MA200 ±5% 이내", ext: "MA200 +60% 이상 (확장)" };
+
+function fmtCap(v) {
+  if (v == null) return "–";
+  if (v >= 10000) { const jo = v / 10000; return (jo >= 100 ? Math.round(jo) : jo.toFixed(1)) + "조"; }
+  return Math.round(v).toLocaleString() + "억";
+}
+function rsBadge(v) {
+  if (v == null) return '<span class="badge b-mid">–</span>';
+  const cls = v >= 70 ? "b-hi" : (v >= 40 ? "b-mid" : "b-lo");
+  return `<span class="badge ${cls}">${v.toFixed(1)}</span>`;
+}
+function grpNum(v, best) {
+  if (v == null) return "–";
+  const cls = v >= 70 ? "g-hi" : (v < 40 ? "g-lo" : "");
+  return `<span class="num ${cls}${best ? " g-hi" : ""}">${v.toFixed(1)}</span>`;
+}
+
+// ---------------- 그룹 랭킹 테이블 ----------------
+const GCOLS = [["name","이름"],["rs","평균 RS"],["r1","1M"],["r3","3M"],["r6","6M"],["r12","12M"],["n","종목수"],["p90","RS90+ 비중"]];
+
+function renderGroups() {
+  const defs = [["sec", D.sectors, "tblSec", "cntSec"], ["ind", D.industries, "tblInd", "cntInd"], ["thm", D.themes, "tblThm", "cntThm"]];
+  for (const [kind, arrAll, tid, cid] of defs) {
+    const rows = arrAll.map((g, i) => ({ ...g, _i: i })).filter(g => g.n >= state.minN);
+    document.getElementById(cid).textContent = rows.length;
+    const [sk, sd] = state.gsort[kind];
+    rows.sort((a, b) => {
+      const av = a[sk], bv = b[sk];
+      if (typeof av === "string") return sd * String(av).localeCompare(String(bv), "ko");
+      return sd * ((av ?? -1e9) - (bv ?? -1e9));
+    });
+    const sel = state.group && state.group.kind === kind ? state.group.idx : -1;
+    let h = "<thead><tr>" + GCOLS.map(([k, lbl], ci) =>
+      `<th class="${ci === 0 ? "l" : ""}" onclick="gsort('${kind}','${k}')">${lbl}${sk === k ? `<span class="arr">${sd < 0 ? " ▼" : " ▲"}</span>` : ""}</th>`
+    ).join("") + "</tr></thead><tbody>";
+    for (const g of rows) {
+      h += `<tr class="grow${g._i === sel ? " sel" : ""}" onclick="pickGroup('${kind}',${g._i})">`
+        + `<td class="l gname">${g.name}</td>`
+        + `<td>${grpNum(g.rs)}</td><td>${grpNum(g.r1)}</td><td>${grpNum(g.r3)}</td>`
+        + `<td>${grpNum(g.r6)}</td><td>${grpNum(g.r12)}</td>`
+        + `<td class="num">${g.n}</td><td class="num">${g.p90 != null ? g.p90.toFixed(1) + "%" : "–"}</td></tr>`;
+    }
+    document.getElementById(tid).innerHTML = h + "</tbody>";
+  }
+}
+function gsort(kind, key) {
+  const cur = state.gsort[kind];
+  state.gsort[kind] = [key, cur[0] === key ? -cur[1] : (key === "name" ? 1 : -1)];
+  renderGroups();
+}
+function toggleAcc(id) { document.getElementById(id).classList.toggle("open"); }
+function pickGroup(kind, idx) {
+  const src = kind === "sec" ? D.sectors : kind === "ind" ? D.industries : D.themes;
+  if (state.group && state.group.kind === kind && state.group.idx === idx) state.group = null;
+  else state.group = { kind, idx, name: src[idx].name };
+  state.page = 1;
+  renderGroups(); renderSel(); renderStocks();
+  document.getElementById("selWrap").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+function clearGroup() { state.group = null; renderGroups(); renderSel(); renderStocks(); }
+function renderSel() {
+  const w = document.getElementById("selWrap");
+  if (!state.group) { w.innerHTML = ""; return; }
+  const label = { sec: "섹터", ind: "업종", thm: "테마" }[state.group.kind];
+  w.innerHTML = `<span class="selchip" onclick="clearGroup()">${label}: ${state.group.name} <span class="x">✕</span></span>`;
+}
+
+// ---------------- 종목 테이블 ----------------
+const SCOLS = [
+  ["#", null], ["티커", CODE], ["종목명", NAME], ["시총", CAP],
+  ["RS", RS], ["1M RS", R1], ["3M RS", R3], ["6M RS", R6], ["12M RS", R12], ["신호", null],
+];
+
+function filtered() {
+  const q = state.q.trim().toLowerCase();
+  const g = state.group;
+  return D.stocks.filter(s => {
+    if (s[RS] == null || s[RS] < state.rsMin) return false;
+    if (state.mkt !== "" && s[MKT] !== +state.mkt) return false;
+    if (state.capMin > 0 && (s[CAP] == null || s[CAP] < state.capMin)) return false;
+    if (q && !(s[NAME].toLowerCase().includes(q) || s[CODE].includes(q))) return false;
+    if (state.sig && !signals(s).includes(state.sig)) return false;
+    if (g) {
+      if (g.kind === "sec" && s[SEC] !== g.idx) return false;
+      if (g.kind === "ind" && s[IND] !== g.idx) return false;
+      if (g.kind === "thm" && !s[THM].includes(g.idx)) return false;
+    }
+    return true;
+  });
+}
+
+function renderStocks() {
+  const rows = filtered();
+  const { col, dir } = state.sort;
+  if (col != null) rows.sort((a, b) => {
+    const av = a[col], bv = b[col];
+    if (col === NAME || col === CODE) return dir * String(av).localeCompare(String(bv), "ko");
+    return dir * ((av ?? -1e9) - (bv ?? -1e9));
+  });
+
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+  if (state.page > pages) state.page = pages;
+  const lo = (state.page - 1) * PAGE, hi = Math.min(lo + PAGE, rows.length);
+  document.getElementById("meta").textContent =
+    `${rows.length.toLocaleString()}개 종목 · ${state.page}/${pages} 페이지 (${rows.length ? lo + 1 : 0}–${hi})`;
+
+  let h = "<thead><tr>" + SCOLS.map(([lbl, c], i) => {
+    const sortable = c != null;
+    const arr = sortable && state.sort.col === c ? `<span class="arr">${state.sort.dir < 0 ? " ▼" : " ▲"}</span>` : "";
+    return `<th class="${i <= 2 ? "l" : ""}" ${sortable ? `onclick="ssort(${c})"` : ""}>${lbl}${arr}</th>`;
+  }).join("") + "</tr></thead><tbody>";
+
+  for (let i = lo; i < hi; i++) {
+    const s = rows[i];
+    const sym = s[CODE] + (s[MKT] === 0 ? ".KS" : ".KQ");
+    const sec = s[SEC] >= 0 ? D.sectors[s[SEC]].name : "";
+    const ind = s[IND] >= 0 ? D.industries[s[IND]].name : "";
+    const sig = signals(s).map(k => `<span title="${SIG_TIP[k]}">${SIG_EMOJI[k]}</span>`).join("");
+    h += `<tr><td class="num" style="color:var(--muted)">${i + 1}</td>`
+      + `<td class="l code">${s[CODE]}<span class="sub">${s[MKT] === 0 ? "KOSPI" : "KOSDAQ"}</span></td>`
+      + `<td class="l name"><a href="chart.html?symbol=${sym}" title="차트 보기">${s[NAME]}</a>`
+      + `<span class="sub">${sec}${ind ? " · " + ind : ""}</span></td>`
+      + `<td class="num">${fmtCap(s[CAP])}</td>`
+      + `<td>${rsBadge(s[RS])}</td><td>${rsBadge(s[R1])}</td><td>${rsBadge(s[R3])}</td>`
+      + `<td>${rsBadge(s[R6])}</td><td>${rsBadge(s[R12])}</td>`
+      + `<td class="sig">${sig || '<span style="color:var(--muted)">–</span>'}</td></tr>`;
+  }
+  document.getElementById("tblStk").innerHTML = h + "</tbody>";
+  renderPager(pages);
+}
+function ssort(col) {
+  if (state.sort.col === col) state.sort.dir = -state.sort.dir;
+  else state.sort = { col, dir: (col === NAME || col === CODE) ? 1 : -1 };
+  renderStocks();
+}
+function renderPager(pages) {
+  const p = state.page;
+  const btn = (label, to, on, dis) =>
+    `<button class="pbtn${on ? " on" : ""}" ${dis ? "disabled" : ""} onclick="goPage(${to})">${label}</button>`;
+  let nums = [];
+  const push = n => { if (n >= 1 && n <= pages && !nums.includes(n)) nums.push(n); };
+  push(1); push(pages);
+  for (let k = p - 2; k <= p + 2; k++) push(k);
+  nums.sort((a, b) => a - b);
+  let h = btn("‹ 이전", p - 1, false, p <= 1), prev = 0;
+  for (const n of nums) {
+    if (prev && n - prev > 1) h += '<span style="color:var(--muted)">…</span>';
+    h += btn(n, n, n === p, false);
+    prev = n;
+  }
+  h += btn("다음 ›", p + 1, false, p >= pages);
+  document.getElementById("pager").innerHTML = pages > 1 ? h : "";
+}
+function goPage(n) { state.page = n; renderStocks(); document.getElementById("meta").scrollIntoView({ behavior: "smooth", block: "center" }); }
+
+// ---------------- 필터 바인딩 ----------------
+function bindChips(id, key, numeric) {
+  document.querySelectorAll(`#${id} .chip`).forEach(c => c.addEventListener("click", () => {
+    document.querySelectorAll(`#${id} .chip`).forEach(x => x.classList.toggle("on", x === c));
+    state[key] = numeric ? +c.dataset.v : c.dataset.v;
+    if (key === "rsMin") document.getElementById("rsMin").value = "";
+    if (key === "capMin") document.getElementById("capMin").value = "";
+    state.page = 1; renderStocks();
+  }));
+}
+bindChips("rsChips", "rsMin", true);
+bindChips("sigChips", "sig", false);
+bindChips("mktChips", "mkt", false);
+bindChips("capChips", "capMin", true);
+document.getElementById("q").addEventListener("input", e => { state.q = e.target.value; state.page = 1; renderStocks(); });
+document.getElementById("rsMin").addEventListener("input", e => {
+  const v = parseFloat(e.target.value);
+  if (!isNaN(v)) { state.rsMin = v; document.querySelectorAll("#rsChips .chip").forEach(x => x.classList.remove("on")); }
+  state.page = 1; renderStocks();
+});
+document.getElementById("capMin").addEventListener("input", e => {
+  const v = parseFloat(e.target.value);
+  if (!isNaN(v)) { state.capMin = v; document.querySelectorAll("#capChips .chip").forEach(x => x.classList.remove("on")); }
+  state.page = 1; renderStocks();
+});
+document.getElementById("minN").addEventListener("change", e => { state.minN = +e.target.value; renderGroups(); });
+
+renderGroups(); renderSel(); renderStocks();
+</script>
+
+<nav class="bottomnav">
+  <a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a>
+  <a class="nav-cell" href="strategy.html"><span class="ni">📝</span><span class="nl">투자전략</span></a>
+  <a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a>
+  <a class="nav-cell active" href="chart.html"><span class="ni">📈</span><span class="nl">분석</span></a>
+  <a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">뉴스</span></a>
+</nav>
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('theme');
+    if(t){ document.documentElement.dataset.theme = t; }
+  } catch(e) {}
+})();
+</script>
+<style>
+  .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:2px;
+    background:color-mix(in srgb,var(--surface) 92%,transparent); backdrop-filter:blur(10px);
+    border-top:1px solid var(--grid); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); }
+  .bottomnav .nav-cell { display:flex; flex-direction:column; align-items:center; gap:3px; text-decoration:none; color:var(--muted);
+    padding:6px 4px; border-radius:12px; flex:1 1 0; max-width:96px; transition:color .15s,background .15s; }
+  .bottomnav .nav-cell:hover { color:var(--accent); }
+  .bottomnav .nav-cell.active { color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  .bottomnav .ni { font-size:20px; line-height:1; }
+  .bottomnav .nl { font-size:11px; font-weight:600; }
+  body { padding-bottom: 110px; }
+</style>
+</body>
+</html>

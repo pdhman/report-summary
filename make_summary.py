@@ -385,13 +385,15 @@ def build():
         if body:
             cards.append(_card("x.html", "𝕏", "X 모니터링", c["date"], body))
 
-    # 분석 도구(차트·계절성)는 상시 제공되는 정적 도구라 항상 카드 노출
+    # 분석 도구(차트·계절성·RS)는 상시 제공되는 정적 도구라 항상 카드 노출
     cards.append(_card(
-        "chart.html", "📈", "분석 도구", "차트 · 계절성",
+        "chart.html", "📈", "분석 도구", "차트 · 계절성 · RS",
         '<div class="krow"><span class="k-name">주식 차트</span>'
         '<span class="k-val">캔들 · 이동평균 · Log</span></div>'
         '<div class="krow"><span class="k-name">계절성 분석</span>'
-        '<span class="k-val">월별 통계 · 최적 진입 · 히트맵</span></div>'))
+        '<span class="k-val">월별 통계 · 최적 진입 · 히트맵</span></div>'
+        '<div class="krow"><span class="k-name">RS 스크리너</span>'
+        '<span class="k-val">섹터 · 업종 · 테마 랭킹</span></div>'))
 
     c = None
     try:
