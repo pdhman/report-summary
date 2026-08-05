@@ -322,6 +322,22 @@ async function fromStatic(symbol) {
   } catch (e) { return null; }
 }
 
+// 한국 종목(######.KS/.KQ)은 chart-data 브랜치(매일 갱신, orphan)에서 내려받는다.
+// raw.githubusercontent 는 CORS 허용이라 GitHub Pages 에서도 동작한다.
+const KR_DATA_URL = "https://raw.githubusercontent.com/pdhman/report-summary/chart-data/";
+async function fromKrBranch(symbol) {
+  if (!/^\d{6}\.(KS|KQ)$/.test(symbol)) return null;
+  try {
+    const res = await fetch(KR_DATA_URL + symbol + ".json");
+    if (!res.ok) return null;
+    const d = await res.json();
+    return {
+      symbol, name: d.name, currency: d.currency || "KRW", isStatic: true,
+      note: d.note || "", bars: d.bars.map(b => ({ t: iso(b[0]), o: b[1], h: b[2], l: b[3], c: b[4], v: b[5] })),
+    };
+  } catch (e) { return null; }
+}
+
 // 유니버스에 있으면 정적 파일이 가장 빠르고 확실하다.
 // 그 외 티커는 분석 서버(API)가 켜져 있을 때만 조회된다.
 async function fetchBars(symbol) {
@@ -329,6 +345,8 @@ async function fetchBars(symbol) {
     const stat = await fromStatic(symbol);
     if (stat) return stat;
   }
+  const kr = await fromKrBranch(symbol);
+  if (kr) return kr;
   try {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 2500);
