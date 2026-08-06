@@ -586,10 +586,13 @@ function weekdayStats(tk, yearsSet) {
     const s = acc[d];
     s.rets.push(tk.closes[i] / tk.closes[i - 1] - 1);
     if (hasOpen && tk.opens[i] > 0 && tk.rawCloses[i - 1] > 0 && tk.rawCloses[i] > 0) {
-      const gap = tk.opens[i] / tk.rawCloses[i - 1] - 1;
-      const intra = tk.rawCloses[i] / tk.opens[i] - 1;
-      // 지수 백필 구간처럼 시가=종가로 채운 날은 갭/장중이 0이라 통계를 희석 → 제외
-      if (gap !== 0 || intra !== 0) { s.gaps.push(gap); s.intras.push(intra); }
+      // 시가=종가인 봉은 제외: 지수 백필 시 OHLC 가 없어 종가로만 채운 합성 봉을
+      // 거른다(그 봉의 '갭'은 하루 전체 수익률이라 가짜). KODEX 백필 구간은 실제
+      // 지수 OHLC 가 있어 대부분 통과하고, 실제 도지도 걸리지만 극소수라 영향 없음.
+      if (tk.opens[i] !== tk.rawCloses[i]) {
+        s.gaps.push(tk.opens[i] / tk.rawCloses[i - 1] - 1);
+        s.intras.push(tk.rawCloses[i] / tk.opens[i] - 1);
+      }
     }
   }
   const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
