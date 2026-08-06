@@ -369,20 +369,18 @@ def build():
 
     c = None
     try:
-        c = card_leverage()
+        c = card_x()
     except Exception as e:
-        print(f"[요약] 레버리지 카드 실패: {e}")
+        print(f"[요약] X 모니터링 카드 실패: {e}")
     if c:
-        def _row(name, val, diff, unit, dec=2):
-            cls = "up" if diff > 0 else ("down" if diff < 0 else "")
-            sign = "+" if diff > 0 else ""
-            return (f'<div class="krow"><span class="k-name">{name}</span>'
-                    f'<span class="k-val">{val:,.{dec}f}{unit} '
-                    f'<span class="k-diff {cls}">{sign}{diff:,.{dec}f}</span></span></div>')
-        body = (_row("신용거래융자", c["credit"], c["credit_d"], "조원")
-                + _row("투자자예탁금", c["deposit"], c["deposit_d"], "조원")
-                + _row("반대매매비중", c["ratio"], c["ratio_d"], "%"))
-        cards.append(_card("leverage.html", "📈", "시장 레버리지", c["date"], body))
+        body = ""
+        if c["count"] is not None:
+            body += (f'<div class="krow"><span class="k-name">수집</span>'
+                     f'<span class="k-val">{c["count"]}건</span></div>')
+        if c["summary"]:
+            body += f'<p class="clamp">{esc(c["summary"])}</p>'
+        if body:
+            cards.append(_card("x.html", "𝕏", "X 모니터링", c["date"], body))
 
     c = None
     try:
@@ -411,18 +409,20 @@ def build():
 
     c = None
     try:
-        c = card_x()
+        c = card_leverage()
     except Exception as e:
-        print(f"[요약] X 모니터링 카드 실패: {e}")
+        print(f"[요약] 레버리지 카드 실패: {e}")
     if c:
-        body = ""
-        if c["count"] is not None:
-            body += (f'<div class="krow"><span class="k-name">수집</span>'
-                     f'<span class="k-val">{c["count"]}건</span></div>')
-        if c["summary"]:
-            body += f'<p class="clamp">{esc(c["summary"])}</p>'
-        if body:
-            cards.append(_card("x.html", "𝕏", "X 모니터링", c["date"], body))
+        def _row(name, val, diff, unit, dec=2):
+            cls = "up" if diff > 0 else ("down" if diff < 0 else "")
+            sign = "+" if diff > 0 else ""
+            return (f'<div class="krow"><span class="k-name">{name}</span>'
+                    f'<span class="k-val">{val:,.{dec}f}{unit} '
+                    f'<span class="k-diff {cls}">{sign}{diff:,.{dec}f}</span></span></div>')
+        body = (_row("신용거래융자", c["credit"], c["credit_d"], "조원")
+                + _row("투자자예탁금", c["deposit"], c["deposit_d"], "조원")
+                + _row("반대매매비중", c["ratio"], c["ratio_d"], "%"))
+        cards.append(_card("leverage.html", "📈", "시장 레버리지", c["date"], body))
 
     # 분석 도구(차트·계절성·RS)는 상시 제공되는 정적 도구라 항상 카드 노출
     cards.append(_card(
