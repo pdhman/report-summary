@@ -259,6 +259,32 @@
     </div>
   </section>
 
+  <section>
+    <h2>요일별 분석</h2>
+    <div class="card tbl-wrap">
+      <table id="wdTable">
+        <thead>
+          <tr>
+            <th>요일</th><th>평균</th><th>중앙값</th><th>승률</th><th>누적 기여</th>
+            <th>갭<br><span class="hint">전일종가→시가</span></th>
+            <th>장중<br><span class="hint">시가→종가</span></th><th>표본</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="chart-head">
+        <div class="legend" id="wdLegend"></div>
+        <div class="chart-range" id="wdRange"></div>
+      </div>
+      <div id="wdBox" style="position:relative">
+        <svg id="wdChart" viewBox="0 0 1000 240" preserveAspectRatio="none" style="width:100%;display:block"></svg>
+        <div id="wdTip" class="tt"></div>
+      </div>
+    </div>
+  </section>
+
 <script src="data/index.js"></script>
 <script>
 "use strict";
@@ -277,7 +303,9 @@ async function fetchStatic(sym) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const d = await res.json();
   return { name: d.name, note: d.note || "",
-           dates: d.bars.map(b => b[0]), closes: d.bars.map(b => b[6]) };
+           dates: d.bars.map(b => b[0]), closes: d.bars.map(b => b[6]),
+           // 요일별 갭/장중 분해용 (무조정 시가·종가 — 비율이라 조정 여부 무관)
+           opens: d.bars.map(b => b[1]), rawCloses: d.bars.map(b => b[4]) };
 }
 const HOLDS = [10, 15, 20, 25, 30];
 const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
@@ -543,7 +571,114 @@ function renderMonthPattern(tk, yearsSet, m) {
   mpState = { agg, W, padL, plotW };
 }
 
-// ---------- 렌더링 ----------
+// ---------- 요일별 분석 ----------
+const DOW_NAMES = ["월", "화", "수", "목", "금"];
+const dowOf = n => new Date(n / 10000 | 0, ((n / 100 | 0) % 100) - 1, n % 100).getDay(); // 0=일
+
+// 요일별 통계: 일간(수정종가 기준) + 갭/장중(무조정 시가·종가 기준, 있을 때만)
+function weekdayStats(tk, yearsSet) {
+  const acc = Array.from({ length: 5 }, () => ({ rets: [], gaps: [], intras: [] }));
+  const hasOpen = Array.isArray(tk.opens);
+  for (let i = 1; i < tk.dates.length; i++) {
+    if (!yearsSet.has(yOf(tk.dates[i]))) continue;
+    const d = dowOf(tk.dates[i]) - 1;
+    if (d < 0 || d > 4) continue;
+    const s = acc[d];
+    s.rets.push(tk.closes[i] / tk.closes[i - 1] - 1);
+    if (hasOpen && tk.opens[i] > 0 && tk.rawCloses[i - 1] > 0 && tk.rawCloses[i] > 0) {
+      const gap = tk.opens[i] / tk.rawCloses[i - 1] - 1;
+      const intra = tk.rawCloses[i] / tk.opens[i] - 1;
+      // 지수 백필 구간처럼 시가=종가로 채운 날은 갭/장중이 0이라 통계를 희석 → 제외
+      if (gap !== 0 || intra !== 0) { s.gaps.push(gap); s.intras.push(intra); }
+    }
+  }
+  const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+  return acc.map((s, d) => {
+    if (!s.rets.length) return { d, n: 0 };
+    return {
+      d, n: s.rets.length,
+      avg: mean(s.rets), med: median(s.rets),
+      win: s.rets.filter(v => v > 0).length / s.rets.length,
+      sum: s.rets.reduce((x, y) => x + y, 0),
+      gap: s.gaps.length >= 10 ? mean(s.gaps) : null,
+      intra: s.intras.length >= 10 ? mean(s.intras) : null,
+    };
+  });
+}
+
+let wdState = null;
+let wdRows = [];
+function renderWeekday(tk, yearsSet) {
+  const C = chromeC();
+  const stats = weekdayStats(tk, yearsSet);
+  wdRows = stats;
+  const hasDecomp = stats.some(s => s.gap !== null && s.gap !== undefined);
+
+  // 표
+  $("wdTable").tBodies[0].innerHTML = stats.map(s => {
+    if (!s.n) return `<tr><td class="mon">${DOW_NAMES[s.d]}</td><td class="samp" colspan="7">·</td></tr>`;
+    return `<tr>
+      <td class="mon">${DOW_NAMES[s.d]}</td>
+      <td class="num" style="background:${heatColor(s.avg, 0.005)}">${pct(s.avg, 2)}</td>
+      <td class="num" style="background:${heatColor(s.med, 0.005)}">${pct(s.med, 2)}</td>
+      <td class="num ${winClass(s.win)}">${Math.round(s.win * 100)}%</td>
+      <td class="num" style="background:${heatColor(s.sum, 0.3)}">${pct(s.sum, 1)}p</td>
+      <td class="num">${s.gap === null ? "·" : pct(s.gap, 2)}</td>
+      <td class="num">${s.intra === null ? "·" : pct(s.intra, 2)}</td>
+      <td class="samp">${s.n}</td>
+    </tr>`;
+  }).join("");
+
+  // 차트: 갭/장중 분해(가능하면) 또는 일간 평균 단일
+  const series = hasDecomp
+    ? [{ key: "gap", name: "갭 (전일 종가→시가)", hex: "#2a78d6" },
+       { key: "intra", name: "장중 (시가→종가)", hex: "#eb6834" }]
+    : [{ key: "avg", name: "일간 평균 (전일 종가→종가)", hex: null }];
+  $("wdLegend").innerHTML = series.map(s =>
+    `<span><span class="sw" style="background:${s.hex || C.pos}"></span>${s.name}</span>`).join("");
+  $("wdRange").textContent = `${state.startYear}–${state.endYear} · 평균 일간 수익률`;
+
+  const W = 1000, H = 240, padL = 52, padR = 16, padT = 12, padB = 26;
+  let lo = 0, hi = 0;
+  for (const s of stats) for (const ser of series) {
+    const v = s[ser.key];
+    if (v === null || v === undefined) continue;
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  const span = (hi - lo) || 0.001;
+  lo -= span * 0.15; hi += span * 0.15;
+  const y = v => padT + (hi - v) / (hi - lo) * (H - padT - padB);
+  const plotW = W - padL - padR;
+  const xC = d => padL + (d + 0.5) / 5 * plotW;
+  const step = niceStep((hi - lo) / 4);
+  const dec = step * 100 >= 1 ? 1 : 2;
+  let g = "";
+  for (let k = Math.ceil(lo / step); k * step <= hi; k++) {
+    const v = k * step, yy = y(v);
+    g += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="${C.grid}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+    g += `<text x="${padL - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="${C.muted}">${(v * 100).toFixed(dec)}%</text>`;
+  }
+  if (lo < 0 && hi > 0)
+    g += `<line x1="${padL}" y1="${y(0)}" x2="${W - padR}" y2="${y(0)}" stroke="${C.axis}" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`;
+  const groupW = plotW / 5 * 0.6;
+  const barW = groupW / series.length - 2;
+  stats.forEach(s => {
+    if (!s.n) return;
+    series.forEach((ser, k) => {
+      const v = s[ser.key];
+      if (v === null || v === undefined) return;
+      const x = xC(s.d) - groupW / 2 + k * (barW + 2);
+      const top = Math.min(y(v), y(0)), h = Math.abs(y(v) - y(0));
+      const fill = ser.hex || (v >= 0 ? C.pos : C.neg);
+      g += `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(h, 0.5).toFixed(1)}" rx="2" fill="${fill}"/>`;
+    });
+    g += `<text x="${xC(s.d).toFixed(1)}" y="${H - padB + 16}" text-anchor="middle" font-size="12" fill="${C.muted}">${DOW_NAMES[s.d]}</text>`;
+  });
+  $("wdChart").innerHTML = g;
+  $("wdTip").style.display = "none";
+  wdState = { stats, W, padL, plotW };
+}
 function heatColor(v, scale) {
   if (v === null || v === undefined) return "";
   const a = Math.min(1, Math.abs(v) / scale);
@@ -754,6 +889,15 @@ function exportCSV(rows, mret, years) {
     }
     L.push(y + "," + cells.join(","));
   }
+  L.push("");
+  L.push("요일,평균%,중앙값%,승률%,누적%,갭%,장중%,표본");
+  for (const s of wdRows) {
+    if (!s.n) continue;
+    L.push([DOW_NAMES[s.d], (s.avg*100).toFixed(3), (s.med*100).toFixed(3),
+      Math.round(s.win*100), (s.sum*100).toFixed(1),
+      s.gap === null ? "" : (s.gap*100).toFixed(3),
+      s.intra === null ? "" : (s.intra*100).toFixed(3), s.n].join(","));
+  }
   const blob = new Blob(["﻿" + L.join("\r\n")], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -811,6 +955,7 @@ function refresh() {
   const yearsSet = new Set(years);
   renderDailyWin(dailyWinStats(tk, yearsSet));
   renderMonthPattern(tk, yearsSet, state.patternMonth);
+  renderWeekday(tk, yearsSet);
   const n = tk.dates.length;
   $("metaText").innerHTML = `<b>${tk.name}</b> · 데이터 ${String(tk.dates[0]).slice(0,4)}~${String(tk.dates[n-1]).slice(0,4)} · 선택 ${years.length}년`
     + (tk.note ? ` <span style="color:var(--muted)">· ${tk.note}</span>` : "");
@@ -996,6 +1141,24 @@ function setupDailyHover() {
     placeTip(tip, $("mpBox"), ev);
   });
   $("mpChart").addEventListener("mouseleave", () => { $("mpTip").style.display = "none"; });
+
+  $("wdChart").addEventListener("mousemove", ev => {
+    if (!wdState) return;
+    const tip = $("wdTip");
+    const rect = $("wdChart").getBoundingClientRect();
+    const relX = (ev.clientX - rect.left) / rect.width * wdState.W;
+    const d = Math.floor((relX - wdState.padL) / wdState.plotW * 5);
+    const s = wdState.stats[d];
+    if (d < 0 || d > 4 || !s || !s.n) { tip.style.display = "none"; return; }
+    let html = `<div class="tt-date">${DOW_NAMES[d]}요일 (${s.n}일)</div>`;
+    html += `<div class="row">일간 <b>${pct(s.avg, 2)}</b> · 승률 <b>${Math.round(s.win * 100)}%</b></div>`;
+    if (s.gap !== null && s.gap !== undefined)
+      html += `<div class="row">갭 <b>${pct(s.gap, 2)}</b> · 장중 <b>${pct(s.intra, 2)}</b></div>`;
+    tip.innerHTML = html;
+    tip.style.display = "block";
+    placeTip(tip, $("wdBox"), ev);
+  });
+  $("wdChart").addEventListener("mouseleave", () => { $("wdTip").style.display = "none"; });
 }
 init();
 // 알파노트 테마 토글(data-theme)·OS 테마 변경 시 차트 색을 다시 그린다
