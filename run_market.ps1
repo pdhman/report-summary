@@ -31,11 +31,19 @@ $log = Join-Path $logDir ("market_{0:yyyyMMdd_HHmmss}.log" -f (Get-Date))
 function Write-Log($m) { "$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) $m" | Add-Content -Path $log -Encoding UTF8 }
 
 try {
-    # 차트데이터(16:20, parquet 생산자)가 아직 돌고 있으면 대기 (최대 12분)
+    # 차트데이터(16:20, parquet 생산자)가 오늘자 캐시를 만들 때까지 대기 (최대 12분).
+    # "실행 중"만 보면 차트 작업이 늦게 시작한 날(예: 2026-08-06, 16:41 시작)
+    # 어제 데이터로 돌아버리므로, parquet 파일이 오늘 갱신됐는지를 함께 본다.
+    # 휴장일 등으로 오늘자 갱신이 없으면 12분 후 그대로 진행한다(데이터 변화
+    # 없음 → 푸시 생략으로 끝나므로 무해).
+    $pq = Join-Path $proj 'quant-data\cache\ohlcv_full.parquet'
     for ($i = 0; $i -lt 72; $i++) {
         $t = Get-ScheduledTask -TaskName '차트데이터_1620_수집' -ErrorAction SilentlyContinue
-        if (-not $t -or $t.State -ne 'Running') { break }
-        if ($i -eq 0) { Write-Log 'waiting for chart-data task...' }
+        $running = ($t -and $t.State -eq 'Running')
+        $fresh = (Test-Path $pq) -and ((Get-Item $pq).LastWriteTime.Date -eq (Get-Date).Date)
+        if (-not $running -and $fresh) { break }
+        if (-not $t) { break }   # 차트 작업이 아예 없으면 그냥 진행
+        if ($i -eq 0) { Write-Log 'waiting for chart-data (fresh parquet)...' }
         Start-Sleep -Seconds 10
     }
 
