@@ -282,6 +282,20 @@ def card_flows():
     }
 
 
+def card_market():
+    """시장 건전성: breadth_build.py(quant-data)가 만든 요약 JSON 읽기.
+
+    market.html 은 정적 페이지고 market_data.js 를 시장건전성_1635_수집 작업이
+    매일 갱신한다. 여기서는 홈 카드 내용만 만든다.
+    """
+    import json
+    path = os.path.join(OUT_DIR, "data", "market_summary.json")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
 # ---------------------------------------------------------------- 렌더링
 def _card(href, icon, title, date, body):
     return f"""
@@ -369,6 +383,31 @@ def build():
                 + _row("투자자예탁금", c["deposit"], c["deposit_d"], "조원")
                 + _row("반대매매비중", c["ratio"], c["ratio_d"], "%"))
         cards.append(_card("leverage.html", "📈", "시장 레버리지", c["date"], body))
+
+    c = None
+    try:
+        c = card_market()
+    except Exception as e:
+        print(f"[요약] 시장 건전성 카드 실패: {e}")
+    if c:
+        labels = ["냉각", "낮음", "중립", "높음", "과열"]
+        body = ""
+        if c.get("overall") is not None:
+            lab = labels[min(4, int(c["overall"] // 20))]
+            body += (f'<div class="krow"><span class="k-name">종합 체온</span>'
+                     f'<span class="k-val">{c["overall"]:.0f} · {lab}</span></div>')
+        if c.get("ma200") is not None:
+            body += (f'<div class="krow"><span class="k-name">200일선 위</span>'
+                     f'<span class="k-val">{c["ma200"]:.1f}%</span></div>')
+        if c.get("nh") is not None and c.get("nl") is not None:
+            body += (f'<div class="krow"><span class="k-name">52주 신고/신저</span>'
+                     f'<span class="k-val"><span class="k-diff up">{c["nh"]}</span> / '
+                     f'<span class="k-diff down">{c["nl"]}</span></span></div>')
+        if c.get("vkospi") is not None:
+            body += (f'<div class="krow"><span class="k-name">VKOSPI</span>'
+                     f'<span class="k-val">{c["vkospi"]:.2f}</span></div>')
+        if body:
+            cards.append(_card("market.html", "🌡️", "시장 건전성", c["date"], body))
 
     c = None
     try:
