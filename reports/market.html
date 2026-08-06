@@ -1,0 +1,589 @@
+<!doctype html><html lang='ko'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>시장 건전성</title></head><body>
+<script src="market_data.js"></script>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">데일리 대시보드</div>
+    <h1>시장 건전성</h1>
+    <div class="date" id="hd-date"></div>
+  </header>
+
+  <!-- ============ 종합 스코어 ============ -->
+  <section class="panel" id="sec-score">
+    <div class="score-grid">
+      <div class="score-main" id="g-overall"></div>
+      <div class="score-subs">
+        <div class="score-sub" id="g-trend"></div>
+        <div class="score-sub" id="g-spec"></div>
+        <div class="score-sub" id="g-vol"></div>
+        <div class="score-sub" id="g-lev"></div>
+      </div>
+    </div>
+    <div class="chart-block">
+      <div class="ct">스코어 추이 <span class="cd">범례 클릭으로 표시/숨김 · 전 기간 백분위(0~100)</span></div>
+      <div class="legend" id="lg-score"></div>
+      <div id="ch-score"></div>
+    </div>
+    <p class="fn">각 스코어는 수집된 전체 기간(현재 <span id="fn-days"></span>거래일) 대비 백분위.
+      추세(폭)=이평선 위 비율·ADR·신고가율·McClellan / 투기 열기=저가주 비중·상한가·회전율·집중도·코스닥 상대강도 /
+      변동성=VKOSPI·실현변동성 / 레버리지=신용융자 증가율·예탁금 대비 신용·반대매매비중.</p>
+  </section>
+
+  <!-- ============ 시장 폭 ============ -->
+  <section class="panel">
+    <div class="sec-head">
+      <h2>시장 폭 <span class="muted">Breadth</span></h2>
+      <div class="chips" id="tab-market">
+        <button class="chip active" data-m="all">전체</button>
+        <button class="chip" data-m="kospi">코스피</button>
+        <button class="chip" data-m="kosdaq">코스닥</button>
+      </div>
+      <div class="chips" id="tab-range">
+        <button class="chip" data-r="63">3개월</button>
+        <button class="chip active" data-r="126">6개월</button>
+        <button class="chip" data-r="9999">전체</button>
+      </div>
+    </div>
+    <div id="badge-zbt"></div>
+    <div class="grid2">
+      <div class="chart-block"><div class="ct">등락 종목수 <span class="cd">상승 종목 − 하락 종목</span></div><div id="ch-advdec"></div></div>
+      <div class="chart-block"><div class="ct">A/D 라인 · 지수 <span class="cd">등락 종목수 누적(아래) vs 지수(위)</span></div><div id="ch-index"></div><div id="ch-ad"></div></div>
+      <div class="chart-block"><div class="ct">이평선 위 종목 비율 <span class="cd">%</span></div><div id="ch-ma"></div></div>
+      <div class="chart-block"><div class="ct">52주 신고가 / 신저가 <span class="cd">종목수 · 아래 = 신고−신저 누적</span></div><div id="ch-nhnl"></div><div id="ch-nhnlcum"></div></div>
+      <div class="chart-block"><div class="ct">McClellan 오실레이터 <span class="cd">아래 = Summation Index</span></div><div id="ch-mc"></div><div id="ch-mcs"></div></div>
+      <div class="chart-block"><div class="ct">ADR(20일) · 상승 거래대금 비중 <span class="cd">점 = 90% 업/다운 데이</span></div><div id="ch-adr"></div><div id="ch-upshare"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ 투기 열기 ============ -->
+  <section class="panel">
+    <div class="sec-head"><h2>투기 열기 <span class="muted">전체 시장 기준</span></h2></div>
+    <div class="grid2">
+      <div class="chart-block"><div class="ct">거래대금 TOP10 집중도 <span class="cd">전체 거래대금 중 상위 10종목 비중 %</span></div><div id="ch-top10"></div></div>
+      <div class="chart-block"><div class="ct">저가주 거래대금 비중 <span class="cd">종가 2천원 미만 · %</span></div><div id="ch-penny"></div></div>
+      <div class="chart-block"><div class="ct">상한가 / 하한가 종목수</div><div id="ch-cap"></div></div>
+      <div class="chart-block"><div class="ct">시장 회전율 <span class="cd">거래대금 ÷ 시가총액 · %</span></div><div id="ch-turn"></div></div>
+      <div class="chart-block wide"><div class="ct">코스닥 − 코스피 20일 상대수익률 <span class="cd">%p · 양수 = 위험선호</span></div><div id="ch-kqrel"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ 변동성 ============ -->
+  <section class="panel">
+    <div class="sec-head"><h2>변동성</h2></div>
+    <div class="grid2">
+      <div class="chart-block"><div class="ct">VKOSPI <span class="cd">인베스팅닷컴 · 수집 시작일부터</span></div><div id="ch-vk"></div></div>
+      <div class="chart-block"><div class="ct">코스피 실현변동성 <span class="cd">20일 · 연율화 %</span></div><div id="ch-rv"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ 레버리지 · 수급 ============ -->
+  <section class="panel">
+    <div class="sec-head"><h2>레버리지 · 수급 <span class="muted">기존 수집 데이터 요약</span></h2></div>
+    <div class="tiles" id="tiles-lev"></div>
+    <div class="tiles" id="tiles-flow"></div>
+    <div class="linkrow"><a href="leverage.html">시장 레버리지 상세 →</a><a href="flow.html">수급 동향 상세 →</a></div>
+  </section>
+
+  <footer><p class="muted" id="ft-note"></p>
+  <p class="muted">본 페이지의 모든 정보는 자동 수집·생성된 참고 자료입니다. 투자 판단과 그 결과에 대한 책임은 이용자 본인에게 있습니다.</p></footer>
+</div>
+<div id="tip"></div>
+
+<nav class="bottomnav"><a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a><a class="nav-cell" href="strategy.html"><span class="ni">📝</span><span class="nl">투자전략</span></a><a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a><a class="nav-cell" href="chart.html"><span class="ni">📈</span><span class="nl">분석</span></a><a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">뉴스</span></a></nav>
+<script>
+(function(){
+  try { var t = localStorage.getItem('theme'); if(t){ document.documentElement.dataset.theme = t; } } catch(e) {}
+})();
+</script>
+<script>
+(function(){
+  if(!/^https?:$/.test(location.protocol)) return;
+  var POLL = 5 * 60 * 1000, tag = null;
+  function stamp(res){ return res.headers.get('etag') || res.headers.get('last-modified') || res.headers.get('content-length'); }
+  function check(){
+    fetch(location.pathname, { method:'HEAD', cache:'no-store' }).then(function(res){
+      if(!res.ok) return; var s = stamp(res); if(!s) return;
+      if(tag === null){ tag = s; return; }
+      if(s !== tag){ location.reload(); }
+    }).catch(function(){});
+  }
+  check(); setInterval(check, POLL);
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState === 'visible') check(); });
+})();
+</script>
+
+<style>
+  :root {
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d21; --muted:#6b7280;
+    --line:#e6e8eb; --accent:#3b5bdb; --up:#e03131; --dn:#1971c2;
+    --amber:#e8590c; --teal:#0ca678; --gray:#868e96;
+    --z-cold:#1971c2; --z-cool:#339af0; --z-mid:#868e96; --z-warm:#f08c00; --z-hot:#e03131;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1216; --panel:#171b21; --ink:#e8eaed; --muted:#9aa2ad;
+      --line:#252b33; --accent:#748ffc; --up:#ff6b6b; --dn:#4dabf7;
+      --amber:#ff922b; --teal:#38d9a9; --gray:#adb5bd;
+      --z-cold:#4dabf7; --z-cool:#74c0fc; --z-mid:#adb5bd; --z-warm:#fab005; --z-hot:#ff6b6b; }
+  }
+  :root[data-theme="dark"] { --bg:#0f1216; --panel:#171b21; --ink:#e8eaed; --muted:#9aa2ad;
+    --line:#252b33; --accent:#748ffc; --up:#ff6b6b; --dn:#4dabf7;
+    --amber:#ff922b; --teal:#38d9a9; --gray:#adb5bd;
+    --z-cold:#4dabf7; --z-cool:#74c0fc; --z-mid:#adb5bd; --z-warm:#fab005; --z-hot:#ff6b6b; }
+  :root[data-theme="light"] { --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d21; --muted:#6b7280;
+    --line:#e6e8eb; --accent:#3b5bdb; --up:#e03131; --dn:#1971c2;
+    --amber:#e8590c; --teal:#0ca678; --gray:#868e96;
+    --z-cold:#1971c2; --z-cool:#339af0; --z-mid:#868e96; --z-warm:#f08c00; --z-hot:#e03131; }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+    font-size:15px; line-height:1.55; padding-bottom:92px; }
+  .wrap { max-width:1120px; margin:0 auto; padding:28px 16px 40px; }
+  header { margin-bottom:18px; }
+  .eyebrow { font-size:12px; font-weight:700; letter-spacing:.12em; color:var(--accent); text-transform:uppercase; }
+  h1 { margin:2px 0 4px; font-size:26px; }
+  .date { color:var(--muted); font-size:13px; }
+  .muted { color:var(--muted); font-weight:500; font-size:.72em; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px 18px 14px; margin-bottom:16px; }
+  .sec-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+  .sec-head h2 { margin:0; font-size:18px; flex:1 1 auto; }
+  .chips { display:flex; gap:6px; }
+  .chip { border:1px solid var(--line); background:var(--panel); color:var(--muted); border-radius:18px;
+    padding:5px 12px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .15s; }
+  .chip:hover { border-color:var(--accent); color:var(--accent); }
+  .chip.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .grid2 .wide { grid-column:1 / -1; }
+  @media (max-width:840px) { .grid2 { grid-template-columns:1fr; } }
+  .chart-block { min-width:0; }
+  .ct { font-size:13.5px; font-weight:700; margin:6px 0 2px; }
+  .cd { color:var(--muted); font-weight:500; font-size:11.5px; margin-left:4px; }
+  svg text { font-family:inherit; }
+
+  /* ---- 스코어 ---- */
+  .score-grid { display:grid; grid-template-columns:minmax(200px,1fr) 2fr; gap:16px; align-items:stretch; margin-bottom:8px; }
+  @media (max-width:840px) { .score-grid { grid-template-columns:1fr; } }
+  .score-subs { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  @media (max-width:840px) { .score-subs { grid-template-columns:repeat(2,1fr); } }
+  .score-main, .score-sub { border:1px solid var(--line); border-radius:14px; padding:12px 14px; min-width:0; }
+  .sc-name { font-size:12.5px; font-weight:700; color:var(--muted); }
+  .sc-val { font-variant-numeric:tabular-nums; font-weight:800; }
+  .score-main .sc-val { font-size:44px; line-height:1.1; }
+  .score-sub .sc-val { font-size:24px; line-height:1.2; }
+  .sc-label { font-size:12.5px; font-weight:700; margin-left:6px; }
+  .meter { height:8px; border-radius:5px; background:var(--line); position:relative; margin-top:8px; }
+  .meter > i { position:absolute; left:0; top:0; bottom:0; border-radius:5px; }
+  .meter > b { position:absolute; top:-3px; width:2px; height:14px; background:var(--ink); border-radius:1px; }
+  .legend { display:flex; gap:10px; flex-wrap:wrap; margin:4px 0 2px; }
+  .lg { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; color:var(--muted);
+    cursor:pointer; border:none; background:none; padding:2px 4px; font-family:inherit; }
+  .lg i { width:14px; height:3px; border-radius:2px; display:inline-block; }
+  .lg.off { opacity:.35; }
+  .fn { color:var(--muted); font-size:12px; margin:8px 2px 0; }
+
+  /* ---- 배지 ---- */
+  .badge { display:inline-block; background:color-mix(in srgb,var(--up) 14%,transparent); color:var(--up);
+    border:1px solid color-mix(in srgb,var(--up) 40%,transparent); border-radius:10px;
+    font-size:12.5px; font-weight:700; padding:4px 10px; margin:0 0 10px; }
+
+  /* ---- 타일 ---- */
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
+  @media (max-width:840px) { .tiles { grid-template-columns:repeat(2,1fr); } }
+  .tile { border:1px solid var(--line); border-radius:14px; padding:10px 12px; min-width:0; }
+  .tile .tname { font-size:12px; font-weight:700; color:var(--muted); }
+  .tile .tval { font-size:20px; font-weight:800; font-variant-numeric:tabular-nums; margin-top:2px; }
+  .tile .tsub { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .tile .tsub .up { color:var(--up); } .tile .tsub .dn { color:var(--dn); }
+  .tile svg { display:block; margin-top:4px; }
+  .tval.up { color:var(--up); } .tval.dn { color:var(--dn); }
+  .linkrow { display:flex; gap:18px; margin:4px 2px; }
+  .linkrow a { color:var(--accent); font-size:13px; font-weight:700; text-decoration:none; }
+  .linkrow a:hover { text-decoration:underline; }
+  footer { margin-top:8px; font-size:12px; }
+  footer .muted { font-size:12px; }
+
+  /* ---- 툴팁 ---- */
+  #tip { position:fixed; z-index:70; pointer-events:none; display:none; background:var(--panel);
+    border:1px solid var(--line); border-radius:10px; padding:7px 10px; font-size:12px;
+    box-shadow:0 4px 16px rgba(0,0,0,.18); font-variant-numeric:tabular-nums; max-width:240px; }
+  #tip .td { font-weight:700; margin-bottom:3px; }
+  #tip .tr { display:flex; align-items:center; gap:6px; }
+  #tip .tr i { width:8px; height:8px; border-radius:2px; flex:0 0 auto; }
+  #tip .tr b { margin-left:auto; font-weight:700; }
+
+  .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:2px;
+    background:color-mix(in srgb,var(--panel) 92%,transparent); backdrop-filter:blur(10px);
+    border-top:1px solid var(--line); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); }
+  .bottomnav .nav-cell { display:flex; flex-direction:column; align-items:center; gap:3px; text-decoration:none; color:var(--muted);
+    padding:6px 4px; border-radius:12px; flex:1 1 0; max-width:96px; transition:color .15s,background .15s; }
+  .bottomnav .nav-cell:hover { color:var(--accent); }
+  .bottomnav .ni { font-size:20px; line-height:1; }
+  .bottomnav .nl { font-size:11px; font-weight:600; }
+</style>
+
+<script>
+'use strict';
+var D = window.MARKET_DATA;
+if (!D) { document.getElementById('hd-date').textContent = '데이터 없음 — market_data.js 를 확인하세요.'; }
+
+/* ================= 유틸 ================= */
+function el(id){ return document.getElementById(id); }
+function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function fmt(v, nd){ return v == null ? '–' : v.toLocaleString('ko-KR', {minimumFractionDigits:nd||0, maximumFractionDigits:nd||0}); }
+function lastVal(arr){ if(!arr) return null; for(var i=arr.length-1;i>=0;i--){ if(arr[i]!=null) return arr[i]; } return null; }
+var state = { m:'all', n:126 };
+
+/* ================= 범용 차트 =================
+   cfg: { series:[{data,label,color,type:'line'|'bar'|'area',width,dots}], dates,
+          h, yfmt, refs:[{y,label}], zero(0 기준 대칭 여부), markers:[{i,color}], endLabels } */
+function drawChart(container, cfg){
+  var W = container.clientWidth || 500, H = cfg.h || 190;
+  var padL = 8, padR = 44, padT = 10, padB = 20;
+  var pw = W - padL - padR, ph = H - padT - padB;
+  var dates = cfg.dates, n = dates.length;
+
+  var lo = Infinity, hi = -Infinity;
+  cfg.series.forEach(function(s){ s.data.forEach(function(v){
+    if(v == null) return; if(v < lo) lo = v; if(v > hi) hi = v; }); });
+  if(!isFinite(lo)){ container.innerHTML = '<div class="fn">데이터 없음</div>'; return; }
+  (cfg.refs||[]).forEach(function(r){ if(r.y < lo) lo = r.y; if(r.y > hi) hi = r.y; });
+  var hasBar = cfg.series.some(function(s){ return s.type === 'bar'; });
+  if(cfg.zero || hasBar){ if(lo > 0) lo = 0; if(hi < 0) hi = 0; }
+  if(hi === lo){ hi += 1; lo -= 1; }
+  var span = hi - lo; hi += span * 0.06; lo -= span * 0.06;
+
+  function X(i){ return padL + (n <= 1 ? pw/2 : i * pw / (n-1)); }
+  function Y(v){ return padT + (hi - v) / (hi - lo) * ph; }
+
+  var svg = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">';
+  // 그리드 + y라벨
+  var ticks = 4;
+  for(var t = 0; t <= ticks; t++){
+    var yv = lo + (hi - lo) * t / ticks, yy = Y(yv);
+    svg += '<line x1="' + padL + '" x2="' + (padL+pw) + '" y1="' + yy + '" y2="' + yy +
+           '" style="stroke:var(--line);stroke-width:1"/>';
+    svg += '<text x="' + (W-2) + '" y="' + (yy+4) + '" text-anchor="end" font-size="10" style="fill:var(--muted)">' +
+           (cfg.yfmt ? cfg.yfmt(yv) : fmt(yv, Math.abs(hi-lo) < 8 ? 1 : 0)) + '</text>';
+  }
+  // x라벨 (4~5개)
+  var xstep = Math.max(1, Math.round(n / 4));
+  for(var i = 0; i < n; i += xstep){
+    if(i > n - xstep * 0.4 && i < n - 1) continue;
+    var anchor = i === 0 ? 'start' : 'middle', lx = i === 0 ? padL : X(i);
+    svg += '<text x="' + lx + '" y="' + (H-5) + '" text-anchor="' + anchor + '" font-size="10" style="fill:var(--muted)">' +
+           dates[i].slice(2).replace(/-/g,'.') + '</text>';
+  }
+  // 기준선
+  (cfg.refs||[]).forEach(function(r){
+    svg += '<line x1="' + padL + '" x2="' + (padL+pw) + '" y1="' + Y(r.y) + '" y2="' + Y(r.y) +
+           '" style="stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3;opacity:.6"/>';
+    if(r.label) svg += '<text x="' + (padL+2) + '" y="' + (Y(r.y)-3) + '" font-size="9.5" style="fill:var(--muted)">' + r.label + '</text>';
+  });
+  if((cfg.zero || hasBar) && lo < 0 && hi > 0)
+    svg += '<line x1="' + padL + '" x2="' + (padL+pw) + '" y1="' + Y(0) + '" y2="' + Y(0) + '" style="stroke:var(--muted);stroke-width:1;opacity:.5"/>';
+
+  // 시리즈
+  var bw = Math.max(1, pw / n - 1);
+  cfg.series.forEach(function(s){
+    if(s.type === 'bar'){
+      var y0 = Y(0);
+      s.data.forEach(function(v, i){
+        if(v == null || v === 0) return;
+        var yy = Y(v), top = Math.min(yy, y0), hh = Math.max(1, Math.abs(yy - y0));
+        var color = (s.negColor && v < 0) ? s.negColor : s.color;
+        svg += '<rect x="' + (X(i)-bw/2) + '" y="' + top + '" width="' + bw + '" height="' + hh +
+               '" style="fill:' + color + ';opacity:.85"/>';
+      });
+    } else {
+      var path = '', open = false;
+      s.data.forEach(function(v, i){
+        if(v == null){ open = false; return; }
+        path += (open ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); open = true;
+      });
+      if(s.type === 'area'){
+        var area = '', openA = false, i0 = null, iN = null;
+        s.data.forEach(function(v, i){ if(v != null){ if(i0 == null) i0 = i; iN = i; } });
+        if(i0 != null){
+          area = path + 'L' + X(iN).toFixed(1) + ' ' + Y(Math.max(lo,0)).toFixed(1) +
+                 'L' + X(i0).toFixed(1) + ' ' + Y(Math.max(lo,0)).toFixed(1) + 'Z';
+          svg += '<path d="' + area + '" style="fill:' + s.color + ';opacity:.12"/>';
+        }
+      }
+      svg += '<path d="' + path + '" fill="none" style="stroke:' + s.color + ';stroke-width:' + (s.width||2) + '"/>';
+      if(s.dots){
+        s.data.forEach(function(v, i){
+          if(v == null) return;
+          svg += '<circle cx="' + X(i) + '" cy="' + Y(v) + '" r="2.5" style="fill:' + s.color + '"/>';
+        });
+      }
+    }
+  });
+  // 마커(90% 데이 등)
+  (cfg.markers||[]).forEach(function(mk){
+    svg += '<circle cx="' + X(mk.i) + '" cy="' + Y(mk.y) + '" r="3.5" style="fill:' + mk.color +
+           ';stroke:var(--panel);stroke-width:1.5"/>';
+  });
+  // 라인 끝 직접 라벨
+  if(cfg.endLabels !== false){
+    var used = [];
+    cfg.series.forEach(function(s){
+      if(s.type === 'bar' || s.noLabel) return;
+      var v = lastVal(s.data); if(v == null) return;
+      var yy = Y(v);
+      used.forEach(function(u){ if(Math.abs(u - yy) < 11) yy = u - 12; });
+      used.push(yy);
+      svg += '<text x="' + (padL + pw - 3) + '" y="' + (yy - 5) + '" text-anchor="end" font-size="10.5" font-weight="700" style="fill:' +
+             s.color + '">' + s.label + '</text>';
+    });
+  }
+  svg += '</svg>';
+  container.innerHTML = svg;
+
+  // ---- 호버(크로스헤어 + 툴팁) ----
+  var tip = el('tip'), node = container.querySelector('svg');
+  var vline = document.createElementNS('http://www.w3.org/2000/svg','line');
+  vline.setAttribute('style','stroke:var(--muted);stroke-width:1;opacity:0;pointer-events:none');
+  vline.setAttribute('y1', padT); vline.setAttribute('y2', padT + ph);
+  node.appendChild(vline);
+  function onmove(ev){
+    var r = node.getBoundingClientRect();
+    var x = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
+    var i = Math.round((x - padL) / (pw || 1) * (n - 1));
+    if(i < 0 || i > n - 1){ onout(); return; }
+    vline.setAttribute('x1', X(i)); vline.setAttribute('x2', X(i)); vline.setAttribute('opacity', .8);
+    var html = '<div class="td">' + dates[i] + '</div>';
+    cfg.series.forEach(function(s){
+      if(s.noTip) return;
+      var v = s.data[i];
+      html += '<div class="tr"><i style="background:' + s.color + '"></i>' + s.label +
+              '<b>' + (v == null ? '–' : (s.fmt ? s.fmt(v) : fmt(v, s.nd != null ? s.nd : 1))) + '</b></div>';
+    });
+    tip.innerHTML = html; tip.style.display = 'block';
+    var cx = (ev.touches ? ev.touches[0].clientX : ev.clientX), cy = (ev.touches ? ev.touches[0].clientY : ev.clientY);
+    var tw = tip.offsetWidth, vw = window.innerWidth;
+    tip.style.left = Math.min(cx + 14, vw - tw - 8) + 'px';
+    tip.style.top = (cy + 16) + 'px';
+  }
+  function onout(){ tip.style.display = 'none'; vline.setAttribute('opacity', 0); }
+  node.addEventListener('mousemove', onmove);
+  node.addEventListener('touchmove', onmove, {passive:true});
+  node.addEventListener('mouseleave', onout);
+  node.addEventListener('touchend', onout);
+}
+
+/* ================= 스코어 게이지 ================= */
+var ZONES = [
+  { max:20, cls:'--z-cold' }, { max:40, cls:'--z-cool' }, { max:60, cls:'--z-mid' },
+  { max:80, cls:'--z-warm' }, { max:101, cls:'--z-hot' }];
+var SCORE_DEFS = {
+  overall: { name:'종합 체온', labels:['냉각','낮음','중립','높음','과열'] },
+  trend:   { name:'추세(폭)', labels:['폭 매우 좁음','폭 좁음','보통','폭 넓음','폭 매우 넓음'] },
+  spec:    { name:'투기 열기', labels:['매우 차분','차분','보통','뜨거움','과열'] },
+  vol:     { name:'변동성', labels:['매우 낮음','낮음','보통','높음','매우 높음'] },
+  lev:     { name:'레버리지', labels:['매우 가벼움','가벼움','보통','무거움','과중'] }};
+function zone(v){ for(var i=0;i<ZONES.length;i++){ if(v < ZONES[i].max) return i; } return 4; }
+function gauge(id, key, main){
+  var def = SCORE_DEFS[key], v = D.scores[key];
+  var c = el(id), zi = v == null ? null : zone(v);
+  var color = zi == null ? 'var(--muted)' : 'var(' + ZONES[zi].cls + ')';
+  c.innerHTML = '<div class="sc-name">' + def.name + '</div>' +
+    '<div><span class="sc-val" style="color:' + color + '">' + (v == null ? '–' : v.toFixed(0)) + '</span>' +
+    (zi == null ? '' : '<span class="sc-label" style="color:' + color + '">' + def.labels[zi] + '</span>') + '</div>' +
+    '<div class="meter"><i style="width:' + (v||0) + '%;background:' + color + '"></i>' +
+    (v == null ? '' : '<b style="left:calc(' + v + '% - 1px)"></b>') + '</div>';
+}
+
+/* ================= 렌더 ================= */
+function sl(arr){ // 현재 범위 슬라이스
+  if(!arr) return [];
+  var n = Math.min(state.n, D.dates.length);
+  return arr.slice(arr.length - n);
+}
+function renderBreadth(){
+  var M = D.markets[state.m], dates = sl(D.dates);
+  var idxData = state.m === 'kosdaq' ? D.index.kosdaq : D.index.kospi;
+  var idxLabel = state.m === 'kosdaq' ? '코스닥' : '코스피';
+
+  drawChart(el('ch-advdec'), { dates:dates, h:180, series:[
+    { data:sl(M.adv), label:'상승', color:'var(--up)', type:'bar', nd:0 },
+    { data:sl(M.dec).map(function(v){ return v == null ? null : -v; }), label:'하락', color:'var(--dn)', type:'bar', nd:0,
+      fmt:function(v){ return fmt(Math.abs(v),0); } }],
+    yfmt:function(v){ return fmt(Math.abs(v),0); } });
+
+  drawChart(el('ch-index'), { dates:dates, h:110, series:[
+    { data:sl(idxData), label:idxLabel, color:'var(--ink)', nd:1 }] });
+  drawChart(el('ch-ad'), { dates:dates, h:110, series:[
+    { data:sl(M.ad), label:'A/D', color:'var(--accent)', type:'area', nd:0 }] });
+
+  drawChart(el('ch-ma'), { dates:dates, h:190, refs:[{y:50}], series:[
+    { data:sl(M.ma20), label:'20일', color:'var(--teal)', width:1.6 },
+    { data:sl(M.ma50), label:'50일', color:'var(--amber)', width:1.8 },
+    { data:sl(M.ma200), label:'200일', color:'var(--accent)', width:2.2 }],
+    yfmt:function(v){ return fmt(v,0) + '%'; } });
+
+  drawChart(el('ch-nhnl'), { dates:dates, h:110, series:[
+    { data:sl(M.nh), label:'신고가', color:'var(--up)', type:'bar', nd:0 },
+    { data:sl(M.nl).map(function(v){ return v == null ? null : -v; }), label:'신저가', color:'var(--dn)', type:'bar', nd:0,
+      fmt:function(v){ return fmt(Math.abs(v),0); } }],
+    yfmt:function(v){ return fmt(Math.abs(v),0); } });
+  drawChart(el('ch-nhnlcum'), { dates:dates, h:110, series:[
+    { data:sl(M.nhnl), label:'신고−신저 누적', color:'var(--ink)', width:1.8, nd:0 }] });
+
+  drawChart(el('ch-mc'), { dates:dates, h:110, series:[
+    { data:sl(M.mco), label:'오실레이터', color:'var(--up)', negColor:'var(--dn)', type:'bar', nd:1 }] });
+  drawChart(el('ch-mcs'), { dates:dates, h:110, series:[
+    { data:sl(M.mcs), label:'Summation', color:'var(--ink)', width:1.8, nd:0 }] });
+
+  drawChart(el('ch-adr'), { dates:dates, h:110, refs:[{y:100},{y:120,label:'과열 120'},{y:70,label:'침체 70'}], series:[
+    { data:sl(M.adr20), label:'ADR', color:'var(--accent)', nd:0 }] });
+
+  var up = sl(M.upshare), markers = [];
+  up.forEach(function(v, i){
+    if(v == null) return;
+    if(v >= 90) markers.push({ i:i, y:v, color:'var(--up)' });
+    if(v <= 10) markers.push({ i:i, y:v, color:'var(--dn)' });
+  });
+  drawChart(el('ch-upshare'), { dates:dates, h:110, refs:[{y:90},{y:10}], markers:markers, series:[
+    { data:up, label:'상승 거래대금%', color:'var(--teal)', nd:0, fmt:function(v){ return fmt(v,0) + '%'; } }] });
+
+  // Zweig Breadth Thrust: 최근 30일 내 0.40 미만 → 10일 안에 0.615 초과
+  var z = M.zbt, badge = '';
+  for(var i = Math.max(0, z.length - 30); i < z.length; i++){
+    if(z[i] != null && z[i] > 0.615){
+      for(var j = Math.max(0, i - 10); j < i; j++){
+        if(z[j] != null && z[j] < 0.40){
+          badge = '<span class="badge">⚡ Zweig Breadth Thrust — ' + D.dates[i] + ' (' + (state.m==='all'?'전체':state.m==='kospi'?'코스피':'코스닥') + ')</span>';
+          i = z.length; break;
+        }
+      }
+    }
+  }
+  el('badge-zbt').innerHTML = badge;
+}
+
+function renderSpec(){
+  var dates = sl(D.dates);
+  drawChart(el('ch-top10'), { dates:dates, h:170, series:[
+    { data:sl(D.spec.top10_share), label:'TOP10', color:'var(--accent)', type:'area', nd:1,
+      fmt:function(v){ return fmt(v,1) + '%'; } }], yfmt:function(v){ return fmt(v,0) + '%'; } });
+  drawChart(el('ch-penny'), { dates:dates, h:170, series:[
+    { data:sl(D.spec.penny_share), label:'저가주', color:'var(--amber)', type:'area', nd:2,
+      fmt:function(v){ return fmt(v,2) + '%'; } }] });
+  drawChart(el('ch-cap'), { dates:dates, h:170, series:[
+    { data:sl(D.spec.cap_up), label:'상한가', color:'var(--up)', type:'bar', nd:0 },
+    { data:sl(D.spec.cap_down).map(function(v){ return v == null ? null : -v; }), label:'하한가', color:'var(--dn)', type:'bar', nd:0,
+      fmt:function(v){ return fmt(Math.abs(v),0); } }],
+    yfmt:function(v){ return fmt(Math.abs(v),0); } });
+  drawChart(el('ch-turn'), { dates:dates, h:170, series:[
+    { data:sl(D.markets.all.turnover), label:'전체', color:'var(--accent)', nd:2, fmt:function(v){ return fmt(v,2) + '%'; } },
+    { data:sl(D.markets.kosdaq.turnover), label:'코스닥', color:'var(--amber)', nd:2, fmt:function(v){ return fmt(v,2) + '%'; } }] });
+  drawChart(el('ch-kqrel'), { dates:dates, h:150, zero:true, series:[
+    { data:sl(D.index.kq_rel20), label:'KQ−KS 20일', color:'var(--teal)', type:'area', nd:1,
+      fmt:function(v){ return (v > 0 ? '+' : '') + fmt(v,1) + '%p'; } }] });
+}
+
+function renderVol(){
+  var dates = sl(D.dates);
+  // VKOSPI 는 수집 시작일 이후만 값이 있으므로 첫 값부터 잘라 빈 공간을 없앤다
+  var vk = sl(D.vkospi), first = vk.findIndex(function(v){ return v != null; });
+  if(first < 0) first = 0;
+  drawChart(el('ch-vk'), { dates:dates.slice(first), h:170, series:[
+    { data:vk.slice(first), label:'VKOSPI', color:'var(--up)', nd:1, dots:vk.filter(function(v){return v!=null;}).length < 40 }] });
+  drawChart(el('ch-rv'), { dates:dates, h:170, series:[
+    { data:sl(D.index.rv20), label:'실현변동성', color:'var(--accent)', nd:1, fmt:function(v){ return fmt(v,1) + '%'; } }] });
+}
+
+function renderScoreChart(){
+  var dates = sl(D.dates), S = D.scores.series;
+  var defs = [
+    { key:'overall', color:'var(--ink)', width:2.4, on:true },
+    { key:'trend', color:'var(--teal)', width:1.5, on:false },
+    { key:'spec', color:'var(--up)', width:1.5, on:true },
+    { key:'vol', color:'var(--amber)', width:1.5, on:false },
+    { key:'lev', color:'var(--dn)', width:1.5, on:false }];
+  if(!renderScoreChart.state) renderScoreChart.state = defs.map(function(d){ return d.on; });
+  var st = renderScoreChart.state;
+  var lg = el('lg-score');
+  lg.innerHTML = defs.map(function(d, i){
+    return '<button class="lg' + (st[i] ? '' : ' off') + '" data-i="' + i + '"><i style="background:' + d.color + '"></i>' +
+           SCORE_DEFS[d.key].name + '</button>';
+  }).join('');
+  lg.querySelectorAll('.lg').forEach(function(b){
+    b.onclick = function(){ st[+b.dataset.i] = !st[+b.dataset.i]; renderScoreChart(); };
+  });
+  drawChart(el('ch-score'), { dates:dates, h:170, refs:[{y:50}], series:
+    defs.filter(function(d, i){ return st[i]; }).map(function(d){
+      return { data:sl(S[d.key]), label:SCORE_DEFS[d.key].name, color:d.color, width:d.width, nd:0 };
+    }), yfmt:function(v){ return fmt(v,0); } });
+}
+
+function renderTiles(){
+  var L = D.leverage, lt = el('tiles-lev');
+  function spark(arr, color){
+    var a = (arr||[]).slice(-60).filter(function(v){ return v != null; });
+    if(a.length < 2) return '';
+    var w = 110, h = 26, lo = Math.min.apply(null,a), hi = Math.max.apply(null,a);
+    if(hi === lo){ hi += 1; }
+    var pts = a.map(function(v,i){ return (i*w/(a.length-1)).toFixed(1) + ',' + (h - (v-lo)/(hi-lo)*(h-4) - 2).toFixed(1); });
+    return '<svg width="' + w + '" height="' + h + '"><polyline points="' + pts.join(' ') +
+           '" fill="none" style="stroke:' + color + ';stroke-width:1.6"/></svg>';
+  }
+  function tile(name, val, unit, diff, arr, color, nd){
+    var dcls = diff > 0 ? 'up' : diff < 0 ? 'dn' : '';
+    var dtxt = diff == null ? '' : '<span class="' + dcls + '">' + (diff > 0 ? '+' : '') + fmt(diff, nd) + '</span> 전일比';
+    return '<div class="tile"><div class="tname">' + name + '</div><div class="tval">' + fmt(val, nd) + '<span class="muted"> ' + unit + '</span></div>' +
+           '<div class="tsub">' + dtxt + '</div>' + spark(arr, color) + '</div>';
+  }
+  if(L && L.dates.length){
+    var n = L.dates.length;
+    function dif(a){ return n > 1 && a[n-1] != null && a[n-2] != null ? a[n-1] - a[n-2] : null; }
+    lt.innerHTML =
+      tile('신용거래융자', L.credit[n-1], '조원', dif(L.credit), L.credit, 'var(--up)', 2) +
+      tile('투자자예탁금', L.deposit[n-1], '조원', dif(L.deposit), L.deposit, 'var(--accent)', 2) +
+      tile('반대매매비중', L.liq_ratio[n-1], '%', dif(L.liq_ratio), L.liq_ratio, 'var(--amber)', 2) +
+      tile('신용/예탁금', L.cd_ratio[n-1], '%', dif(L.cd_ratio), L.cd_ratio, 'var(--gray)', 1);
+  } else { lt.innerHTML = '<div class="tile"><div class="tname">레버리지 데이터 없음</div></div>'; }
+
+  var F = D.flows, ft = el('tiles-flow');
+  if(F){
+    function ftile(name, o, key){
+      if(!o) return '';
+      var v = o[key], v5 = o[key + '5'];
+      var cls = v > 0 ? 'up' : v < 0 ? 'dn' : '';
+      return '<div class="tile"><div class="tname">' + name + ' <span class="muted">' + o.date.slice(5) + '</span></div>' +
+             '<div class="tval ' + cls + '">' + (v > 0 ? '+' : '') + fmt(v, 0) + '<span class="muted"> 억</span></div>' +
+             '<div class="tsub">5일 누적 ' + (v5 > 0 ? '+' : '') + fmt(v5, 0) + '억</div></div>';
+    }
+    ft.innerHTML = ftile('코스피 개인', F.kospi, 'indiv') + ftile('코스피 외국인', F.kospi, 'forgn') +
+                   ftile('코스피 기관', F.kospi, 'inst') + ftile('선물 외국인', F.futures, 'forgn');
+  } else { ft.innerHTML = ''; }
+}
+
+function renderAll(){
+  renderBreadth(); renderSpec(); renderVol(); renderScoreChart();
+}
+
+if (D) {
+  el('hd-date').innerHTML = D.asof + ' 기준 <span class="muted">(갱신 ' + D.generated + ')</span>';
+  el('fn-days').textContent = fmt(D.scores.n_days, 0);
+  el('ft-note').textContent = '지표 정의: ' + D.meta.notes +
+    ' A/D·신고저·이평 비율은 스팩 제외 전 상장종목 기준. VKOSPI 는 인베스팅닷컴 수집값.';
+  gauge('g-overall', 'overall', true);
+  gauge('g-trend', 'trend'); gauge('g-spec', 'spec'); gauge('g-vol', 'vol'); gauge('g-lev', 'lev');
+  renderTiles();
+  renderAll();
+  el('tab-market').addEventListener('click', function(e){
+    var b = e.target.closest('.chip'); if(!b) return;
+    this.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); });
+    b.classList.add('active'); state.m = b.dataset.m; renderBreadth();
+  });
+  el('tab-range').addEventListener('click', function(e){
+    var b = e.target.closest('.chip'); if(!b) return;
+    this.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); });
+    b.classList.add('active'); state.n = +b.dataset.r; renderAll();
+  });
+  var rsz;
+  window.addEventListener('resize', function(){ clearTimeout(rsz); rsz = setTimeout(renderAll, 200); });
+}
+</script>
+</body></html>
