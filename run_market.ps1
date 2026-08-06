@@ -43,6 +43,15 @@ try {
     & $py -X utf8 -u (Join-Path $proj 'quant-data\breadth_build.py') 2>&1 | Add-Content -Path $log -Encoding UTF8
     if ($LASTEXITCODE -ne 0) { Write-Log "ERROR: breadth_build exit $LASTEXITCODE"; exit 1 }
 
+    # 침체·과열 구간 카톡 알림 (실패해도 파이프라인은 계속)
+    & $py -X utf8 -u (Join-Path $proj 'quant-data\market_alert.py') 2>&1 | Add-Content -Path $log -Encoding UTF8
+    if ($LASTEXITCODE -eq 3) {
+        Write-Log 'NEEDS_REAUTH: 카카오 토큰 만료 - 복구: python price-alert\kakao_auth.py'
+    }
+    elseif ($LASTEXITCODE -ne 0) {
+        Write-Log "WARN: market_alert exit $LASTEXITCODE (계속 진행)"
+    }
+
     # 알파노트 홈 카드(index.html) 재생성
     & $py -u -c "import make_summary; make_summary.build()" 2>&1 | Add-Content -Path $log -Encoding UTF8
 
