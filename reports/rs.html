@@ -159,10 +159,18 @@
     <div class="frow"><span class="lbl">신호</span>
       <div class="chips" id="sigChips">
         <span class="chip on" data-v="">전체</span>
-        <span class="chip" data-v="hi">🔥 고점권</span>
         <span class="chip" data-v="ma">📏 이평 근접</span>
         <span class="chip" data-v="ext">⚠️ Extended</span>
       </div>
+    </div>
+    <div class="frow"><span class="lbl">고점대비</span>
+      <div class="chips" id="hiChips">
+        <span class="chip on" data-v="">전체</span>
+        <span class="chip" data-v="-25">-25% 이내</span>
+        <span class="chip" data-v="-15">-15% 이내</span>
+        <span class="chip" data-v="-5">-5% 이내</span>
+      </div>
+      <input type="number" id="hiMin" class="numin" min="0" max="100" step="1" placeholder="% 이내">
     </div>
     <div class="frow"><span class="lbl">시장</span>
       <div class="chips" id="mktChips">
@@ -197,7 +205,7 @@
     <div class="pager" id="pager"></div>
   </div>
   <div class="attrib">종합 RS = 기간별 상대강도(시장 백분위)의 가중평균 — 1M 20% · 3M 40% · 6M 20% · 12M 20% · 업종/테마 분류: 네이버금융 ·
-    신호: 🔥 52주 고점 -5% 이내 · 📏 MA200 ±5% · ⚠️ MA200 +60% 이상</div>
+    고점대비 = 52주 고점 기준 · 신호: 📏 MA200 ±5% · ⚠️ MA200 +60% 이상</div>
 
 <script>
 const D = window.RS_DATA || { asof: "-", sectors: [], industries: [], themes: [], stocks: [] };
@@ -207,7 +215,7 @@ document.getElementById("asof").textContent = D.asof;
 const CODE=0, NAME=1, MKT=2, CAP=3, AMT=4, RS=5, R1=6, R3=7, R6=8, R12=9, HI=10, MA=11, SEC=12, IND=13, THM=14;
 
 const state = {
-  q: "", rsMin: 70, sig: "", mkt: "", capMin: 0, minN: 5,
+  q: "", rsMin: 70, sig: "", mkt: "", capMin: 0, minN: 5, hiMin: null,
   group: null,               // {kind:'sec'|'ind'|'thm', idx, name}
   sort: { col: RS, dir: -1 },
   page: 1,
@@ -217,15 +225,15 @@ const state = {
 const PAGE = 50;
 const GPAGE = 20;   // 랭킹 테이블 페이지당 행 수
 
+// 고점 근접 여부는 '고점대비' 필터·컬럼이 직접 보여주므로 신호에서 제외한다
 function signals(s) {
   const out = [];
-  if (s[HI] != null && s[HI] >= -5) out.push("hi");
   if (s[MA] != null && Math.abs(s[MA]) <= 5) out.push("ma");
   if (s[MA] != null && s[MA] >= 60) out.push("ext");
   return out;
 }
-const SIG_EMOJI = { hi: "🔥", ma: "📏", ext: "⚠️" };
-const SIG_TIP = { hi: "52주 고점 -5% 이내", ma: "MA200 ±5% 이내", ext: "MA200 +60% 이상 (확장)" };
+const SIG_EMOJI = { ma: "📏", ext: "⚠️" };
+const SIG_TIP = { ma: "MA200 ±5% 이내", ext: "MA200 +60% 이상 (확장)" };
 
 function fmtCap(v) {
   if (v == null) return "–";
@@ -303,8 +311,16 @@ function renderSel() {
 // ---------------- 종목 테이블 ----------------
 const SCOLS = [
   ["#", null], ["티커", CODE], ["종목명", NAME], ["시총", CAP],
-  ["RS", RS], ["1M RS", R1], ["3M RS", R3], ["6M RS", R6], ["12M RS", R12], ["신호", null],
+  ["RS", RS], ["1M RS", R1], ["3M RS", R3], ["6M RS", R6], ["12M RS", R12],
+  ["고점대비", HI], ["신호", null],
 ];
+
+// 고점 근접일수록 초록, 멀어질수록 빨강 (52주 고점 기준이라 값은 0 이하)
+function hiCell(v) {
+  if (v == null) return '<span class="num" style="color:var(--muted)">–</span>';
+  const cls = v >= -10 ? "g-hi" : (v <= -30 ? "g-lo" : "");
+  return `<span class="num ${cls}">${v.toFixed(1)}%</span>`;
+}
 
 function filtered() {
   const q = state.q.trim().toLowerCase();
@@ -315,6 +331,7 @@ function filtered() {
     if (state.capMin > 0 && (s[CAP] == null || s[CAP] < state.capMin)) return false;
     if (q && !(s[NAME].toLowerCase().includes(q) || s[CODE].includes(q))) return false;
     if (state.sig && !signals(s).includes(state.sig)) return false;
+    if (state.hiMin != null && (s[HI] == null || s[HI] < state.hiMin)) return false;
     if (g) {
       if (g.kind === "sec" && s[SEC] !== g.idx) return false;
       if (g.kind === "ind" && s[IND] !== g.idx) return false;
@@ -358,6 +375,7 @@ function renderStocks() {
       + `<td class="num">${fmtCap(s[CAP])}</td>`
       + `<td>${rsBadge(s[RS])}</td><td>${rsBadge(s[R1])}</td><td>${rsBadge(s[R3])}</td>`
       + `<td>${rsBadge(s[R6])}</td><td>${rsBadge(s[R12])}</td>`
+      + `<td>${hiCell(s[HI])}</td>`
       + `<td class="sig">${sig || '<span style="color:var(--muted)">–</span>'}</td></tr>`;
   }
   document.getElementById("tblStk").innerHTML = h + "</tbody>";
@@ -391,19 +409,22 @@ function renderPager(pages) {
 function goPage(n) { state.page = n; renderStocks(); document.getElementById("meta").scrollIntoView({ behavior: "smooth", block: "center" }); }
 
 // ---------------- 필터 바인딩 ----------------
-function bindChips(id, key, numeric) {
+function bindChips(id, key, parse) {
   document.querySelectorAll(`#${id} .chip`).forEach(c => c.addEventListener("click", () => {
     document.querySelectorAll(`#${id} .chip`).forEach(x => x.classList.toggle("on", x === c));
-    state[key] = numeric ? +c.dataset.v : c.dataset.v;
-    if (key === "rsMin") document.getElementById("rsMin").value = "";
-    if (key === "capMin") document.getElementById("capMin").value = "";
+    state[key] = parse(c.dataset.v);
+    // 같은 이름의 직접입력 칸이 있으면 비운다 (칩 선택이 우선)
+    const inp = document.getElementById(key);
+    if (inp) inp.value = "";
     state.page = 1; renderStocks();
   }));
 }
-bindChips("rsChips", "rsMin", true);
-bindChips("sigChips", "sig", false);
-bindChips("mktChips", "mkt", false);
-bindChips("capChips", "capMin", true);
+const asNum = v => +v, asStr = v => v, asNumOrNull = v => v === "" ? null : +v;
+bindChips("rsChips", "rsMin", asNum);
+bindChips("sigChips", "sig", asStr);
+bindChips("mktChips", "mkt", asStr);
+bindChips("capChips", "capMin", asNum);
+bindChips("hiChips", "hiMin", asNumOrNull);
 document.getElementById("q").addEventListener("input", e => { state.q = e.target.value; state.page = 1; renderStocks(); });
 document.getElementById("rsMin").addEventListener("input", e => {
   const v = parseFloat(e.target.value);
@@ -413,6 +434,12 @@ document.getElementById("rsMin").addEventListener("input", e => {
 document.getElementById("capMin").addEventListener("input", e => {
   const v = parseFloat(e.target.value);
   if (!isNaN(v)) { state.capMin = v; document.querySelectorAll("#capChips .chip").forEach(x => x.classList.remove("on")); }
+  state.page = 1; renderStocks();
+});
+// 직접입력은 양수로 받아 '고점 대비 N% 이내'로 해석한다 (15 → -15)
+document.getElementById("hiMin").addEventListener("input", e => {
+  const v = parseFloat(e.target.value);
+  if (!isNaN(v)) { state.hiMin = -Math.abs(v); document.querySelectorAll("#hiChips .chip").forEach(x => x.classList.remove("on")); }
   state.page = 1; renderStocks();
 });
 document.getElementById("minN").addEventListener("change", e => {
