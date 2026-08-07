@@ -910,6 +910,18 @@ function exportCSV(rows, mret, years) {
 }
 
 // ---------- 컨트롤 ----------
+// 미국 선거 주기 필터. 중간선거 = 4로 나눈 나머지 2, 대선 = 4의 배수.
+// 재임 2기는 규칙으로 계산되지 않아(연임·승계·비연속 재선) 연도를 직접 적는다.
+const SECOND_TERM_MIDTERMS = new Set([1958, 1974, 1986, 1998, 2006, 2014, 2026]);
+const YEAR_FILTERS = {
+  all: () => true,
+  odd: y => y % 2 === 1,
+  even: y => y % 2 === 0,
+  midterm: y => y % 4 === 2,
+  pres: y => y % 4 === 0,
+  term2: y => SECOND_TERM_MIDTERMS.has(y),
+};
+
 function buildYearChips() {
   const wrap = $("yearChips");
   const ys = [];
@@ -920,7 +932,18 @@ function buildYearChips() {
     `<span class="chip preset" data-act="odd">홀수</span>` +
     `<span class="chip preset" data-act="even">짝수</span>` +
     `<span class="divider"></span>` +
+    `<span class="lbl">미 선거주기</span>` +
+    `<span class="chip preset" data-act="midterm" title="미국 중간선거가 있는 해">중간선거</span>` +
+    `<span class="chip preset" data-act="pres" title="미국 대통령 선거가 있는 해">대선</span>` +
+    `<span class="chip preset" data-act="term2" title="재임 2기 대통령의 중간선거 해">재임 2기</span>` +
+    `<span class="divider"></span>` +
     ys.map(y => `<span class="chip yr-chip ${state.years.has(y) ? "on" : ""}" data-y="${y}">${y}</span>`).join("");
+  // 현재 선택이 어떤 프리셋과 정확히 일치하면 그 칩을 활성 표시
+  wrap.querySelectorAll(".preset").forEach(c => {
+    const picked = ys.filter(y => YEAR_FILTERS[c.dataset.act](y));
+    c.classList.toggle("on", picked.length > 0 && picked.length === state.years.size
+      && picked.every(y => state.years.has(y)));
+  });
   wrap.querySelectorAll(".yr-chip").forEach(c => c.addEventListener("click", () => {
     const y = +c.dataset.y;
     if (state.years.has(y)) { if (state.years.size > 1) state.years.delete(y); }
@@ -928,10 +951,16 @@ function buildYearChips() {
     refresh();
   }));
   wrap.querySelectorAll(".preset").forEach(c => c.addEventListener("click", () => {
+    const act = c.dataset.act;
+    const picked = ys.filter(y => YEAR_FILTERS[act](y));
+    if (!picked.length) {   // 분석 기간에 해당 해가 없으면 선택을 비우지 않는다
+      $("loadStatus").className = "err";
+      $("loadStatus").textContent = "선택한 기간에 해당하는 연도가 없습니다";
+      return;
+    }
+    $("loadStatus").textContent = "";
     state.years.clear();
-    for (const y of ys)
-      if (c.dataset.act === "all" || (c.dataset.act === "odd" ? y % 2 === 1 : y % 2 === 0))
-        state.years.add(y);
+    picked.forEach(y => state.years.add(y));
     refresh();
   }));
 }
