@@ -18,7 +18,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from send_summary import BASE, CONFIG_PATH, api_call, resolve_chat_id
+from send_summary import BASE, CONFIG_PATH, add_target_arg, resolve_targets, send
 
 X_DIR = BASE / "x-monitor"
 SITE = "https://pdhman.github.io/report-summary"
@@ -129,6 +129,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", help="YYYY-MM-DD (기본: 가장 최근 리포트)")
     ap.add_argument("--dry-run", action="store_true", help="발송하지 않고 메시지만 출력")
+    add_target_arg(ap)
     args = ap.parse_args()
 
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
@@ -145,15 +146,8 @@ def main():
     if not CONFIG_PATH.exists():
         raise SystemExit(f"설정 파일이 없습니다: {CONFIG_PATH}")
     cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    res = api_call(cfg["bot_token"], "sendMessage", {
-        "chat_id": resolve_chat_id(cfg),
-        "text": msg,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": "true",
-    })
-    if not res.get("ok"):
-        raise SystemExit(f"발송 실패: {res}")
-    print(f"발송 완료: X 모니터링 {date} ({len(msg)}자)")
+    send(cfg, resolve_targets(cfg, args.to), msg)
+    print(f"X 모니터링 {date} ({len(msg)}자)")
 
 
 if __name__ == "__main__":

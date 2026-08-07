@@ -203,9 +203,46 @@ def resolve_chat_id(cfg):
     )
 
 
+def resolve_targets(cfg, which):
+    """--to 값 → 보낼 chat_id 목록.
+
+    dm      개인 대화방 (기본)
+    channel config 의 channel_id (예: "@daily_alphanote") — 봇이 채널 관리자여야 한다
+    both    둘 다
+    """
+    out = []
+    if which in ("dm", "both"):
+        out.append(resolve_chat_id(cfg))
+    if which in ("channel", "both"):
+        ch = cfg.get("channel_id")
+        if not ch:
+            raise SystemExit("config.json 에 channel_id 가 없습니다 (예: \"@daily_alphanote\").")
+        out.append(str(ch))
+    return out
+
+
+def send(cfg, targets, msg):
+    for chat_id in targets:
+        res = api_call(cfg["bot_token"], "sendMessage", {
+            "chat_id": chat_id,
+            "text": msg,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": "true",
+        })
+        if not res.get("ok"):
+            raise SystemExit(f"발송 실패({chat_id}): {res}")
+        print(f"발송 완료 → {chat_id}")
+
+
+def add_target_arg(ap):
+    ap.add_argument("--to", choices=("dm", "channel", "both"), default="dm",
+                    help="보낼 곳 (기본 dm). channel 은 봇이 채널 관리자로 등록돼 있어야 한다")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true", help="발송하지 않고 메시지만 출력")
+    add_target_arg(ap)
     args = ap.parse_args()
 
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
@@ -220,17 +257,8 @@ def main():
     if not CONFIG_PATH.exists():
         raise SystemExit(f"설정 파일이 없습니다: {CONFIG_PATH}")
     cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    chat_id = resolve_chat_id(cfg)
-
-    res = api_call(cfg["bot_token"], "sendMessage", {
-        "chat_id": chat_id,
-        "text": msg,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": "true",
-    })
-    if not res.get("ok"):
-        raise SystemExit(f"발송 실패: {res}")
-    print(f"발송 완료 ({datetime.now():%Y-%m-%d %H:%M})")
+    send(cfg, resolve_targets(cfg, args.to), msg)
+    print(f"({datetime.now():%Y-%m-%d %H:%M})")
 
 
 if __name__ == "__main__":

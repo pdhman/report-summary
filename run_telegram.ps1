@@ -3,6 +3,8 @@
 #  - 평일 16:50 (작업명 텔레그램요약_1650_발송)
 #  - reports\market_data.js / 수급모니터링\dashboard_data.js / reports\rs_data.js
 #    를 읽어 핵심 지표만 요약해 텔레그램으로 보낸다. 수집은 하지 않는다.
+#  - --to both: 개인 대화방 + 공개 채널(@daily_alphanote) 양쪽에 보낸다.
+#    채널 발송은 봇이 채널 관리자여야 하므로, 관리자에서 빠지면 여기서 실패한다.
 #  - 시장건전성_1635_수집 이 차트데이터를 기다리느라 16:50 을 넘길 수 있어
 #    그 작업이 끝나고 market_data.js 가 오늘자로 갱신될 때까지 먼저 기다린다.
 # =====================================================================
@@ -36,7 +38,7 @@ try {
     }
 
     Write-Log 'send_summary start'
-    & $py -X utf8 -u (Join-Path $proj 'telegram\send_summary.py') 2>&1 | Add-Content -Path $log -Encoding UTF8
+    & $py -X utf8 -u (Join-Path $proj 'telegram\send_summary.py') --to both 2>&1 | Add-Content -Path $log -Encoding UTF8
     if ($LASTEXITCODE -ne 0) { Write-Log "ERROR: send_summary exit $LASTEXITCODE"; exit 1 }
 
     Write-Log 'OK: sent'
