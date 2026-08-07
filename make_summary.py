@@ -422,7 +422,12 @@ def build():
         body = (_row("신용거래융자", c["credit"], c["credit_d"], "조원")
                 + _row("투자자예탁금", c["deposit"], c["deposit_d"], "조원")
                 + _row("반대매매비중", c["ratio"], c["ratio_d"], "%"))
-        cards.append(_card("leverage.html", "📈", "시장 레버리지", c["date"], body))
+        # 헤더 날짜는 '갱신일'. 금투협이 T 자료를 T+1 에 공표해 수치는 하루 전
+        # 기준이므로, 오해가 없도록 실제 기준일을 아래에 작게 덧붙인다.
+        upd = c.get("updated", c["date"])
+        if upd != c["date"]:
+            body += f'<div class="sc-note">수치는 {esc(c["date"])} 기준</div>'
+        cards.append(_card("leverage.html", "📈", "시장 레버리지", upd, body))
 
     # 분석 도구(차트·계절성·RS)는 상시 제공되는 정적 도구라 항상 카드 노출
     cards.append(_card(
@@ -508,6 +513,8 @@ def build():
   .k-val.up {{ color:var(--up); font-variant-numeric:tabular-nums; }}
   .k-val.down {{ color:var(--accent); font-variant-numeric:tabular-nums; }}
   .k-diff {{ font-weight:600; font-size:12.5px; font-variant-numeric:tabular-nums; color:var(--muted); }}
+  .sc-note {{ margin-top:7px; color:var(--muted); font-size:11.5px;
+    font-variant-numeric:tabular-nums; }}
   .k-diff.up {{ color:var(--up); }}
   .k-diff.down {{ color:var(--accent); }}
   .sc-more {{ margin-top:10px; color:var(--accent); font-size:13px; font-weight:600; }}

@@ -116,6 +116,24 @@ def kpi(label, value, prev, unit, decimals=1):
     </div>'''
 
 
+def _last_update(data_date):
+    """마지막 수집 성공일(collector 가 남긴 스탬프). 없으면 데이터 날짜로 대체.
+
+    금투협은 T 자료를 T+1 에 공표해 데이터 날짜가 항상 하루 뒤처진다. 요약 카드는
+    "언제 갱신됐는지"를 보여주는 게 오해가 적어 이 값을 쓴다. 수집이 며칠 멈추면
+    스탬프도 함께 멈추므로 낡은 상태가 그대로 드러난다.
+    """
+    d = data_date.strftime("%Y-%m-%d")
+    try:
+        with open(os.path.join(DATA, "last_update.txt"), encoding="utf-8") as f:
+            stamp = f.read().strip()[:10]
+        if len(stamp) == 10:
+            return max(d, stamp)
+    except OSError:
+        pass
+    return d
+
+
 def latest_stats():
     """요약 카드용 최신 수치. (날짜, 신용융자, 예탁금, 반대매매비중, 각 전일대비)"""
     cb, mf = load()
@@ -125,6 +143,7 @@ def latest_stats():
     rt = _num(mf["미수금 대비 반대매매비중(%)"]).tolist()
     return {
         "date": cb["date"].iloc[-1].strftime("%Y-%m-%d"),
+        "updated": _last_update(cb["date"].iloc[-1]),
         "credit": ca[-1], "credit_d": ca[-1] - ca[-2],
         "deposit": dp[-1], "deposit_d": dp[-1] - dp[-2],
         "ratio": rt[-1], "ratio_d": rt[-1] - rt[-2],

@@ -447,6 +447,7 @@ def print_latest_change(name: str, df: pd.DataFrame) -> None:
 
 
 def main() -> None:
+    collected = False
     for name, url in URLS.items():
         print(f"\n{name} 수집 중...")
 
@@ -464,9 +465,18 @@ def main() -> None:
             print_latest_change(name, df)
 
             print(f"저장 완료: {csv_path}")
+            collected = True
 
         except Exception as error:
             print(f"{name} 수집 실패: {error}")
+
+    if collected:
+        # 마지막으로 수집이 성공한 날짜(KST). 금투협은 T 데이터를 T+1 에 공표하므로
+        # 데이터 자체의 날짜와 갱신일이 하루 어긋난다. 요약 카드는 이 갱신일을 쓰고,
+        # 차트·CSV·DB 는 계속 실제 데이터 날짜를 그대로 유지한다.
+        (DATA_DIR / "last_update.txt").write_text(
+            datetime.now().strftime("%Y-%m-%d"), encoding="utf-8"
+        )
 
 
 if __name__ == "__main__":
