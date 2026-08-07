@@ -182,8 +182,9 @@
       <span class="lbl" style="flex:0 0 auto">분류 종목 수</span>
       <select id="minN">
         <option value="1">전체</option>
-        <option value="5">5+</option>
-        <option value="10" selected>10+ (기본)</option>
+        <option value="2">2+</option>
+        <option value="5" selected>5+ (기본)</option>
+        <option value="10">10+</option>
         <option value="20">20+</option>
       </select>
     </div>
@@ -206,7 +207,7 @@ document.getElementById("asof").textContent = D.asof;
 const CODE=0, NAME=1, MKT=2, CAP=3, AMT=4, RS=5, R1=6, R3=7, R6=8, R12=9, HI=10, MA=11, SEC=12, IND=13, THM=14;
 
 const state = {
-  q: "", rsMin: 70, sig: "", mkt: "", capMin: 0, minN: 10,
+  q: "", rsMin: 70, sig: "", mkt: "", capMin: 0, minN: 5,
   group: null,               // {kind:'sec'|'ind'|'thm', idx, name}
   sort: { col: RS, dir: -1 },
   page: 1,
