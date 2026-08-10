@@ -11,6 +11,9 @@
 > 개별 기업 CDS(오라클·NVIDIA·브로드컴 등)는 Markit/Bloomberg 유료 독점이라 무료 추적 불가.
 > 대신 등급 버킷 OAS로 프록시: AA=하이퍼스케일러(MSFT AAA·GOOGL AA+·AMZN AA·META AA-)·NVIDIA급,
 > BBB=오라클·브로드컴급. 해당 등급 스프레드가 벌어지면 그 그룹의 조달비용 상승 신호.
+> 개별 CDS 수치가 언론·리서치에 인용되면 manual_data.json 의 bigtech_cds_5y_bp 에 스냅샷으로
+> 기록(차트 + ORCL 200bp 이상 경계). 개별 CDS는 등급 버킷보다 개별 리스크를 먼저 반영한다 —
+> 2026-07 기준 ORCL CDS 215bp vs BBB OAS 97bp 처럼 괴리가 커지면 그 자체가 신호.
 
 > FRED는 로컬·GitHub 러너 모두 직접 접근이 차단이라 allorigins 프록시 + 로컬 캐시 폴백을 내장.
 > GPU 임대가는 vast.ai 직접 API가 어디서든 403이라 통계 미러(500.farm)를 기본 소스로 사용.

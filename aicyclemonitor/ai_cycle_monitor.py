@@ -81,6 +81,7 @@ TH = {
     "bbb_oas_level": 200.0,        # BBB OAS(bp) 이 값 이상 → 경계
     "bbb_oas_chg_90d": 50.0,       # BBB OAS 90일 상승폭(bp) 이 값 이상 → 경계
     "aa_oas_chg_90d": 30.0,        # AA OAS 90일 상승폭(bp) 이 값 이상 → 경계 (하이퍼스케일러급)
+    "orcl_cds_level": 200.0,       # 오라클 5Y CDS(bp, 수동 스냅샷) 이 값 이상 → 경계
     "neocloud_drawdown": -50.0,    # 네오클라우드 평균 52주 낙폭(%) → 경계
     "crwv_capex_yoy": 0.0,         # CRWV 분기 capex YoY(%) 이 값 이하(감소 전환) → 경계
     "orcl_drawdown": -40.0,        # 오라클 52주 낙폭(%) → 경계
@@ -565,6 +566,7 @@ def collect_live():
             "orcl_indexed": indexed([ORACLE]),
             "drawdowns": dd,
             "crwv_capex": crwv_capex,
+            "cds": manual.get("bigtech_cds_5y_bp", {}),
         },
         "metrics": metrics,
     }
@@ -685,6 +687,9 @@ def collect_sample():
             "crwv_capex": {"labels": ["2024Q1", "2024Q2", "2024Q3", "2024Q4",
                                       "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1"],
                            "values": [1.7, 2.0, 2.2, 2.8, 1.4, 2.5, 2.4, 4.1, 7.7]},
+            "cds": {"date": "2026-07-29", "source": "S&P Global MI (예시)",
+                    "ytd_chg": {"ORCL": 70, "AVGO": 48, "META": 39, "NVDA": 32, "AMZN": 30, "GOOGL": 29},
+                    "level": {"ORCL": 215, "META": 95, "NVDA": 82}},
         },
         "metrics": {
             "gpu_rent_chg_90d": round((gpu_vals[-1] / gpu_vals[-90] - 1) * 100, 1),
@@ -804,6 +809,10 @@ def judge(data):
     v = m.get("crwv_capex_yoy")
     add("레버리지", "CoreWeave 분기 capex YoY (SEC)", v, "%",
         f"{TH['crwv_capex_yoy']:.0f}% 이하 (감소 전환)", v is not None and v <= TH["crwv_capex_yoy"])
+    cds = data["leverage"].get("cds") or {}
+    v = (cds.get("level") or {}).get("ORCL")
+    add("레버리지", f"오라클 5Y CDS (수동 스냅샷 {cds.get('date', '')})", v, "bp",
+        f"{TH['orcl_cds_level']:.0f}bp 이상", v is not None and v >= TH["orcl_cds_level"])
 
     pillar_status = {}
     for p in ["공급", "수요", "레버리지"]:
@@ -1007,6 +1016,9 @@ TEMPLATE = r"""<!DOCTYPE html>
       <div class="card"><h3>CoreWeave 분기 capex ($B)</h3>
         <p class="note">SEC 현금흐름표(YTD 차분) — GPU 담보부채로 조달하는 buildout, 급감 = 자금줄 경색 신호</p>
         <div id="ch-crwv"></div></div>
+      <div class="card"><h3>빅테크 5Y CDS — 연초 대비 변화 (bp)</h3>
+        <p class="note" id="cdsNote">개별 CDS는 유료라 언론 인용 스냅샷을 수동 기록 — 괄호는 현재 레벨(bp)</p>
+        <div id="ch-cds"></div></div>
     </div>
   </section>
 
@@ -1166,8 +1178,10 @@ function hbarChart(elId, items, unit='%'){
   const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
   wrap.appendChild(svg);
   const minV=Math.min(...items.map(i=>i.value),0);
-  const ticks=niceTicks(minV,0,4);
-  const X=v=>M.l+(W-M.l-M.r)*(v-ticks[0])/(0-ticks[0]||1);
+  const maxV=Math.max(...items.map(i=>i.value),0);
+  const ticks=niceTicks(minV,maxV,4);
+  const t0=ticks[0], tn=ticks[ticks.length-1];
+  const X=v=>M.l+(W-M.l-M.r)*(v-t0)/((tn-t0)||1);
   ticks.forEach(t=>{
     svg.appendChild(svgEl('line',{x1:X(t),x2:X(t),y1:M.t,y2:H-M.b,stroke:INK.grid,'stroke-width':1}));
     const tx=svgEl('text',{x:X(t),y:H-6,'text-anchor':'middle','font-size':10.5,fill:INK.muted});
@@ -1175,15 +1189,19 @@ function hbarChart(elId, items, unit='%'){
   });
   svg.appendChild(svgEl('line',{x1:X(0),x2:X(0),y1:M.t,y2:H-M.b,stroke:INK.baseline,'stroke-width':1}));
   items.forEach((it,i)=>{
-    const y=M.t+rowH*i+(rowH-22)/2, x1=X(it.value), w=Math.max(2,X(0)-x1);
-    // 베이스라인(0) 쪽 직각, 데이터 끝 4px 라운드
-    const p=`M ${X(0)} ${y} L ${x1+4} ${y} Q ${x1} ${y} ${x1} ${y+4} L ${x1} ${y+18} Q ${x1} ${y+22} ${x1+4} ${y+22} L ${X(0)} ${y+22} Z`;
+    const y=M.t+rowH*i+(rowH-22)/2, x0=X(0), xv=X(it.value), neg=it.value<0;
+    // 베이스라인(0) 쪽 직각, 데이터 끝 4px 라운드 (음수=왼쪽, 양수=오른쪽)
+    const p=neg
+      ?`M ${x0} ${y} L ${xv+4} ${y} Q ${xv} ${y} ${xv} ${y+4} L ${xv} ${y+18} Q ${xv} ${y+22} ${xv+4} ${y+22} L ${x0} ${y+22} Z`
+      :`M ${x0} ${y} L ${xv-4} ${y} Q ${xv} ${y} ${xv} ${y+4} L ${xv} ${y+18} Q ${xv} ${y+22} ${xv-4} ${y+22} L ${x0} ${y+22} Z`;
     svg.appendChild(svgEl('path',{d:p,fill:SLOT[0]}));
     const lb=svgEl('text',{x:M.l-6,y:y+15,'text-anchor':'end','font-size':11.5,fill:INK.secondary});
     lb.textContent=it.label;svg.appendChild(lb);
-    // 막대가 길어 왼쪽 축 라벨과 겹치면 값 라벨을 막대 안쪽에 표시
-    const inside=(x1-6)<(M.l+44);
-    const vl=svgEl('text',{x:inside?x1+6:x1-6,y:y+15,'text-anchor':inside?'start':'end','font-size':11,
+    // 값 라벨은 막대 끝 바깥, 공간이 없으면 안쪽에 표시
+    let inside,vx,anchor;
+    if(neg){inside=(xv-6)<(M.l+44);vx=inside?xv+6:xv-6;anchor=inside?'start':'end';}
+    else{inside=(xv+6)>(W-M.r-4);vx=inside?xv-6:xv+6;anchor=inside?'end':'start';}
+    const vl=svgEl('text',{x:vx,y:y+15,'text-anchor':anchor,'font-size':11,
       fill:inside?INK.surface:INK.secondary,style:'font-variant-numeric:tabular-nums'});
     vl.textContent=fmt(it.value)+unit;svg.appendChild(vl);
   });
@@ -1297,6 +1315,16 @@ function renderAll(){
     lineChart('ch-crwv',[{name:'CRWV capex',dates:cwc.labels,values:cwc.values}],{labels:cwc.labels,unit:'B',h:190});
   } else {
     document.getElementById('ch-crwv').innerHTML='<div class="empty">SEC 수집 대기</div>';
+  }
+  const cds=DATA.leverage.cds||{}, cchg=cds.ytd_chg||{}, clvl=cds.level||{};
+  if(Object.keys(cchg).length){
+    document.getElementById('cdsNote').textContent=
+      `${cds.date||''} 기준 · ${cds.source||''} — 개별 CDS는 유료라 언론 인용 스냅샷 수동 기록, 괄호=현재 레벨(bp)`;
+    hbarChart('ch-cds',Object.keys(cchg).map(k=>({label:k+(clvl[k]?` (${clvl[k]})`:''),value:cchg[k]}))
+      .sort((a,b)=>b.value-a.value),'bp');
+  } else {
+    document.getElementById('ch-cds').innerHTML=
+      '<div class="empty">manual_data.json 의 bigtech_cds_5y_bp 입력 대기</div>';
   }
 
   // 경계 신호 표
