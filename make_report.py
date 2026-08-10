@@ -15,7 +15,16 @@ import pandas as pd
 import site_nav
 
 XLSX = "종목탐색_TOP30.xlsx"
+# 엑셀 파일을 열어둔 채로 스크리너가 돌면 저장이 잠겨 실패한다(2026-08-10 실사고:
+# PermissionError 로 그날 리포트가 통째로 누락). 그럴 때 스크리너가 전체본을
+# 아래 pending 파일에 대신 써두고, 잠금이 풀린 다음 실행에서 본 파일로 병합한다.
+PENDING = "종목탐색_TOP30.pending.xlsx"
 OUT_DIR = "reports"
+
+
+def xlsx_path():
+    """읽기용 xlsx 경로. pending 이 있으면 그쪽이 더 최신인 전체본이다."""
+    return PENDING if os.path.exists(PENDING) else XLSX
 
 
 def fmt_int(x):
@@ -150,11 +159,12 @@ def compute_streaks(df, latest):
 
 
 def main():
-    if not os.path.exists(XLSX):
+    src = xlsx_path()
+    if not os.path.exists(src):
         print(f"[보고서] {XLSX} 없음 — 보고서 생성 건너뜀")
         return
 
-    df = pd.read_excel(XLSX)
+    df = pd.read_excel(src)
     if df.empty:
         print("[보고서] 데이터 없음 — 건너뜀")
         return

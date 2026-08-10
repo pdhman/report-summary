@@ -18,6 +18,13 @@ import pandas as pd
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 XLSX = os.path.join(BASE, "종목탐색_TOP30.xlsx")
+# 본 파일이 엑셀에서 열려 있던 회차는 스크리너가 pending 에 전체본을 써둔다.
+# 그 경우 참고 열도 pending 쪽에 채워야 리포트에 반영된다.
+PENDING = os.path.join(BASE, "종목탐색_TOP30.pending.xlsx")
+
+
+def _target():
+    return PENDING if os.path.exists(PENDING) else XLSX
 
 COL_YOY = "매출YoY(%)"
 COL_OP = "영업이익흑자"
@@ -33,7 +40,8 @@ def main():
         print("[펀더멘털] DART API 키 없음 — 건너뜀")
         return 0
 
-    df = pd.read_excel(XLSX)
+    path = _target()
+    df = pd.read_excel(path)
     if df.empty or "ticker" not in df.columns:
         print("[펀더멘털] 데이터 없음 — 건너뜀")
         return 0
@@ -73,7 +81,7 @@ def main():
         df.loc[mask, COL_DEBT] = debt_v
         filled += int(mask.sum())
 
-    df.to_excel(XLSX, index=False)
+    df.to_excel(path, index=False)
     print(f"[펀더멘털] {len(codes)}종목 조회, {filled}행 채움")
     return 0
 

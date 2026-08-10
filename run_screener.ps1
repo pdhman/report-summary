@@ -81,6 +81,9 @@ if ($report) { Start-Process $report.FullName }
 # reports/** 트리거로 사이트를 재배포한다. (봇 커밋은 [skip ci]라 루프 없음)
 # xlsx 는 러너의 요약 대시보드(주도주 카드) 생성에 필요하다.
 & git -C $proj add "reports/report_*.html" "reports/index.html" "reports/screener.html" "종목탐색_TOP30.xlsx" 2>&1 | Out-File $out -Append -Encoding utf8
+# 대기본(pending)은 생성·삭제가 오가므로 그 한 경로만 -A 로 스테이징한다.
+# 러너도 이 파일을 우선 읽어야 잠긴 회차의 결과가 사이트에 반영된다.
+& git -C $proj add -A -- "종목탐색_TOP30.pending.xlsx" 2>&1 | Out-File $out -Append -Encoding utf8
 & git -C $proj diff --staged --quiet
 if ($LASTEXITCODE -ne 0) {
     & git -C $proj checkout -- reports/ 2>&1 | Out-File $out -Append -Encoding utf8

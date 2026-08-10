@@ -135,7 +135,8 @@ def card_screener():
     그날이 더 최신이면 '0종목' 상태로 표시한다.
     """
     import pandas as pd
-    xlsx = os.path.join(BASE, "종목탐색_TOP30.xlsx")
+    import make_report
+    xlsx = os.path.join(BASE, make_report.xlsx_path())
     if not os.path.exists(xlsx):
         return None
     df = pd.read_excel(xlsx)
