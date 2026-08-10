@@ -5,11 +5,32 @@
 #  - 결과는 logs\screener_날짜시간.log 에 저장
 # =====================================================================
 
+param([switch]$Force)   # -Force : 시간 가드 무시하고 즉시 실행(수동 실행용)
+
 $proj = 'C:\Users\SAMSUNG\Desktop\클로드코드'
 $py   = 'C:\Users\SAMSUNG\AppData\Local\Programs\Python\Python311\python.exe'
 $script = '주도섹터 필터링.py'
 
 Set-Location $proj
+
+# --- 시간 가드: 장 마감(15:30) 전이거나 주말이면 실행하지 않는다 ---
+# 주말에 PC 가 꺼져 있으면 15:35 트리거가 밀리고, StartWhenAvailable=True 때문에
+# 월요일 부팅 직후 놓친 실행이 한꺼번에 돈다(2026-08-10 08:50/08:56 실사고).
+# 그 시각엔 장이 열리기 전이라 직전 거래일 종가로 '오늘자' 리포트를 만들어
+# 발행해버린다. 정규 15:35 실행은 그대로 두고 이런 따라잡기 실행만 막는다.
+$now = Get-Date
+if (-not $Force) {
+    $skip = $null
+    if ($now.DayOfWeek -eq 'Saturday' -or $now.DayOfWeek -eq 'Sunday') { $skip = '주말 휴장' }
+    elseif ($now.TimeOfDay -lt [TimeSpan]'15:30:00') { $skip = '장 마감 전' }
+    if ($skip) {
+        $g = Join-Path $proj 'logs'
+        if (-not (Test-Path $g)) { New-Item -ItemType Directory -Path $g | Out-Null }
+        "$($now.ToString('yyyy-MM-dd HH:mm:ss')) [guard] $skip - 실행 건너뜀 (놓친 실행 따라잡기 추정)" |
+            Add-Content -Path (Join-Path $g 'screener_skip.log') -Encoding UTF8
+        exit 0
+    }
+}
 
 # 실행 환경
 $env:PYTHONUTF8      = '1'
