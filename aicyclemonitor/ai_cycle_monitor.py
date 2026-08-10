@@ -63,6 +63,7 @@ PRIVATE_CREDIT = ["BIZD", "PBDC"]                  # BDC/사모신용 상장 프
 HYPERSCALER = ["MSFT", "GOOGL", "AMZN", "META"]
 ORACLE = "ORCL"
 FRED_SERIES = {
+    "AA_OAS": "BAMLC0A2CAA",      # ICE BofA AA 회사채 OAS (MSFT/GOOGL/AMZN/META=AA급 프록시)
     "BBB_OAS": "BAMLC0A4CBBB",    # ICE BofA BBB 회사채 OAS (오라클=BBB 프록시)
     "HY_OAS": "BAMLH0A0HYM2",     # ICE BofA 하이일드 OAS
 }
@@ -79,6 +80,7 @@ TH = {
     "capex_runrate_vs_ttm": 0.0,   # 5사 capex 런레이트(최근2Q×2)가 직전 4분기 합 이하(가속 멈춤) → 경계
     "bbb_oas_level": 200.0,        # BBB OAS(bp) 이 값 이상 → 경계
     "bbb_oas_chg_90d": 50.0,       # BBB OAS 90일 상승폭(bp) 이 값 이상 → 경계
+    "aa_oas_chg_90d": 30.0,        # AA OAS 90일 상승폭(bp) 이 값 이상 → 경계 (하이퍼스케일러급)
     "neocloud_drawdown": -50.0,    # 네오클라우드 평균 52주 낙폭(%) → 경계
     "crwv_capex_yoy": 0.0,         # CRWV 분기 capex YoY(%) 이 값 이하(감소 전환) → 경계
     "orcl_drawdown": -40.0,        # 오라클 52주 낙폭(%) → 경계
@@ -518,12 +520,14 @@ def collect_live():
         sum(v for v in [dd[t] for t in NEOCLOUD] if v is not None)
         / max(1, len([1 for t in NEOCLOUD if dd[t] is not None])), 1)
     metrics["orcl_dd"] = dd.get(ORACLE)
-    if "BBB_OAS" in spreads:
-        s = pd.Series(spreads["BBB_OAS"]["values"],
-                      index=pd.to_datetime(spreads["BBB_OAS"]["dates"]))
-        metrics["bbb_last"] = float(s.iloc[-1])
-        past = s[s.index <= s.index[-1] - timedelta(days=90)]
-        metrics["bbb_chg_90d_bp"] = round(float(s.iloc[-1]) - float(past.iloc[-1]), 0) if not past.empty else None
+    for name, key in [("BBB_OAS", "bbb"), ("AA_OAS", "aa")]:
+        if name in spreads:
+            s = pd.Series(spreads[name]["values"],
+                          index=pd.to_datetime(spreads[name]["dates"]))
+            metrics[f"{key}_last"] = float(s.iloc[-1])
+            past = s[s.index <= s.index[-1] - timedelta(days=90)]
+            metrics[f"{key}_chg_90d_bp"] = (round(float(s.iloc[-1]) - float(past.iloc[-1]), 0)
+                                            if not past.empty else None)
     metrics["nvda_dc_yoy_last"] = nvda_dc["yoy"][-1] if nvda_dc["yoy"] else None
     metrics["nvda_dc_last_bil"] = nvda_dc["values"][-1] if nvda_dc["values"] else None
     metrics["capex_runrate_bil"] = runrate
@@ -616,6 +620,7 @@ def collect_sample():
     }
 
     # 레버리지: 스프레드 저점 후 확대, 네오클라우드 급락
+    aa = peaked(58, 260, 50, 95, 0.01)
     bbb = peaked(105, 260, 92, 168, 0.01)
     hy = peaked(300, 260, 262, 445, 0.012)
     crwv = peaked(60, 270, 187, 62, 0.03)
@@ -672,7 +677,7 @@ def collect_sample():
                             "actual": [446.4, 802.0, None, None]},
         },
         "leverage": {
-            "spreads": {"BBB_OAS": pack(bbb), "HY_OAS": pack(hy)},
+            "spreads": {"AA_OAS": pack(aa), "BBB_OAS": pack(bbb), "HY_OAS": pack(hy)},
             "neocloud_indexed": {t: pack(idx(v)) for t, v in neo.items()},
             "private_credit_indexed": {"BIZD": pack(idx(bizd)), "PBDC": pack(idx(pbdc))},
             "orcl_indexed": {"ORCL": pack(idx(orcl))},
@@ -700,6 +705,8 @@ def collect_sample():
             "capex_runrate_vs_ttm": 16.0,
             "bbb_last": bbb[-1],
             "bbb_chg_90d_bp": round(bbb[-1] - bbb[-90], 0),
+            "aa_last": aa[-1],
+            "aa_chg_90d_bp": round(aa[-1] - aa[-90], 0),
         },
     }
     return data
@@ -776,11 +783,14 @@ def judge(data):
         f"{TH['capex_runrate_vs_ttm']:.0f}% 이하 (가속 멈춤)", v is not None and v <= TH["capex_runrate_vs_ttm"])
 
     v = m.get("bbb_last")
-    add("레버리지", "BBB 회사채 OAS 수준 (FRED)", v, "bp",
+    add("레버리지", "BBB 회사채 OAS 수준 (오라클·브로드컴급)", v, "bp",
         f"{TH['bbb_oas_level']:.0f}bp 이상", v is not None and v >= TH["bbb_oas_level"])
     v = m.get("bbb_chg_90d_bp")
     add("레버리지", "BBB OAS 90일 상승폭", v, "bp",
         f"+{TH['bbb_oas_chg_90d']:.0f}bp 이상", v is not None and v >= TH["bbb_oas_chg_90d"])
+    v = m.get("aa_chg_90d_bp")
+    add("레버리지", "AA OAS 90일 상승폭 (하이퍼스케일러·NVIDIA급)", v, "bp",
+        f"+{TH['aa_oas_chg_90d']:.0f}bp 이상", v is not None and v >= TH["aa_oas_chg_90d"])
     v = m.get("neocloud_dd_avg")
     add("레버리지", "네오클라우드 평균 52주 낙폭", v, "%",
         f"{TH['neocloud_drawdown']}% 이하", v is not None and v <= TH["neocloud_drawdown"])
@@ -982,7 +992,8 @@ TEMPLATE = r"""<!DOCTYPE html>
     <p class="desc">자금조달이 막히는가: 신용 스프레드, 네오클라우드 주가, 사모신용 프록시</p>
     <div class="cards">
       <div class="card"><h3>회사채 신용 스프레드 (bp)</h3>
-        <p class="note">FRED — BBB OAS(오라클급 프록시)·하이일드 OAS</p>
+        <p class="note">FRED — AA(하이퍼스케일러·NVIDIA급)·BBB(오라클·브로드컴급)·하이일드 OAS.
+          개별 CDS는 유료 데이터라 등급 버킷 OAS로 프록시</p>
         <div id="ch-spread"></div></div>
       <div class="card"><h3>네오클라우드 주가 (시작=100)</h3>
         <p class="note">CRWV·NBIS·IREN·APLD — GPU 담보 레버리지의 체온계</p>
@@ -1271,6 +1282,7 @@ function renderAll(){
   // ③ 레버리지
   const sp=DATA.leverage.spreads||{};
   lineChart('ch-spread',[
+    sp.AA_OAS?{name:'AA OAS',dates:sp.AA_OAS.dates,values:sp.AA_OAS.values}:null,
     sp.BBB_OAS?{name:'BBB OAS',dates:sp.BBB_OAS.dates,values:sp.BBB_OAS.values}:null,
     sp.HY_OAS?{name:'HY OAS',dates:sp.HY_OAS.dates,values:sp.HY_OAS.values}:null,
   ].filter(Boolean),{unit:'bp'});

@@ -142,7 +142,8 @@
     <p class="desc">자금조달이 막히는가: 신용 스프레드, 네오클라우드 주가, 사모신용 프록시</p>
     <div class="cards">
       <div class="card"><h3>회사채 신용 스프레드 (bp)</h3>
-        <p class="note">FRED — BBB OAS(오라클급 프록시)·하이일드 OAS</p>
+        <p class="note">FRED — AA(하이퍼스케일러·NVIDIA급)·BBB(오라클·브로드컴급)·하이일드 OAS.
+          개별 CDS는 유료 데이터라 등급 버킷 OAS로 프록시</p>
         <div id="ch-spread"></div></div>
       <div class="card"><h3>네오클라우드 주가 (시작=100)</h3>
         <p class="note">CRWV·NBIS·IREN·APLD — GPU 담보 레버리지의 체온계</p>
@@ -431,6 +432,7 @@ function renderAll(){
   // ③ 레버리지
   const sp=DATA.leverage.spreads||{};
   lineChart('ch-spread',[
+    sp.AA_OAS?{name:'AA OAS',dates:sp.AA_OAS.dates,values:sp.AA_OAS.values}:null,
     sp.BBB_OAS?{name:'BBB OAS',dates:sp.BBB_OAS.dates,values:sp.BBB_OAS.values}:null,
     sp.HY_OAS?{name:'HY OAS',dates:sp.HY_OAS.dates,values:sp.HY_OAS.values}:null,
   ].filter(Boolean),{unit:'bp'});
