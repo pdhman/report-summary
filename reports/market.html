@@ -60,6 +60,7 @@
       <div class="chart-block"><div class="ct">52주 신고가 / 신저가 <span class="cd">종목수 · 아래 = 신고−신저 누적</span></div><div id="ch-nhnl"></div><div id="ch-nhnlcum"></div></div>
       <div class="chart-block"><div class="ct">McClellan 오실레이터 <span class="cd">아래 = Summation Index</span></div><div id="ch-mc"></div><div id="ch-mcs"></div></div>
       <div class="chart-block"><div class="ct">ADR(20일) · 상승 거래대금 비중 <span class="cd">점 = 90% 업/다운 데이</span></div><div id="ch-adr"></div><div id="ch-upshare"></div></div>
+      <div class="chart-block wide"><div class="ct">Zweig Breadth Thrust <span class="cd">상승 종목 비율의 10일 EMA · 0.40 미만에서 10일 안에 0.615 돌파 = 스러스트(점)</span></div><div id="ch-zbt"></div></div>
     </div>
   </section>
 
@@ -484,6 +485,20 @@ function renderBreadth(){
   });
   drawChart(el('ch-upshare'), { dates:dates, h:110, refs:[{y:90},{y:10}], markers:markers, series:[
     { data:up, label:'상승 거래대금%', color:'var(--teal)', nd:0, fmt:function(v){ return fmt(v,0) + '%'; } }] });
+
+  // ZBT 히스토리 차트: 0.615 상향 돌파 시점 중 직전 10일 내 0.40 미만이 있으면 스러스트(점)
+  var zb = sl(M.zbt), zmarkers = [];
+  for(var zi = 1; zi < zb.length; zi++){
+    if(zb[zi] != null && zb[zi] > 0.615 && (zb[zi-1] == null || zb[zi-1] <= 0.615)){
+      for(var zj = Math.max(0, zi - 10); zj < zi; zj++){
+        if(zb[zj] != null && zb[zj] < 0.40){ zmarkers.push({ i:zi, y:zb[zi], color:'var(--up)' }); break; }
+      }
+    }
+  }
+  drawChart(el('ch-zbt'), { dates:dates, h:150,
+    refs:[{y:0.615, label:'돌파 0.615'}, {y:0.40, label:'침체 0.40'}], markers:zmarkers, series:[
+    { data:zb, label:'ZBT', color:'var(--accent)', nd:3 }],
+    yfmt:function(v){ return v.toFixed(2); } });
 
   // Zweig Breadth Thrust: 최근 30일 내 0.40 미만 → 10일 안에 0.615 초과
   var z = M.zbt, badge = '';
