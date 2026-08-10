@@ -286,6 +286,8 @@
   </section>
 
 <script src="data/index.js"></script>
+<script src="data/krx.js"></script>
+<script src="lib/market.js"></script>
 <script>
 "use strict";
 // 서버 없이도 동작하도록, 매일 자동 생성되는 market_data.js(기본 티커)를 기본 데이터로 쓴다.
@@ -297,15 +299,20 @@ const API = location.port === "8766" ? "" : "http://localhost:8766";
 const UNIVERSE = new Map((typeof TICKER_INDEX !== "undefined" ? TICKER_INDEX : []).map(e => [e.s, e]));
 const SEASONALITY_DATA = {};   // 내려받은 종목만 채워진다
 
-// data/<티커>.json 의 bars[[yyyymmdd,o,h,l,c,v,adj]] → 계절성이 쓰는 {dates, closes(수정종가)}
-async function fetchStatic(sym) {
-  const res = await fetch(`data/${encodeURIComponent(sym.replace("^", "_"))}.json`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const d = await res.json();
+// bars[[yyyymmdd,o,h,l,c,v,(adj)]] → 계절성이 쓰는 {dates, closes(수정종가)}
+// 한국 전종목 브랜치 데이터는 6필드(수정종가 없음)라 종가를 그대로 쓴다.
+function toEntry(d) {
   return { name: d.name, note: d.note || "",
-           dates: d.bars.map(b => b[0]), closes: d.bars.map(b => b[6]),
+           dates: d.bars.map(b => b[0]),
+           closes: d.bars.map(b => b.length > 6 ? b[6] : b[4]),
            // 요일별 갭/장중 분해용 (무조정 시가·종가 — 비율이라 조정 여부 무관)
            opens: d.bars.map(b => b[1]), rawCloses: d.bars.map(b => b[4]) };
+}
+
+async function fetchStatic(sym) {
+  const d = await MARKET.fromStatic(sym);
+  if (!d) throw new Error("데이터를 불러오지 못했습니다");
+  return toEntry(d);
 }
 const HOLDS = [10, 15, 20, 25, 30];
 const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
@@ -1016,9 +1023,10 @@ function switchTicker(sym) {
   refresh();
 }
 
-// 유니버스 종목은 정적 파일에서, 그 외 티커는 분석 서버(API)에서 가져온다.
+// 유니버스 정적 파일 → 한국 전종목 브랜치 → 분석 서버 순으로 조회.
+// '코미코' 같은 한글 종목명도 MARKET.resolve 가 티커로 바꿔준다.
 async function loadSymbol(raw) {
-  const sym = raw.trim().toUpperCase();
+  const sym = MARKET.resolve(raw);
   if (!sym) return;
   const st = $("loadStatus");
   if (SEASONALITY_DATA[sym]) { st.textContent = ""; st.className = ""; switchTicker(sym); return; }
@@ -1029,19 +1037,19 @@ async function loadSymbol(raw) {
     if (UNIVERSE.has(sym)) {
       entry = await fetchStatic(sym);
     } else {
-      let res;
-      try {
-        const ctl = new AbortController();
-        const timer = setTimeout(() => ctl.abort(), 2500);
-        res = await fetch(`${API}/api/closes?symbol=${encodeURIComponent(sym)}`, { signal: ctl.signal });
-        clearTimeout(timer);
-      } catch (e) {
-        throw new Error("목록에 없는 종목입니다 — 목록 밖 티커는 분석 서버"
-          + "(python seasonality/server.py)를 켠 PC에서만 검색됩니다");
+      const kr = await MARKET.fromKr(sym);
+      if (kr) {
+        entry = toEntry(kr);
+      } else {
+        let data;
+        try {
+          data = await MARKET.fromApi(sym, "/api/closes");
+        } catch (e) {
+          throw (e instanceof Error && /찾을 수 없|HTTP/.test(e.message))
+            ? e : MARKET.notFound(sym);
+        }
+        entry = { name: data.name, dates: data.dates, closes: data.closes };
       }
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      entry = { name: data.name, dates: data.dates, closes: data.closes };
       $("tickerSelect").add(new Option(`${sym} · ${entry.name}`, sym));
     }
     SEASONALITY_DATA[sym] = entry;
@@ -1067,8 +1075,11 @@ function buildTickerSelect() {
     }
     og.appendChild(new Option(`${e.s} · ${e.n}`, e.s));
   }
-  $("symList").innerHTML = [...UNIVERSE.values()]
-    .map(e => `<option value="${e.s}">${e.n} (${e.g})</option>`).join("");
+  // 자동완성: 유니버스 + KRX 전종목 이름(한글로 바로 검색)
+  const krx = typeof KRX_INDEX !== "undefined" ? KRX_INDEX : [];
+  $("symList").innerHTML =
+    [...UNIVERSE.values()].map(e => `<option value="${e.s}">${e.n} (${e.g})</option>`).join("")
+    + krx.map(r => `<option value="${r[1]}">${r[0]}.${r[2]}</option>`).join("");
 }
 
 async function init() {

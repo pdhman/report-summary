@@ -6,6 +6,8 @@
 <title>주식 차트</title>
 <script src="lib/lightweight-charts.standalone.production.js"></script>
 <script src="data/index.js"></script>
+<script src="data/krx.js"></script>
+<script src="lib/market.js"></script>
 <style>
   :root {
     --page: #f6f7f9; --surface: #ffffff; --ink: #1a1d21; --ink-2: #4b5563;
@@ -309,61 +311,28 @@ function applyPeriod() {
 const UNIVERSE = new Map((typeof TICKER_INDEX !== "undefined" ? TICKER_INDEX : []).map(e => [e.s, e]));
 const iso = n => `${String(n).slice(0,4)}-${String(n).slice(4,6)}-${String(n).slice(6)}`;
 
-async function fromStatic(symbol) {
-  if (!UNIVERSE.has(symbol)) return null;
-  try {
-    const res = await fetch(`data/${encodeURIComponent(symbol.replace("^", "_"))}.json`);
-    if (!res.ok) return null;
-    const d = await res.json();
-    return {
-      symbol, name: d.name, currency: d.currency || "", isStatic: true, note: d.note || "",
-      bars: d.bars.map(b => ({ t: iso(b[0]), o: b[1], h: b[2], l: b[3], c: b[4], v: b[5] })),
-    };
-  } catch (e) { return null; }
-}
-
-// 한국 종목(######.KS/.KQ)은 chart-data 브랜치(매일 갱신, orphan)에서 내려받는다.
-// raw.githubusercontent 는 CORS 허용이라 GitHub Pages 에서도 동작한다.
-const KR_DATA_URL = "https://raw.githubusercontent.com/pdhman/report-summary/chart-data/";
-async function fromKrBranch(symbol) {
-  if (!/^\d{6}\.(KS|KQ)$/.test(symbol)) return null;
-  try {
-    const res = await fetch(KR_DATA_URL + symbol + ".json");
-    if (!res.ok) return null;
-    const d = await res.json();
-    return {
-      symbol, name: d.name, currency: d.currency || "KRW", isStatic: true,
-      note: d.note || "", bars: d.bars.map(b => ({ t: iso(b[0]), o: b[1], h: b[2], l: b[3], c: b[4], v: b[5] })),
-    };
-  } catch (e) { return null; }
-}
-
-// 유니버스에 있으면 정적 파일이 가장 빠르고 확실하다.
-// 그 외 티커는 분석 서버(API)가 켜져 있을 때만 조회된다.
+// 조회 경로는 lib/market.js 에 모아 두었다(계절성 페이지와 공용).
+// 유니버스 정적 파일 → 한국 전종목 브랜치 → 분석 서버 순으로 조회
 async function fetchBars(symbol) {
+  const toBars = d => ({ ...d, isStatic: d.source !== "api",
+    bars: d.bars.map(b => ({ t: iso(b[0]), o: b[1], h: b[2], l: b[3], c: b[4], v: b[5] })) });
   if (UNIVERSE.has(symbol)) {
-    const stat = await fromStatic(symbol);
-    if (stat) return stat;
+    const stat = await MARKET.fromStatic(symbol);
+    if (stat) return toBars(stat);
   }
-  const kr = await fromKrBranch(symbol);
-  if (kr) return kr;
+  const kr = await MARKET.fromKr(symbol);
+  if (kr) return toBars(kr);
   try {
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 2500);
-    const res = await fetch(`${API}/api/ohlcv?symbol=${encodeURIComponent(symbol)}`, { signal: ctl.signal });
-    clearTimeout(timer);
-    const data = await res.json();
-    if (res.ok) return data;
-    throw new Error(data.error || `HTTP ${res.status}`);
+    const data = await MARKET.fromApi(symbol, "/api/ohlcv");
+    return { ...data, isStatic: false };
   } catch (e) {
     if (e instanceof Error && /찾을 수 없|HTTP/.test(e.message)) throw e;
   }
-  throw new Error(`${symbol}: 목록에 없는 종목입니다. 목록 밖 티커는 분석 서버`
-    + `(python seasonality/server.py)를 켠 PC에서만 검색됩니다.`);
+  throw MARKET.notFound(symbol);
 }
 
-async function load(symbol) {
-  symbol = symbol.trim().toUpperCase();
+async function load(raw) {
+  const symbol = MARKET.resolve(raw);
   if (!symbol) return;
   $("status").style.display = "block";
   $("status").className = "";
@@ -440,8 +409,11 @@ function buildPresets() {
     }
     og.appendChild(new Option(`${e.s} · ${e.n}`, e.s));
   }
-  $("symList").innerHTML = [...UNIVERSE.values()]
-    .map(e => `<option value="${e.s}">${e.n} (${e.g})</option>`).join("");
+  // 자동완성: 유니버스 + KRX 전종목 이름(한글로 바로 검색)
+  const krx = typeof KRX_INDEX !== "undefined" ? KRX_INDEX : [];
+  $("symList").innerHTML =
+    [...UNIVERSE.values()].map(e => `<option value="${e.s}">${e.n} (${e.g})</option>`).join("")
+    + krx.map(r => `<option value="${r[1]}">${r[0]}.${r[2]}</option>`).join("");
 }
 
 function init() {
