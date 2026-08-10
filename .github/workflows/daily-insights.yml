@@ -70,7 +70,10 @@ jobs:
         continue-on-error: true
         env:
           PYTHONUTF8: "1"
-        run: python seasonality/fetch_data.py
+        run: |
+          python seasonality/fetch_data.py
+          # 검색용 KRX 전종목 이름·코드 목록(신규 상장·사명 변경 반영)
+          python seasonality/build_krx_index.py
 
       - name: Commit generated reports
         run: |
