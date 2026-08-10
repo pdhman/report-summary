@@ -90,7 +90,10 @@ def _num(s):
 def build_universe() -> pd.DataFrame:
     """코스피·코스닥 전종목 스냅샷 (시세·시총·거래대금·업종)."""
     krx = fdr.StockListing("KRX")
-    uni = krx[krx["Market"].isin(["KOSPI", "KOSDAQ"])].copy()
+    # 코스닥 우량 종목은 Market 이 'KOSDAQ GLOBAL' 로 따로 표기된다(에코프로비엠·
+    # 리노공업·CJ ENM 등 50여 종목). 예전엔 'KOSDAQ' 만 받아 이들이 통째로 빠졌다.
+    uni = krx[krx["Market"].isin(["KOSPI", "KOSDAQ", "KOSDAQ GLOBAL"])].copy()
+    uni["Market"] = uni["Market"].replace({"KOSDAQ GLOBAL": "KOSDAQ"})
     uni["Code"] = uni["Code"].astype(str).str.zfill(6)
 
     try:

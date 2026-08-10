@@ -82,10 +82,24 @@ const MARKET = (() => {
     } finally { clearTimeout(timer); }
   }
 
+  // 한국 종목으로 해석은 됐는데 데이터가 없는 경우와, 아예 못 찾은 경우를 구분해
+  // 안내한다(전자는 수집 대상에서 빠진 종목이라 사용자가 할 수 있는 일이 없다).
   function notFound(symbol) {
+    if (isKr(symbol)) {
+      const name = krxName(symbol);
+      return new Error(`${name ? name + "(" + symbol + ")" : symbol}: 아직 수집되지 않은 종목입니다. `
+        + `주간 수집에 반영되면 자동으로 조회됩니다.`);
+    }
     return new Error(`${symbol}: 찾을 수 없는 종목입니다. `
       + `한국 주식은 종목명(예: 코미코)이나 6자리 코드로, 해외 종목은 티커로 검색하세요.`);
   }
 
-  return { resolve, fromKr, fromStatic, fromApi, isKr, notFound, KR_DATA_URL };
+  function krxName(symbol) {
+    if (typeof KRX_INDEX === "undefined") return null;
+    const m = symbol.match(/^(\d{6})\./);
+    const hit = m && KRX_INDEX.find(r => r[0] === m[1]);
+    return hit ? hit[1] : null;
+  }
+
+  return { resolve, fromKr, fromStatic, fromApi, isKr, notFound, krxName, KR_DATA_URL };
 })();
