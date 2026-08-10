@@ -9,12 +9,16 @@
   python send_x_summary.py                     가장 최근 리포트 발송
   python send_x_summary.py --date 2026-08-07   특정 날짜
   python send_x_summary.py --dry-run           발송 없이 출력
+  python send_x_summary.py --if-missing --to channel
+                                               오늘자가 아직 안 나갔으면 발송 (누락 감지용)
 """
 import argparse
 import html
 import json
 import re
 import sys
+import time
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
@@ -22,6 +26,10 @@ from send_summary import BASE, CONFIG_PATH, add_target_arg, resolve_targets, sen
 
 X_DIR = BASE / "x-monitor"
 SITE = "https://pdhman.github.io/report-summary"
+
+# 발송 이력. 스킬이 보냈든 감지기가 보냈든 여기 남으므로 중복 발송이 막힌다.
+# *.json 이라 .gitignore 에 걸려 저장소에는 올라가지 않는다.
+SENT_LOG = BASE / "telegram" / "sent.json"
 
 # 텔레그램 메시지 상한은 4096자. 총평 외 머리말·계정 목록·링크 몫을 빼고 잡는다.
 SUMMARY_MAX = 2600
@@ -125,17 +133,86 @@ def build_message(date):
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------- 발송 이력·누락 감지
+
+def load_sent():
+    if SENT_LOG.exists():
+        try:
+            return json.loads(SENT_LOG.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            pass          # 손상됐으면 빈 이력으로 시작한다 (최악이라도 재발송일 뿐)
+    return {}
+
+
+def mark_sent(date, targets):
+    log = load_sent()
+    log[date] = sorted(set(log.get(date, [])) | set(targets))
+    for old in sorted(log)[:-90]:      # 90일치만 남긴다
+        del log[old]
+    SENT_LOG.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def page_is_live(date):
+    """게시 페이지가 배포됐는지. 아직이면 메시지 링크가 404 가 되므로 발송을 미룬다."""
+    url = f"{SITE}/x_{date.replace('-', '')}.html"
+    try:
+        req = urllib.request.Request(url, method="HEAD")
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return r.status == 200
+    except Exception:
+        return False
+
+
+def skip_reason(date, targets, min_age):
+    """--if-missing 에서 발송을 건너뛸 이유. 보내도 되면 None."""
+    path = X_DIR / "reports" / f"{date}.md"
+    if not path.exists():
+        return f"{date} 리포트가 아직 없음"
+
+    done = set(load_sent().get(date, []))
+    if all(t in done for t in targets):
+        return f"{date} 이미 발송됨 → {', '.join(sorted(done))}"
+
+    age = (time.time() - path.stat().st_mtime) / 60
+    if age < min_age:
+        # 스킬이 리포트를 쓰는 중이거나 곧 스스로 보낼 수 있다. 다음 회차에 다시 본다.
+        return f"{date} 리포트 수정 {age:.0f}분 전 — {min_age}분은 지나야 발송"
+
+    if not page_is_live(date):
+        return f"{date} 게시 페이지가 아직 배포 전 (링크가 404 가 됨)"
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", help="YYYY-MM-DD (기본: 가장 최근 리포트)")
     ap.add_argument("--dry-run", action="store_true", help="발송하지 않고 메시지만 출력")
+    ap.add_argument("--if-missing", action="store_true",
+                    help="오늘자 리포트가 아직 발송되지 않았을 때만 보낸다 (스케줄러용)")
+    ap.add_argument("--min-age", type=int, default=30,
+                    help="--if-missing 에서 리포트 수정 후 대기할 분 (기본 30)")
     add_target_arg(ap)
     args = ap.parse_args()
 
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
 
-    date = args.date or latest_date()
+    # --if-missing 은 '오늘' 이 기준이다. latest_date() 를 쓰면 며칠 전 리포트를
+    # 뒤늦게 채널에 올리는 사고가 난다.
+    date = args.date or (datetime.now().strftime("%Y-%m-%d") if args.if_missing else latest_date())
+
+    if not CONFIG_PATH.exists():
+        raise SystemExit(f"설정 파일이 없습니다: {CONFIG_PATH}")
+    cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    targets = resolve_targets(cfg, args.to)
+
+    if args.if_missing:
+        reason = skip_reason(date, targets, args.min_age)
+        if reason:
+            print(f"건너뜀: {reason}")
+            return
+        print(f"미발송 감지 → {date} 발송 시작")
+
     msg = build_message(date)
 
     if args.dry_run:
@@ -143,10 +220,8 @@ def main():
         print(f"\n--- {len(msg)}자 (텔레그램 상한 4096) ---")
         return
 
-    if not CONFIG_PATH.exists():
-        raise SystemExit(f"설정 파일이 없습니다: {CONFIG_PATH}")
-    cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    send(cfg, resolve_targets(cfg, args.to), msg)
+    send(cfg, targets, msg)
+    mark_sent(date, targets)
     print(f"X 모니터링 {date} ({len(msg)}자)")
 
 
