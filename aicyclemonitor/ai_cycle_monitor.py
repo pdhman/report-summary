@@ -82,6 +82,7 @@ TH = {
     "bbb_oas_chg_90d": 50.0,       # BBB OAS 90일 상승폭(bp) 이 값 이상 → 경계
     "aa_oas_chg_90d": 30.0,        # AA OAS 90일 상승폭(bp) 이 값 이상 → 경계 (하이퍼스케일러급)
     "orcl_cds_level": 200.0,       # 오라클 5Y CDS(bp, 수동 스냅샷) 이 값 이상 → 경계
+    "hy_oas_level": 450.0,         # 하이일드 OAS(bp) 이 값 이상 → 경계 (신용시장 전반 스트레스)
     "neocloud_drawdown": -50.0,    # 네오클라우드 평균 52주 낙폭(%) → 경계
     "crwv_capex_yoy": 0.0,         # CRWV 분기 capex YoY(%) 이 값 이하(감소 전환) → 경계
     "orcl_drawdown": -40.0,        # 오라클 52주 낙폭(%) → 경계
@@ -796,6 +797,10 @@ def judge(data):
     v = m.get("aa_chg_90d_bp")
     add("레버리지", "AA OAS 90일 상승폭 (하이퍼스케일러·NVIDIA급)", v, "bp",
         f"+{TH['aa_oas_chg_90d']:.0f}bp 이상", v is not None and v >= TH["aa_oas_chg_90d"])
+    hy = (data["leverage"].get("spreads") or {}).get("HY_OAS") or {}
+    v = hy["values"][-1] if hy.get("values") else None
+    add("레버리지", "하이일드 OAS 수준 (신용시장 전반)", v, "bp",
+        f"{TH['hy_oas_level']:.0f}bp 이상", v is not None and v >= TH["hy_oas_level"])
     v = m.get("neocloud_dd_avg")
     add("레버리지", "네오클라우드 평균 52주 낙폭", v, "%",
         f"{TH['neocloud_drawdown']}% 이하", v is not None and v <= TH["neocloud_drawdown"])
@@ -1000,10 +1005,14 @@ TEMPLATE = r"""<!DOCTYPE html>
     <h2>③ 레버리지 — 2008년형</h2>
     <p class="desc">자금조달이 막히는가: 신용 스프레드, 네오클라우드 주가, 사모신용 프록시</p>
     <div class="cards">
-      <div class="card"><h3>회사채 신용 스프레드 (bp)</h3>
-        <p class="note">FRED — AA(하이퍼스케일러·NVIDIA급)·BBB(오라클·브로드컴급)·하이일드 OAS.
+      <div class="card"><h3>투자등급 신용 스프레드 (bp)</h3>
+        <p class="note">FRED — AA(하이퍼스케일러·NVIDIA급)·BBB(오라클·브로드컴급) OAS.
           개별 CDS는 유료 데이터라 등급 버킷 OAS로 프록시</p>
         <div id="ch-spread"></div></div>
+      <div class="card"><h3>하이일드(HY) OAS (bp)</h3>
+        <p class="note">투기등급(BB 이하) 회사채 스프레드 — 신용시장 전반의 위험선호 온도계.
+          레벨이 투자등급의 3~5배라 축 왜곡을 피해 별도 표시. 급등 = 2008년형 스트레스</p>
+        <div id="ch-hy"></div></div>
       <div class="card"><h3>네오클라우드 주가 (시작=100)</h3>
         <p class="note">CRWV·NBIS·IREN·APLD — GPU 담보 레버리지의 체온계</p>
         <div id="ch-neo"></div></div>
@@ -1016,8 +1025,8 @@ TEMPLATE = r"""<!DOCTYPE html>
       <div class="card"><h3>CoreWeave 분기 capex ($B)</h3>
         <p class="note">SEC 현금흐름표(YTD 차분) — GPU 담보부채로 조달하는 buildout, 급감 = 자금줄 경색 신호</p>
         <div id="ch-crwv"></div></div>
-      <div class="card"><h3>빅테크 5Y CDS — 연초 대비 변화 (bp)</h3>
-        <p class="note" id="cdsNote">개별 CDS는 유료라 언론 인용 스냅샷을 수동 기록 — 괄호는 현재 레벨(bp)</p>
+      <div class="card"><h3>빅테크 5Y CDS 레벨 (bp)</h3>
+        <p class="note" id="cdsNote">개별 CDS는 유료라 언론 인용 스냅샷을 수동 기록 — 괄호는 연초 대비 변화</p>
         <div id="ch-cds"></div></div>
     </div>
   </section>
@@ -1172,7 +1181,10 @@ function hbarChart(elId, items, unit='%'){
   host.innerHTML='';
   items=items.filter(it=>it.value!=null);
   if(!items.length){host.innerHTML='<div class="empty">데이터 없음</div>';return;}
-  const W=Math.max(320,host.clientWidth||430), rowH=34, M={t:8,r:56,b:22,l:56};
+  const W=Math.max(320,host.clientWidth||430), rowH=34;
+  // 왼쪽 여백은 가장 긴 라벨에 맞춰 동적으로 (괄호 라벨 잘림 방지)
+  const lw=Math.max(...items.map(it=>String(it.label).length))*6.6+12;
+  const M={t:8,r:56,b:22,l:Math.max(56,Math.ceil(lw))};
   const H=M.t+M.b+rowH*items.length;
   const wrap=document.createElement('div');wrap.className='chart';host.appendChild(wrap);
   const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
@@ -1302,8 +1314,10 @@ function renderAll(){
   lineChart('ch-spread',[
     sp.AA_OAS?{name:'AA OAS',dates:sp.AA_OAS.dates,values:sp.AA_OAS.values}:null,
     sp.BBB_OAS?{name:'BBB OAS',dates:sp.BBB_OAS.dates,values:sp.BBB_OAS.values}:null,
-    sp.HY_OAS?{name:'HY OAS',dates:sp.HY_OAS.dates,values:sp.HY_OAS.values}:null,
   ].filter(Boolean),{unit:'bp'});
+  lineChart('ch-hy',
+    sp.HY_OAS?[{name:'HY OAS',dates:sp.HY_OAS.dates,values:sp.HY_OAS.values}]:[],
+    {unit:'bp',h:180});
   const neo=DATA.leverage.neocloud_indexed||{};
   lineChart('ch-neo',Object.keys(neo).map(k=>({name:k,dates:neo[k].dates,values:neo[k].values})));
   const dd=DATA.leverage.drawdowns||{};
@@ -1317,11 +1331,14 @@ function renderAll(){
     document.getElementById('ch-crwv').innerHTML='<div class="empty">SEC 수집 대기</div>';
   }
   const cds=DATA.leverage.cds||{}, cchg=cds.ytd_chg||{}, clvl=cds.level||{};
-  if(Object.keys(cchg).length){
+  if(Object.keys(clvl).length||Object.keys(cchg).length){
     document.getElementById('cdsNote').textContent=
-      `${cds.date||''} 기준 · ${cds.source||''} — 개별 CDS는 유료라 언론 인용 스냅샷 수동 기록, 괄호=현재 레벨(bp)`;
-    hbarChart('ch-cds',Object.keys(cchg).map(k=>({label:k+(clvl[k]?` (${clvl[k]})`:''),value:cchg[k]}))
-      .sort((a,b)=>b.value-a.value),'bp');
+      `${cds.date||''} 기준 · ${cds.source||''} — 유료 데이터라 언론 인용 스냅샷 수동 기록, 괄호=연초 대비(bp)`;
+    // 레벨이 있으면 레벨 막대(+YTD 괄호), 없으면 YTD 변화 막대로 폴백
+    const items=Object.keys(clvl).length
+      ?Object.keys(clvl).map(k=>({label:k+(cchg[k]!=null?` (+${cchg[k]})`:''),value:clvl[k]}))
+      :Object.keys(cchg).map(k=>({label:k,value:cchg[k]}));
+    hbarChart('ch-cds',items.sort((a,b)=>b.value-a.value),'bp');
   } else {
     document.getElementById('ch-cds').innerHTML=
       '<div class="empty">manual_data.json 의 bigtech_cds_5y_bp 입력 대기</div>';

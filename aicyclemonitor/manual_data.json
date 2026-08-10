@@ -19,10 +19,10 @@
     "2026Q2": {"Azure": 43.0, "AWS": 37.0, "Google Cloud": 82.0, "OCI": 93.0}
   },
   "bigtech_cds_5y_bp": {
-    "date": "2026-07-29",
-    "source": "S&P Global MI (Kobeissi Letter)",
+    "date": "2026-07말~08초",
+    "source": "S&P Global MI·LSEG (언론 인용 종합)",
     "ytd_chg": {"ORCL": 70, "AVGO": 48, "META": 39, "NVDA": 32, "AMZN": 30, "GOOGL": 29},
-    "level": {"ORCL": 215, "META": 95, "NVDA": 82}
+    "level": {"ORCL": 215, "META": 95, "NVDA": 82, "GOOGL": 67, "MSFT": 49}
   },
   "hyperscaler_capex_total_bil": {
     "2023": 160.4,
