@@ -163,24 +163,29 @@ def page_is_live(date):
         return False
 
 
-def skip_reason(date, targets, min_age):
-    """--if-missing 에서 발송을 건너뛸 이유. 보내도 되면 None."""
+def pending_targets(date, targets, min_age):
+    """--if-missing 에서 실제로 보내야 할 대상. (보낼목록, 건너뛴이유) 를 준다.
+
+    이미 보낸 곳은 제외하고 남은 곳에만 보낸다. 채널이 둘 이상이라 한쪽만
+    나간 상태가 생길 수 있는데, 전체를 다시 보내면 한쪽에 중복 게시가 된다.
+    """
     path = X_DIR / "reports" / f"{date}.md"
     if not path.exists():
-        return f"{date} 리포트가 아직 없음"
+        return [], f"{date} 리포트가 아직 없음"
 
     done = set(load_sent().get(date, []))
-    if all(t in done for t in targets):
-        return f"{date} 이미 발송됨 → {', '.join(sorted(done))}"
+    todo = [t for t in targets if t not in done]
+    if not todo:
+        return [], f"{date} 이미 발송됨 → {', '.join(sorted(done))}"
 
     age = (time.time() - path.stat().st_mtime) / 60
     if age < min_age:
         # 스킬이 리포트를 쓰는 중이거나 곧 스스로 보낼 수 있다. 다음 회차에 다시 본다.
-        return f"{date} 리포트 수정 {age:.0f}분 전 — {min_age}분은 지나야 발송"
+        return [], f"{date} 리포트 수정 {age:.0f}분 전 — {min_age}분은 지나야 발송"
 
     if not page_is_live(date):
-        return f"{date} 게시 페이지가 아직 배포 전 (링크가 404 가 됨)"
-    return None
+        return [], f"{date} 게시 페이지가 아직 배포 전 (링크가 404 가 됨)"
+    return todo, None
 
 
 def main():
@@ -207,11 +212,11 @@ def main():
     targets = resolve_targets(cfg, args.to)
 
     if args.if_missing:
-        reason = skip_reason(date, targets, args.min_age)
+        targets, reason = pending_targets(date, targets, args.min_age)
         if reason:
             print(f"건너뜀: {reason}")
             return
-        print(f"미발송 감지 → {date} 발송 시작")
+        print(f"미발송 감지 → {date} {', '.join(targets)}")
 
     msg = build_message(date)
 

@@ -204,20 +204,41 @@ def resolve_chat_id(cfg):
 
 
 def resolve_targets(cfg, which):
-    """--to 값 → 보낼 chat_id 목록.
+    """--to 값 → 보낼 chat_id 목록. 쉼표로 여러 개를 지정할 수 있다.
 
-    dm      개인 대화방 (기본)
-    channel config 의 channel_id (예: "@daily_alphanote") — 봇이 채널 관리자여야 한다
-    both    둘 다
+    dm       개인 대화방
+    channel  config 의 channel_id (기본 채널 @daily_alphanote)
+    both     dm + channel
+    <별칭>   config 의 channels 맵에 등록한 이름 (예: rapha)
+    @이름    채널 주소를 그대로
+
+    메시지 종류마다 보낼 곳이 다르므로(시장 요약은 기본 채널만, X 모니터링은
+    두 채널) 이렇게 조합할 수 있게 뒀다. 예: --to channel,rapha
     """
+    channels = cfg.get("channels") or {}
     out = []
-    if which in ("dm", "both"):
-        out.append(resolve_chat_id(cfg))
-    if which in ("channel", "both"):
-        ch = cfg.get("channel_id")
-        if not ch:
-            raise SystemExit("config.json 에 channel_id 가 없습니다 (예: \"@daily_alphanote\").")
-        out.append(str(ch))
+
+    def add(v):
+        if v not in out:      # 같은 곳에 두 번 보내지 않는다
+            out.append(v)
+
+    for token in [t.strip() for t in str(which).split(",") if t.strip()]:
+        if token in ("dm", "both"):
+            add(resolve_chat_id(cfg))
+        if token in ("channel", "both"):
+            ch = cfg.get("channel_id")
+            if not ch:
+                raise SystemExit('config.json 에 channel_id 가 없습니다 (예: "@daily_alphanote").')
+            add(str(ch))
+        elif token in channels:
+            add(str(channels[token]))
+        elif token.startswith("@") or token.lstrip("-").isdigit():
+            add(token)
+        elif token not in ("dm", "channel", "both"):
+            known = ", ".join(["dm", "channel", "both", *channels])
+            raise SystemExit(f"--to 값을 알 수 없습니다: {token} (가능: {known}, 또는 @채널이름)")
+    if not out:
+        raise SystemExit("--to 에 보낼 곳이 지정되지 않았습니다.")
     return out
 
 
@@ -235,8 +256,9 @@ def send(cfg, targets, msg):
 
 
 def add_target_arg(ap):
-    ap.add_argument("--to", choices=("dm", "channel", "both"), default="dm",
-                    help="보낼 곳 (기본 dm). channel 은 봇이 채널 관리자로 등록돼 있어야 한다")
+    ap.add_argument("--to", default="dm",
+                    help="보낼 곳 (기본 dm). dm/channel/both/별칭/@채널이름 을 "
+                         "쉼표로 여러 개 지정 가능. 예: --to channel,rapha")
 
 
 def main():
