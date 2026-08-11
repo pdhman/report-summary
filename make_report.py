@@ -312,6 +312,7 @@ def _write_report(today, date_str):
   .num {{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }}
   .rank {{ color:var(--muted); width:28px; }}
   .empty {{ text-align:center; color:var(--muted); padding:28px 12px; font-size:14px; }}
+  .name {{ white-space:nowrap; }}  /* 종목명이 산업 컬럼에 눌려 두 줄로 잘리지 않게 */
   .name .nm {{ font-weight:600; }}
   .name .code {{ display:block; color:var(--muted); font-size:12px; }}
   .strong {{ font-weight:700; }}
