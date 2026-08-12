@@ -10,10 +10,17 @@
 종목이 100개가 넘으므로 한 파일에 몰지 않고 종목별로 나눈다. 페이지는 선택한
 종목의 파일만 내려받으므로 첫 로딩이 가볍다.
 
+기본은 증분 수집이다. 기존 파일이 있으면 마지막 날짜 부근부터만 받아 뒤에
+붙인다(전체 이력 재다운로드 대비 실행 시간이 크게 줄어든다). 단 수정종가는
+배당·분할 때 과거 값이 소급 변경되므로, 티커별로 7일에 한 번 전체를 다시
+받는다 — 어떤 날 어떤 티커를 전체로 받을지는 날짜에서 계산되므로 별도 상태
+파일이 필요 없고, 매 실행의 부하가 고르게 퍼진다.
+
 사용법:
-    python seasonality/fetch_data.py             # 유니버스 전체 갱신
+    python seasonality/fetch_data.py             # 유니버스 전체 갱신(증분)
     python seasonality/fetch_data.py SPY QQQ     # 지정 종목만 갱신
     python seasonality/fetch_data.py --missing   # 파일이 없는 종목만 (중단 후 이어받기)
+    python seasonality/fetch_data.py --full      # 전체 이력 강제 재다운로드
 
 조회에 실패한 종목은 기존 파일을 그대로 두므로, 야후의 일시적 차단이
 사이트의 데이터를 지우지 않는다.
@@ -22,6 +29,7 @@ import datetime
 import json
 import math
 import sys
+import zlib
 from pathlib import Path
 
 import yfinance as yf
@@ -41,11 +49,46 @@ BACKFILL = {
 }
 GAP_DAYS = 30       # 이보다 긴 공백이 있으면 그 이전 구간은 신뢰하지 않는다
 
+FULL_CYCLE = 7      # 티커별 전체 재수집 주기(일)
+OVERLAP_DAYS = 7    # 증분 시 겹쳐 받는 기간 — 최근 봉 정정·장중봉 확정을 반영
 
-def fetch(symbol: str):
-    """(bars, currency) 또는 None."""
+
+def wants_full(symbol: str, today: datetime.date) -> bool:
+    """오늘 이 티커를 전체로 다시 받을 차례인가.
+
+    수정종가는 배당·분할 시 과거 값까지 바뀌므로 주기적 전체 재수집이 필요하다.
+    티커를 FULL_CYCLE 개 그룹으로 나눠 하루에 한 그룹만 받는다(날짜만으로 결정 →
+    상태 파일 불필요, 부하 분산). crc32 는 실행마다 값이 같아야 하므로 hash() 대신 쓴다.
+    """
+    return zlib.crc32(symbol.encode()) % FULL_CYCLE == today.toordinal() % FULL_CYCLE
+
+
+def read_existing(symbol: str) -> dict | None:
+    path = OUT_DIR / f"{fname(symbol)}.json"
+    if not path.exists():
+        return None
+    try:
+        d = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    return d if d.get("bars") else None
+
+
+def merge(old_bars: list, new_bars: list) -> list:
+    """같은 날짜는 새 값으로 교체하고 날짜순으로 정렬해 합친다."""
+    m = {b[0]: b for b in old_bars}
+    for b in new_bars:
+        m[b[0]] = b
+    return [m[k] for k in sorted(m)]
+
+
+def fetch(symbol: str, start: datetime.date | None = None):
+    """(bars, currency) 또는 None. start 를 주면 그 날짜부터만 받는다."""
     tk = yf.Ticker(symbol)
-    hist = tk.history(period="max", auto_adjust=False)
+    if start is None:
+        hist = tk.history(period="max", auto_adjust=False)
+    else:
+        hist = tk.history(start=start.isoformat(), auto_adjust=False)
     if hist.empty:
         return None
     try:
@@ -170,6 +213,8 @@ def main() -> None:
 
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     only_missing = "--missing" in sys.argv
+    force_full = "--full" in sys.argv
+    today = datetime.date.today()
 
     if args:
         targets = [(s.upper(), *known.get(s.upper(), (s.upper(), "기타"))) for s in args]
@@ -179,33 +224,59 @@ def main() -> None:
     if only_missing:
         targets = [t for t in targets if not (OUT_DIR / f"{fname(t[0])}.json").exists()]
 
-    ok, failed = 0, []
+    ok, failed, n_inc, n_full, added = 0, [], 0, 0, 0
     for i, (sym, name, group) in enumerate(targets, 1):
+        prev = None if force_full else read_existing(sym)
+        # 전체 재수집 조건: 기존 파일 없음 / --full / 오늘이 이 티커의 전체 갱신 차례
+        full = prev is None or force_full or wants_full(sym, today)
+        start = None
+        if not full:
+            last = _date(prev["bars"][-1][0])
+            start = last - datetime.timedelta(days=OVERLAP_DAYS)
+
         try:
-            got = fetch(sym)
+            got = fetch(sym, start)
         except Exception as e:
             print(f"[{i}/{len(targets)}] {sym} 실패: {str(e)[:60]}")
             failed.append(sym)
             continue
         if not got:
-            print(f"[{i}/{len(targets)}] {sym} 데이터 없음")
-            failed.append(sym)
+            # 증분에서 빈 응답은 '새 거래일이 없음'일 뿐이라 실패가 아니다
+            if full:
+                print(f"[{i}/{len(targets)}] {sym} 데이터 없음")
+                failed.append(sym)
+            else:
+                print(f"[{i}/{len(targets)}] {sym} 신규 없음")
             continue
+
         bars, currency = got
-        bars, bf = backfill(sym, bars)
         note = ""
-        if bf:
-            ymd = str(bf[2])
-            note = (f"{ymd[:4]}-{ymd[4:6]} 이전 구간은 {BACKFILL[sym]['label']}로 대체 "
-                    f"(야후 원본 데이터 공백)")
+        if full:
+            bars, bf = backfill(sym, bars)
+            if bf:
+                ymd = str(bf[2])
+                note = (f"{ymd[:4]}-{ymd[4:6]} 이전 구간은 {BACKFILL[sym]['label']}로 대체 "
+                        f"(야후 원본 데이터 공백)")
+            n_full += 1
+            tail = f" · 지수로 {bf[0]}일 백필({bf[1]}~)" if bf else " · 전체"
+        else:
+            before = len(prev["bars"])
+            bars = merge(prev["bars"], bars)
+            # 백필 구간처럼 기존 파일이 들고 있던 설명은 유지한다
+            note = prev.get("note", "")
+            currency = currency or prev.get("currency", "")
+            n_inc += 1
+            added += len(bars) - before
+            tail = f" · 증분 +{len(bars) - before}일"
+
         write_ticker(sym, name, group, bars, currency, note)
         ok += 1
-        tail = f" · 지수로 {bf[0]}일 백필({bf[1]}~)" if bf else ""
         print(f"[{i}/{len(targets)}] {sym} {len(bars)}일 ({bars[0][0]}~{bars[-1][0]}){tail}")
 
     write_index()
     total_mb = sum(f.stat().st_size for f in OUT_DIR.glob("*.json")) / 1024 / 1024
-    print(f"완료: 갱신 {ok}종목 · 실패 {len(failed)} · 전체 {total_mb:,.1f} MB")
+    print(f"완료: 갱신 {ok}종목(증분 {n_inc} +{added}일 / 전체 {n_full}) · "
+          f"실패 {len(failed)} · 전체 {total_mb:,.1f} MB")
     if failed:
         print(f"실패 목록(기존 파일 유지): {failed}")
 
