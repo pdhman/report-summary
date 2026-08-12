@@ -5,6 +5,11 @@
 출처: 'Chapter3-0. 자산 배분 ETF 유니버스' 노트북 + 대표 레버리지 ETF.
 """
 
+try:
+    from universe_kr import KR_GROUPS   # 코스피200·코스닥150·관심종목 (생성 파일)
+except ImportError:                     # 목록을 아직 안 만들었으면 기본 종목만
+    KR_GROUPS = []
+
 UNIVERSE = [
     ("한국", {
         "069500.KS": "KODEX 200",
@@ -152,6 +157,15 @@ UNIVERSE = [
         "PULS": "초단기 액티브",
     }),
 ]
+
+# 코스피200·코스닥150·관심종목은 목록이 길어 별도 생성 파일에서 붙인다.
+# 이미 '한국' 그룹에 있는 종목은 중복 제거한다.
+_have = {sym for _, items in UNIVERSE for sym in items}
+for _label, _items in KR_GROUPS:
+    _rest = {s: n for s, n in _items.items() if s not in _have}
+    if _rest:
+        UNIVERSE.append((_label, _rest))
+        _have |= set(_rest)
 
 
 def flat() -> dict:
