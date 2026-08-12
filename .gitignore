@@ -55,3 +55,8 @@ price-alert/holdings.json
 # 스크리너 본체는 저장소에 두지 않는다(로컬 실행 전용). 2026-08-10 실수로
 # 커밋된 뒤 되돌림 — 실수로 다시 스테이징되지 않도록 명시적으로 제외한다.
 주도섹터 필터링.py
+
+# Claude Code 로컬 설정·작업공간. skills/ 는 팀 자산이라 추적하고 나머지는 무시한다.
+# worktrees/ 는 저장소 전체 복사본이라 `git add .claude` 시 수백 개 파일이 딸려 들어간다.
+.claude/worktrees/
+.claude/launch.json
