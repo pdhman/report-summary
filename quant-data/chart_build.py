@@ -273,16 +273,25 @@ def main():
             pass
 
     # 전 구간 재수신이라 '신규 행 수'는 판단 기준이 못 된다 — 최신 거래일이
-    # 지난 푸시 이후로 넘어갔는지만 본다(휴장일에는 푸시 생략).
-    if not args.force and state.get("last_pushed") == last_date:
-        log.info("최신 거래일 변화 없음 (마지막 푸시 %s) — 푸시 생략", last_date)
+    # 지난 푸시 이후로 넘어갔는지 본다(휴장일에는 푸시 생략).
+    # 단 거래일이 그대로여도 유니버스가 바뀌면(신규 상장·시장 구분 변경 등)
+    # 새 종목이 사이트에서 조회되지 않으므로 푸시해야 한다.
+    n_uni = len(uni)
+    same_day = state.get("last_pushed") == last_date
+    same_uni = state.get("universe_size") == n_uni
+    if not args.force and same_day and same_uni:
+        log.info("최신 거래일·유니버스 변화 없음 (마지막 푸시 %s, %d종목) — 푸시 생략",
+                 last_date, n_uni)
         return 0
+    if same_day and not same_uni:
+        log.info("거래일은 같지만 유니버스 %s → %d종목 — 푸시 진행",
+                 state.get("universe_size", "?"), n_uni)
 
     write_json(adjust_corporate_actions(ohlcv), uni)
     if not args.no_push:
         push_branch()
         with open(STATE_PATH, "w", encoding="utf-8") as f:
-            json.dump({"last_pushed": last_date,
+            json.dump({"last_pushed": last_date, "universe_size": n_uni,
                        "at": dt.datetime.now().isoformat(timespec="seconds")}, f)
 
     log.info("완료 (%.1f분, 로그 %s)", (time.time() - t0) / 60, os.path.basename(log_path))
