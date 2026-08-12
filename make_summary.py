@@ -378,7 +378,12 @@ def build():
         if c["count"] is not None:
             body += (f'<div class="krow"><span class="k-name">수집</span>'
                      f'<span class="k-val">{c["count"]}건</span></div>')
-        if c["summary"]:
+        if c.get("topics"):
+            body += "".join(f'<div class="xtopic">{esc(t)}</div>' for t in c["topics"])
+            rest = c.get("topic_total", 0) - len(c["topics"])
+            if rest > 0:
+                body += f'<div class="xmore">외 {rest}개 주제</div>'
+        elif c.get("summary"):                       # 주제별 정리가 없는 옛 리포트
             body += f'<p class="clamp">{esc(c["summary"])}</p>'
         if body:
             cards.append(_card("x.html", "𝕏", "X 모니터링", c["date"], body))
@@ -509,6 +514,11 @@ def build():
   .krow {{ display:flex; justify-content:space-between; align-items:baseline; gap:12px;
     padding:5px 0; font-size:13.5px; border-bottom:1px dashed color-mix(in srgb,var(--line) 70%,transparent); }}
   .krow:last-child {{ border-bottom:none; }}
+  .xtopic {{ font-size:13px; line-height:1.5; padding:6px 0; display:flex; gap:7px;
+    border-bottom:1px dashed color-mix(in srgb,var(--line) 70%,transparent); }}
+  .xtopic:last-of-type {{ border-bottom:none; }}
+  .xtopic::before {{ content:"·"; color:var(--accent); font-weight:700; flex:0 0 auto; }}
+  .xmore {{ margin-top:6px; font-size:12px; color:var(--muted); }}
   .k-name {{ color:var(--muted); flex:0 0 auto; }}
   .k-val {{ font-weight:600; text-align:right; }}
   .k-val.up {{ color:var(--up); font-variant-numeric:tabular-nums; }}

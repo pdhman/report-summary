@@ -2,7 +2,7 @@
   <header>
     <div class="eyebrow">데일리 대시보드</div>
     <h1>알파노트</h1>
-    <div class="date">2026-08-12 <span class="gen">(갱신 16:24)</span></div>
+    <div class="date">2026-08-12 <span class="gen">(갱신 16:26)</span></div>
   </header>
   <div class="cards">
     <a class="scard" href="briefs.html">
@@ -13,8 +13,8 @@
     </a>
     <a class="scard" href="insights.html">
       <div class="sc-head"><span class="sc-icon">🚀</span><span class="sc-title">상승여력 TOP 3</span>
-        <span class="sc-date">2026-08-12</span></div>
-      <div class="sc-body"><div class="krow"><span class="k-name">신세계</span><span class="k-val up">+133.4%</span></div><div class="krow"><span class="k-name">넥스트바이오메디컬</span><span class="k-val up">+131.4%</span></div><div class="krow"><span class="k-name">태광</span><span class="k-val up">+129.5%</span></div></div>
+        <span class="sc-date">2026-08-11</span></div>
+      <div class="sc-body"><div class="krow"><span class="k-name">비에이치</span><span class="k-val up">+164.3%</span></div><div class="krow"><span class="k-name">삼성전기</span><span class="k-val up">+135.5%</span></div><div class="krow"><span class="k-name">SK하이닉스</span><span class="k-val up">+97.2%</span></div></div>
       <div class="sc-more">자세히 →</div>
     </a>
     <a class="scard" href="screener.html">
@@ -32,7 +32,7 @@
     <a class="scard" href="x.html">
       <div class="sc-head"><span class="sc-icon">𝕏</span><span class="sc-title">X 모니터링</span>
         <span class="sc-date">2026-08-12</span></div>
-      <div class="sc-body"><div class="krow"><span class="k-name">수집</span><span class="k-val">133건</span></div><p class="clamp">**"실적은 폭발했고, 헤지는 벗겨졌고, 고용은 무너지고 있다."** 화요일 미국장은 지루했다 — SPX가 **±0.7% 미만 변동을 5일 연속** 기록했고(그 직전엔 ±0.7% 초과 5일 연속), OddStats는 *"이게 마지막으로 일어난 건 우리가 달에 착륙하기 직전"* 이라고 비꼬았다. 하지만 지수 뒤의 내용은 전혀 조용하지 않았다. **장 마감 후 광학·AI 인프라 실적이 통째로 터졌다** — **Lumentum $LITE 매출 $1.01B(+109% YoY), EPS $3.23**, **Supermicro $SMCI FY2027 매출 가이던스 $65~72B(컨센서스 $52.4B 대비 +$16.1B 초과)**, **CoreWeave 백로그 $104B+**. 여기에 **$RIOT–Anthropic 91억 달러(최대 161억, 20년+) 계약**까지 붙었다. 반대편에서 Kobeissi는 **하이퍼스케일러가 대차대조표에 잡히지 않는 미래 지출 2.6조 달러를 이미 약정**했고(Alphabet 약 8,960억, Oracle 약 2,920억), **미국 고용 수치가 지난 30개월 중 21개월에 걸쳐 총 -105만 개 하향 조정**됐다는 두 개의 불편한 숫자를 던졌다. 포지셔닝은 한쪽으로 기울었다 — **1개월 풋-콜 스큐 1.15로 2025년 4월 이후 최저(헤지 해제)**, **3개월 콜 스큐는 12개월 최고**. 강세 근거도 여전하다 — **S&amp;P 500 종목의 70% 이상이 200일선 위**(Detrick), **시장 암시 침체 확률 12%**(ISABELNET/GS). 오늘(현지 수요일) **CPI**가 남아 있고, Bluekurtic은 **7월 유가 +25%가 지난달 -0.35%p 기여를 반전시킬 수 있다**고 경고했다.</p></div>
+      <div class="sc-body"><div class="krow"><span class="k-name">수집</span><span class="k-val">133건</span></div><div class="xtopic">광학·AI 인프라 실적이 통째로 터졌다 — 컨센서스가 문제가 아니라 자릿수가 문제</div><div class="xtopic">"AI가 버블인가"보다 "2.6조 달러를 무엇으로 갚는가"</div><div class="xtopic">강세장 지표는 멀쩡한데, 안전벨트를 다 풀었다</div><div class="xmore">외 4개 주제</div></div>
       <div class="sc-more">자세히 →</div>
     </a>
     <a class="scard" href="market.html">
@@ -156,6 +156,11 @@ function _tgTheme(){
   .krow { display:flex; justify-content:space-between; align-items:baseline; gap:12px;
     padding:5px 0; font-size:13.5px; border-bottom:1px dashed color-mix(in srgb,var(--line) 70%,transparent); }
   .krow:last-child { border-bottom:none; }
+  .xtopic { font-size:13px; line-height:1.5; padding:6px 0; display:flex; gap:7px;
+    border-bottom:1px dashed color-mix(in srgb,var(--line) 70%,transparent); }
+  .xtopic:last-of-type { border-bottom:none; }
+  .xtopic::before { content:"·"; color:var(--accent); font-weight:700; flex:0 0 auto; }
+  .xmore { margin-top:6px; font-size:12px; color:var(--muted); }
   .k-name { color:var(--muted); flex:0 0 auto; }
   .k-val { font-weight:600; text-align:right; }
   .k-val.up { color:var(--up); font-variant-numeric:tabular-nums; }

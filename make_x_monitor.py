@@ -24,6 +24,7 @@ SRC_DIR = os.path.join(BASE, "x-monitor", "reports")
 DATA_DIR = os.path.join(BASE, "x-monitor", "data")
 OUT_DIR = os.path.join(BASE, "reports")
 FEED_MAX = 500          # 허브에 임베드할 최근 포스트 수 상한
+CARD_TOPICS = 3         # '오늘의 요약' 카드에 노출할 주제 수
 
 
 def _files():
@@ -466,8 +467,27 @@ def _build_hub():
     print(f"[허브] x.html 갱신 ({len(entries)}건, 최신 {dates[0]}, 피드 {'포함' if feed else '없음'})")
 
 
+def _topics(text):
+    """'주제별 정리' 섹션의 소제목(### 1) …)만 뽑아 리스트로 돌려준다.
+
+    카드에는 총평 대신 이 주제 줄들을 보여준다 — 텔레그램 요약과 같은 관점.
+    해당 섹션이 없는 옛 리포트에서는 빈 리스트가 되고 호출부가 총평으로 되돌아간다.
+    """
+    parts = re.split(r"^##\s+주제별 정리\s*$", text, flags=re.M)
+    if len(parts) < 2:
+        return []
+    section = re.split(r"^##\s", parts[1], flags=re.M)[0]   # 다음 ## 헤딩 전까지
+    out = []
+    for m in re.finditer(r"^###\s+(.+?)\s*$", section, flags=re.M):
+        t = re.sub(r"^\d+\s*[.)]\s*", "", m.group(1).strip())   # 앞의 '1)' · '1.' 제거
+        t = re.sub(r"[*_`]", "", t).strip()                     # 마크다운 강조 제거
+        if t:
+            out.append(t)
+    return out
+
+
 def latest_card():
-    """요약 카드용 데이터: 최신 리포트의 날짜·건수·총평."""
+    """요약 카드용 데이터: 최신 리포트의 날짜·건수·주제별 정리."""
     files = _files()
     if not files:
         return None
@@ -476,10 +496,13 @@ def latest_card():
     text = open(path, encoding="utf-8").read()
     m_cnt = re.search(r"\*\*수집 건수\*\*:\s*(\d+)건", text)
     m_sum = re.search(r"\*\*총평\*\*:\s*(.+)", text)
+    topics = _topics(text)
     return {
         "date": date,
         "count": int(m_cnt.group(1)) if m_cnt else None,
-        "summary": m_sum.group(1).strip() if m_sum else None,
+        "topics": topics[:CARD_TOPICS],
+        "topic_total": len(topics),
+        "summary": m_sum.group(1).strip() if m_sum else None,   # 주제 없을 때 대체용
     }
 
 
