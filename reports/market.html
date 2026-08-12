@@ -202,6 +202,9 @@
   .score-main .sc-val { font-size:44px; line-height:1.1; }
   .score-sub .sc-val { font-size:24px; line-height:1.2; }
   .sc-label { font-size:12.5px; font-weight:700; margin-left:6px; }
+  /* 원값 표시(쏠림): 점수는 백분위라 포화되므로 판정 근거가 된 실제 수치를 함께 보여준다 */
+  .sc-raw { font-size:11.5px; color:var(--muted); margin-top:1px; }
+  .sc-raw b { font-variant-numeric:tabular-nums; font-weight:700; color:var(--ink); }
   .meter { height:8px; border-radius:5px; background:var(--line); position:relative; margin-top:8px; }
   .meter > i { position:absolute; left:0; top:0; bottom:0; border-radius:5px; }
   .meter > b { position:absolute; top:-3px; width:2px; height:14px; background:var(--ink); border-radius:1px; }
