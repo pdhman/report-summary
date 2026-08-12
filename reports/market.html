@@ -35,9 +35,9 @@
     <p class="fn">각 스코어는 수집된 전체 기간(현재 <span id="fn-days"></span>거래일) 대비 백분위.
       추세(폭)=이평선 위 비율·ADR·신고가율·McClellan / 투기 열기=저가주 비중·상한가·회전율(개인 투기) /
       쏠림=TOP10 거래대금 집중도(종합 체온 미반영) / 변동성=VKOSPI·실현변동성 / 레버리지=신용융자 증가율·예탁금 대비 신용·반대매매비중.
-      <br>단, <b>쏠림의 라벨은 백분위가 아니라 TOP10 비중 원값의 고정 기준</b>으로 판정한다
-      (28% 미만 매우 분산 · 34 분산 · 42 보통 · 55 쏠림 · 55% 이상 극단 쏠림).
-      수집 기간이 짧아 백분위가 최근 국면에서 포화되기 때문이며, 숫자(백분위)와 함께 원값을 표시한다.</p>
+      <br>단, <b>쏠림만 백분위가 아니라 TOP10 비중 원값(%)을 그대로 표시</b>하고 고정 기준으로 판정한다
+      (30% 미만 분산 · 30~45 보통 · 45~55 쏠림 · 55% 이상 극단 쏠림).
+      수집 기간이 짧아 백분위가 최근 국면에서 포화되기 때문이다.</p>
   </section>
 
   <!-- ============ 시장 폭 ============ -->
@@ -205,9 +205,6 @@
   .score-main .sc-val { font-size:44px; line-height:1.1; }
   .score-sub .sc-val { font-size:24px; line-height:1.2; }
   .sc-label { font-size:12.5px; font-weight:700; margin-left:6px; }
-  /* 원값 표시(쏠림): 점수는 백분위라 포화되므로 판정 근거가 된 실제 수치를 함께 보여준다 */
-  .sc-raw { font-size:11.5px; color:var(--muted); margin-top:1px; }
-  .sc-raw b { font-variant-numeric:tabular-nums; font-weight:700; color:var(--ink); }
   .meter { height:8px; border-radius:5px; background:var(--line); position:relative; margin-top:8px; }
   .meter > i { position:absolute; left:0; top:0; bottom:0; border-radius:5px; }
   .meter > b { position:absolute; top:-3px; width:2px; height:14px; background:var(--ink); border-radius:1px; }
@@ -424,34 +421,33 @@ var SCORE_DEFS = {
   overall: { name:'종합 체온', labels:['냉각','낮음','중립','높음','과열'] },
   trend:   { name:'추세(폭)', labels:['폭 매우 좁음','폭 좁음','보통','폭 넓음','폭 매우 넓음'] },
   spec:    { name:'투기 열기', labels:['매우 차분','차분','보통','뜨거움','과열'] },
-  // 쏠림만 백분위가 아니라 원값(TOP10 거래대금 비중, %)의 고정 기준으로 판정한다.
-  // 수집 기간이 짧아(2025-06~) 백분위가 최근 쏠림 국면에서 80~95 로 포화돼
-  // 실제 변화를 구분하지 못했다. 경계는 관측 분포 기준(평상 국면 29~39%,
-  // 중앙값 35.6%)으로 중앙값이 '보통' 한가운데 오도록 잡았다.
-  conc:    { name:'쏠림', labels:['매우 분산','분산','보통','쏠림','극단 쏠림'],
+  // 쏠림은 백분위를 쓰지 않는다. 수집 기간이 짧아(2025-06~) 최근 국면에서
+  // 백분위가 80~95 로 포화돼 7월 정점(69%)과 현재(54%)가 구분되지 않았다.
+  // TOP10 거래대금 비중 원값을 그대로 보여주고 고정 구간으로 판정한다.
+  conc:    { name:'쏠림', labels:['분산','보통','쏠림','극단 쏠림'],
+             bandCls:['--z-cool','--z-mid','--z-warm','--z-hot'],
              raw:function(i){ return D.spec.top10_share[i]; },
-             rawUnit:'%', rawName:'TOP10 비중',
-             bands:[28, 34, 42, 55] },
+             bands:[30, 45, 55] },
   vol:     { name:'변동성', labels:['매우 낮음','낮음','보통','높음','매우 높음'] },
   lev:     { name:'레버리지', labels:['매우 가벼움','가벼움','보통','무거움','과중'] }};
 function zone(v){ for(var i=0;i<ZONES.length;i++){ if(v < ZONES[i].max) return i; } return 4; }
-// bands = [b1,b2,b3,b4] → v<b1:0, <b2:1, <b3:2, <b4:3, 그 이상:4
-function bandZone(v, bands){ for(var i=0;i<bands.length;i++){ if(v < bands[i]) return i; } return 4; }
+// 경계 n개 → 구간 n+1개. v<bands[0]:0 … 마지막 경계 이상:bands.length
+function bandZone(v, bands){ for(var i=0;i<bands.length;i++){ if(v < bands[i]) return i; } return bands.length; }
 function gauge(id, key){
-  var def = SCORE_DEFS[key], v = D.scores.series[key][state.d];
-  var raw = def.raw ? def.raw(state.d) : null;
-  // 고정 기준(bands)이 있으면 원값으로 구간을 판정하고, 없으면 백분위로 판정
-  var zi = def.bands
-    ? (raw == null ? null : bandZone(raw, def.bands))
-    : (v == null ? null : zone(v));
-  var c = el(id);
-  var color = zi == null ? 'var(--muted)' : 'var(' + ZONES[zi].cls + ')';
-  c.innerHTML = '<div class="sc-name">' + def.name + '</div>' +
-    '<div><span class="sc-val" style="color:' + color + '">' + (v == null ? '–' : v.toFixed(0)) + '</span>' +
+  var def = SCORE_DEFS[key];
+  // bands 가 있으면 백분위 대신 원값을 그대로 쓴다(표시·판정·막대 모두)
+  var v = def.bands ? def.raw(state.d) : D.scores.series[key][state.d];
+  var zi = v == null ? null
+    : (def.bands ? bandZone(v, def.bands) : zone(v));
+  var cls = zi == null ? null : (def.bandCls ? def.bandCls[zi] : ZONES[zi].cls);
+  var color = zi == null ? 'var(--muted)' : 'var(' + cls + ')';
+  var txt = v == null ? '–' : (def.bands ? fmt(v, 0) : v.toFixed(0));
+  var el_ = el(id);
+  el_.innerHTML = '<div class="sc-name">' + def.name + '</div>' +
+    '<div><span class="sc-val" style="color:' + color + '">' + txt + '</span>' +
     (zi == null ? '' : '<span class="sc-label" style="color:' + color + '">' + def.labels[zi] + '</span>') + '</div>' +
-    (raw == null ? '' : '<div class="sc-raw">' + def.rawName + ' <b>' + fmt(raw, 1) + def.rawUnit + '</b></div>') +
-    '<div class="meter"><i style="width:' + (v||0) + '%;background:' + color + '"></i>' +
-    (v == null ? '' : '<b style="left:calc(' + v + '% - 1px)"></b>') + '</div>';
+    '<div class="meter"><i style="width:' + Math.min(v||0, 100) + '%;background:' + color + '"></i>' +
+    (v == null ? '' : '<b style="left:calc(' + Math.min(v, 100) + '% - 1px)"></b>') + '</div>';
 }
 
 /* ================= 렌더 ================= */
