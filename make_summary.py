@@ -297,6 +297,26 @@ def card_market():
         return json.load(f)
 
 
+def card_rs():
+    """RS 스크리너: 1개월 RS 상위 테마 2개 + ETF 종합 RS 상위 2개.
+
+    rs_build.py(주간)가 만든 rs_data.js 를 읽는다. ETF 는 화면 기본값과
+    동일하게 레버리지·인버스 제외.
+    """
+    import json
+    path = os.path.join(OUT_DIR, "rs_data.js")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    d = json.loads(text[text.index("=") + 1:].strip().rstrip(";"))
+    themes = [t for t in d.get("themes", [])
+              if t.get("n", 0) >= 5 and t.get("r1") is not None]
+    themes.sort(key=lambda t: t["r1"], reverse=True)
+    etfs = [e for e in d.get("etfs", []) if e[5] is not None and not e[15]]
+    return {"date": d.get("asof", ""), "themes": themes[:2], "etfs": etfs[:2]}
+
+
 # ---------------------------------------------------------------- 렌더링
 def _card(href, icon, title, date, body):
     return f"""
@@ -444,6 +464,25 @@ def build():
         '<span class="k-val">월별 통계 · 최적 진입 · 히트맵</span></div>'
         '<div class="krow"><span class="k-name">RS 스크리너</span>'
         '<span class="k-val">섹터 · 업종 · 테마 랭킹</span></div>'))
+
+    c = None
+    try:
+        c = card_rs()
+    except Exception as e:
+        print(f"[요약] RS 카드 실패: {e}")
+    if c and (c["themes"] or c["etfs"]):
+        body = ""
+        for i, t in enumerate(c["themes"]):
+            # 테마명 괄호 부연은 카드에서 생략 (예: '로봇(산업용/협동로봇 등)' → '로봇')
+            name = t["name"].split("(")[0].strip()
+            body += (f'<div class="krow"><span class="k-name">{"테마 1M" if i == 0 else ""}</span>'
+                     f'<span class="k-val">{esc(name)} '
+                     f'<span class="k-diff up">{t["r1"]:.1f}</span></span></div>')
+        for i, e_ in enumerate(c["etfs"]):
+            body += (f'<div class="krow"><span class="k-name">{"ETF RS" if i == 0 else ""}</span>'
+                     f'<span class="k-val">{esc(e_[1])} '
+                     f'<span class="k-diff up">{e_[5]:.0f}</span></span></div>')
+        cards.append(_card("rs.html", "🔥", "RS 스크리너", c["date"], body))
 
     c = None
     try:
