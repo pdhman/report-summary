@@ -11,7 +11,9 @@
 
 const MARKET = (() => {
   const KR_DATA_URL = "https://raw.githubusercontent.com/pdhman/report-summary/chart-data/";
-  const isKr = s => /^\d{6}\.(KS|KQ)$/.test(s);
+  // 신형 종목코드는 영문 포함 6자리 (예: ETF 0127R0) — 숫자 1개 이상 필수라
+  // 6글자 해외 티커와는 겹치지 않는다.
+  const isKr = s => /^(?=.*\d)[0-9A-Z]{6}\.(KS|KQ)$/.test(s);
 
   // '코미코' → 183300.KQ · '183300' → 183300.KQ · 그 외는 대문자 티커
   function resolve(raw) {
@@ -21,7 +23,7 @@ const MARKET = (() => {
     if (typeof TICKER_INDEX !== "undefined" && TICKER_INDEX.some(e => e.s === up)) return up;
     if (typeof KRX_INDEX === "undefined") return up;
 
-    const code = up.match(/^(\d{6})(\.(KS|KQ))?$/);
+    const code = up.match(/^(?=.*\d)([0-9A-Z]{6})(\.(KS|KQ))?$/);
     if (code) {
       const hit = KRX_INDEX.find(r => r[0] === code[1]);
       return hit ? `${hit[0]}.${hit[2]}` : up;
@@ -96,7 +98,7 @@ const MARKET = (() => {
 
   function krxName(symbol) {
     if (typeof KRX_INDEX === "undefined") return null;
-    const m = symbol.match(/^(\d{6})\./);
+    const m = symbol.match(/^([0-9A-Z]{6})\./);
     const hit = m && KRX_INDEX.find(r => r[0] === m[1]);
     return hit ? hit[1] : null;
   }

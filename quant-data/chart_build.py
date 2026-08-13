@@ -77,6 +77,21 @@ def load_universe() -> pd.DataFrame:
         raise FileNotFoundError("output/퀀트데이터_latest.csv 없음 — collect.py 먼저 실행")
     df = pd.read_csv(path, dtype={"코드": str}, usecols=["코드", "회사명", "시장"])
     df["코드"] = df["코드"].str.zfill(6)
+
+    # ETF 도 차트 대상에 포함 (rs_build.py 가 주 1회 갱신하는 목록, 심볼은 .KS)
+    etf_list = os.path.join(CACHE_DIR, "etf_list.json")
+    if os.path.exists(etf_list):
+        try:
+            with open(etf_list, encoding="utf-8") as f:
+                etfs = json.load(f)
+            add = pd.DataFrame({"코드": [str(e["code"]).zfill(6) for e in etfs],
+                                "회사명": [e["name"] for e in etfs],
+                                "시장": "KOSPI"})
+            add = add[~add["코드"].isin(set(df["코드"]))]
+            df = pd.concat([df, add], ignore_index=True)
+            log.info("유니버스에 ETF %d종목 추가", len(add))
+        except Exception as ex:
+            log.warning("ETF 목록 로드 실패 — 주식만 진행: %s", ex)
     return df
 
 

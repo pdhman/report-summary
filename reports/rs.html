@@ -130,9 +130,13 @@
     </div>
   </div>
   <div class="subtitle">RS 스크리너 — 한국 전종목 상대강도 · 기준일 <b id="asof"></b> · 주 1회(금) 갱신</div>
+  <div class="chips" id="modeChips" style="margin:0 0 14px">
+    <span class="chip on" data-v="stock">📈 주식</span>
+    <span class="chip" data-v="etf">🧺 ETF</span>
+  </div>
 
   <div class="acc" id="accSec">
-    <div class="acc-head" onclick="toggleAcc('accSec')"><span class="tri">▶</span><span class="ttl">섹터 랭킹</span><span class="cnt" id="cntSec"></span></div>
+    <div class="acc-head" onclick="toggleAcc('accSec')"><span class="tri">▶</span><span class="ttl" id="ttlSec">섹터 랭킹</span><span class="cnt" id="cntSec"></span></div>
     <div class="acc-body"><div class="tblwrap"><table id="tblSec"></table></div><div class="pager" id="pgSec"></div></div>
   </div>
   <div class="acc" id="accInd">
@@ -172,11 +176,17 @@
       </div>
       <input type="number" id="hiMin" class="numin" min="0" max="100" step="1" placeholder="% 이내">
     </div>
-    <div class="frow"><span class="lbl">시장</span>
+    <div class="frow" id="mktRow"><span class="lbl">시장</span>
       <div class="chips" id="mktChips">
         <span class="chip on" data-v="">전체</span>
         <span class="chip" data-v="0">코스피</span>
         <span class="chip" data-v="1">코스닥</span>
+      </div>
+    </div>
+    <div class="frow" id="levRow" style="display:none"><span class="lbl">상품</span>
+      <div class="chips" id="levChips">
+        <span class="chip on" data-v="">일반만 (기본)</span>
+        <span class="chip" data-v="1">레버리지·인버스 포함</span>
       </div>
     </div>
     <div class="frow"><span class="lbl">시가총액</span>
@@ -205,16 +215,25 @@
     <div class="pager" id="pager"></div>
   </div>
   <div class="attrib">종합 RS = 기간별 상대강도(시장 백분위)의 가중평균 — 1M 20% · 3M 40% · 6M 20% · 12M 20% · 업종/테마 분류: 네이버금융 ·
-    고점대비 = 52주 고점 기준 · 신호: 📏 MA200 ±5% · ⚠️ MA200 +60% 이상</div>
+    고점대비 = 52주 고점 기준 · 신호: 📏 MA200 ±5% · ⚠️ MA200 +60% 이상 ·
+    ETF RS는 ETF 풀(레버리지·인버스 포함) 내 백분위 · ETF 유형: 네이버 분류</div>
 
 <script>
 const D = window.RS_DATA || { asof: "-", sectors: [], industries: [], themes: [], stocks: [] };
 document.getElementById("asof").textContent = D.asof;
 
-// 종목 배열 인덱스
-const CODE=0, NAME=1, MKT=2, CAP=3, AMT=4, RS=5, R1=6, R3=7, R6=8, R12=9, HI=10, MA=11, SEC=12, IND=13, THM=14;
+// 종목 배열 인덱스 (ETF 배열도 같은 구조, SEC 자리에 유형 인덱스 + LEV 플래그 추가)
+const CODE=0, NAME=1, MKT=2, CAP=3, AMT=4, RS=5, R1=6, R3=7, R6=8, R12=9, HI=10, MA=11, SEC=12, IND=13, THM=14, LEV=15;
+
+// 현재 모드의 데이터 묶음 — 주식/ETF 가 같은 렌더 코드를 공유한다
+function cur() {
+  return state.mode === "etf"
+    ? { stocks: D.etfs || [], sec: D.etfCats || [], ind: [], thm: [], secTitle: "유형 랭킹" }
+    : { stocks: D.stocks, sec: D.sectors, ind: D.industries, thm: D.themes, secTitle: "섹터 랭킹" };
+}
 
 const state = {
+  mode: "stock", lev: false,
   q: "", rsMin: 70, sig: "", mkt: "", capMin: 0, minN: 5, hiMin: null,
   group: null,               // {kind:'sec'|'ind'|'thm', idx, name}
   sort: { col: RS, dir: -1 },
@@ -255,7 +274,11 @@ function grpNum(v, best) {
 const GCOLS = [["name","이름"],["rs","평균 RS"],["r1","1M"],["r3","3M"],["r6","6M"],["r12","12M"],["n","종목수"],["p90","RS90+ 비중"]];
 
 function renderGroups() {
-  const defs = [["sec", D.sectors, "tblSec", "cntSec", "pgSec"], ["ind", D.industries, "tblInd", "cntInd", "pgInd"], ["thm", D.themes, "tblThm", "cntThm", "pgThm"]];
+  const c = cur();
+  document.getElementById("ttlSec").textContent = c.secTitle;
+  document.getElementById("accInd").style.display = state.mode === "etf" ? "none" : "";
+  document.getElementById("accThm").style.display = state.mode === "etf" ? "none" : "";
+  const defs = [["sec", c.sec, "tblSec", "cntSec", "pgSec"], ["ind", c.ind, "tblInd", "cntInd", "pgInd"], ["thm", c.thm, "tblThm", "cntThm", "pgThm"]];
   for (const [kind, arrAll, tid, cid, pid] of defs) {
     const rows = arrAll.map((g, i) => ({ ...g, _i: i })).filter(g => g.n >= state.minN);
     document.getElementById(cid).textContent = rows.length;
@@ -293,7 +316,8 @@ function gsort(kind, key) {
 function gpageGo(kind, n) { state.gpage[kind] = n; renderGroups(); }
 function toggleAcc(id) { document.getElementById(id).classList.toggle("open"); }
 function pickGroup(kind, idx) {
-  const src = kind === "sec" ? D.sectors : kind === "ind" ? D.industries : D.themes;
+  const c = cur();
+  const src = kind === "sec" ? c.sec : kind === "ind" ? c.ind : c.thm;
   if (state.group && state.group.kind === kind && state.group.idx === idx) state.group = null;
   else state.group = { kind, idx, name: src[idx].name };
   state.page = 1;
@@ -304,7 +328,8 @@ function clearGroup() { state.group = null; renderGroups(); renderSel(); renderS
 function renderSel() {
   const w = document.getElementById("selWrap");
   if (!state.group) { w.innerHTML = ""; return; }
-  const label = { sec: "섹터", ind: "업종", thm: "테마" }[state.group.kind];
+  const label = state.mode === "etf" ? "유형"
+    : { sec: "섹터", ind: "업종", thm: "테마" }[state.group.kind];
   w.innerHTML = `<span class="selchip" onclick="clearGroup()">${label}: ${state.group.name} <span class="x">✕</span></span>`;
 }
 
@@ -325,8 +350,9 @@ function hiCell(v) {
 function filtered() {
   const q = state.q.trim().toLowerCase();
   const g = state.group;
-  return D.stocks.filter(s => {
+  return cur().stocks.filter(s => {
     if (s[RS] == null || s[RS] < state.rsMin) return false;
+    if (state.mode === "etf" && !state.lev && s[LEV]) return false;
     if (state.mkt !== "" && s[MKT] !== +state.mkt) return false;
     if (state.capMin > 0 && (s[CAP] == null || s[CAP] < state.capMin)) return false;
     if (q && !(s[NAME].toLowerCase().includes(q) || s[CODE].includes(q))) return false;
@@ -362,16 +388,20 @@ function renderStocks() {
     return `<th class="${i <= 2 ? "l" : ""}" ${sortable ? `onclick="ssort(${c})"` : ""}>${lbl}${arr}</th>`;
   }).join("") + "</tr></thead><tbody>";
 
+  const c2 = cur();
   for (let i = lo; i < hi; i++) {
     const s = rows[i];
+    const isEtf = state.mode === "etf";
     const sym = s[CODE] + (s[MKT] === 0 ? ".KS" : ".KQ");
-    const sec = s[SEC] >= 0 ? D.sectors[s[SEC]].name : "";
-    const ind = s[IND] >= 0 ? D.industries[s[IND]].name : "";
+    const sec = s[SEC] >= 0 && c2.sec[s[SEC]] ? c2.sec[s[SEC]].name : "";
+    const ind = s[IND] >= 0 && c2.ind[s[IND]] ? c2.ind[s[IND]].name : "";
+    const sub = isEtf ? `${sec}${s[LEV] ? " · 레버리지/인버스" : ""}`
+                      : `${sec}${ind ? " · " + ind : ""}`;
     const sig = signals(s).map(k => `<span title="${SIG_TIP[k]}">${SIG_EMOJI[k]}</span>`).join("");
     h += `<tr><td class="num" style="color:var(--muted)">${i + 1}</td>`
-      + `<td class="l code">${s[CODE]}<span class="sub">${s[MKT] === 0 ? "KOSPI" : "KOSDAQ"}</span></td>`
+      + `<td class="l code">${s[CODE]}<span class="sub">${isEtf ? "ETF" : (s[MKT] === 0 ? "KOSPI" : "KOSDAQ")}</span></td>`
       + `<td class="l name"><a href="chart.html?symbol=${sym}" title="차트 보기">${s[NAME]}</a>`
-      + `<span class="sub">${sec}${ind ? " · " + ind : ""}</span></td>`
+      + `<span class="sub">${sub}</span></td>`
       + `<td class="num">${fmtCap(s[CAP])}</td>`
       + `<td>${rsBadge(s[RS])}</td><td>${rsBadge(s[R1])}</td><td>${rsBadge(s[R3])}</td>`
       + `<td>${rsBadge(s[R6])}</td><td>${rsBadge(s[R12])}</td>`
@@ -425,6 +455,21 @@ bindChips("sigChips", "sig", asStr);
 bindChips("mktChips", "mkt", asStr);
 bindChips("capChips", "capMin", asNum);
 bindChips("hiChips", "hiMin", asNumOrNull);
+bindChips("levChips", "lev", v => v === "1");
+
+// 주식 ↔ ETF 모드 전환: 그룹 선택·페이지를 초기화하고 시장/상품 필터 행을 토글
+document.querySelectorAll("#modeChips .chip").forEach(c => c.addEventListener("click", () => {
+  if (state.mode === c.dataset.v) return;
+  document.querySelectorAll("#modeChips .chip").forEach(x => x.classList.toggle("on", x === c));
+  state.mode = c.dataset.v;
+  state.group = null;
+  state.page = 1;
+  state.gpage = { sec: 1, ind: 1, thm: 1 };
+  state.sort = { col: RS, dir: -1 };
+  document.getElementById("mktRow").style.display = state.mode === "etf" ? "none" : "";
+  document.getElementById("levRow").style.display = state.mode === "etf" ? "" : "none";
+  renderGroups(); renderSel(); renderStocks();
+}));
 document.getElementById("q").addEventListener("input", e => { state.q = e.target.value; state.page = 1; renderStocks(); });
 document.getElementById("rsMin").addEventListener("input", e => {
   const v = parseFloat(e.target.value);
