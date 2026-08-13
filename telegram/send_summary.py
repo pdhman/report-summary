@@ -149,6 +149,34 @@ def section_rs(lines, top=5, min_n=5):
         lines.append(f"   {html.escape(t['name'])} {' · '.join(bits)}")
 
 
+def section_etf(lines, top=5):
+    """RS 상위 ETF — rs.html ETF 모드 기본값과 동일하게 레버리지·인버스 제외.
+
+    etfs 배열 필드: [코드, 이름, 시장, 시총, 대금, RS, 1M, 3M, 6M, 12M,
+                    고점대비, MA200, 유형idx, -1, [], 레버플래그]
+    """
+    path = BASE / "reports" / "rs_data.js"
+    if not path.exists():
+        return
+    rs = load_js(path)
+    cats = rs.get("etfCats", [])
+    etfs = [e for e in rs.get("etfs", [])
+            if e[5] is not None and not e[15]]      # RS 있음 + 레버·인버스 제외
+    if not etfs:
+        return
+    etfs.sort(key=lambda e: e[5], reverse=True)
+    lines.append("")
+    lines.append("🧺 <b>RS 상위 ETF</b> (레버리지·인버스 제외)")
+    for e in etfs[:top]:
+        cat = cats[e[12]]["name"] if 0 <= e[12] < len(cats) else ""
+        bits = [f"{e[5]:.0f}"]
+        if cat:
+            bits.append(cat)
+        if e[10] is not None:                       # 52주 고점대비
+            bits.append(f"고점 {e[10]:.0f}%")
+        lines.append(f"   {html.escape(e[1])} {' · '.join(bits)}")
+
+
 def build_message():
     m = load_js(BASE / "reports" / "market_data.js")
     asof = m.get("asof", "")
@@ -163,6 +191,7 @@ def build_message():
     section_breadth(m, lines)
     section_flows(lines)
     section_rs(lines)
+    section_etf(lines)
 
     # 오늘 갱신분이 아니면 눈에 띄게 표시한다 (수집기가 실패했는데 모르고 넘어가는 걸 막는다)
     if asof != datetime.now().strftime("%Y-%m-%d"):
