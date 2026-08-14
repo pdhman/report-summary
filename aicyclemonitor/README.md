@@ -112,7 +112,7 @@ Market Regime Score 를 만든다. 기존에 쌓아온 데이터 자산을 전�
   / 35~ Risk-off(30~50%) / <35 Bear(현금·헤지).
 - 실행: `python korea_cycle_monitor.py` (또는 `run_korea_cycle.bat`), `--offline` 은 캐시만 사용.
 - 국면 알림: `run_korea_cycle.bat` 이 모델 실행 후 `telegram/send_cycle_alert.py` 를 호출 —
-  직전 기록 대비 종합 스코어 2점 이상 하락 또는 국면 밴드 하향 전환 시에만
+  직전 기록 대비 종합 스코어 2점 이상 하락, 국면 밴드 하향(⚠️) 또는 상향(🟢) 전환 시
   텔레그램 DM(개인 대화)으로 발송(채널 미발송, 날짜당 1회).
 - 출력: `korea_cycle.html` + 배포 사본 `reports/korea_cycle.html`(그쪽 상호링크는 aicycle.html).
   AI 사이클 대시보드 헤더와 상호 링크로 연결.

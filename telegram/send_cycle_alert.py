@@ -4,9 +4,10 @@
 korea_cycle_monitor.py(평일 17:45)가 aicyclemonitor/kc_cache/score_log.csv 에
 일별 점수를 기록한 뒤, run_korea_cycle.bat 이 마지막 단계로 이 스크립트를 호출한다.
 
-발송 조건 (둘 중 하나, 직전 기록 대비):
+발송 조건 (하나라도 충족, 직전 기록 대비):
   - 종합 스코어가 DROP_PT(2.0)점 이상 하락
   - 국면 밴드 하향 전환 (예: Bull → Neutral)
+  - 국면 밴드 상향 전환 (예: Neutral → Bull)
 채널(@daily_alphanote)에는 보내지 않고 기본 DM(알파노트 봇 개인 대화)으로만 발송.
 같은 날짜로는 한 번만 보낸다 (cycle_alert_state.json).
 
@@ -78,6 +79,8 @@ def build_message(last, prev, forced):
         prank, plabel, _ = regime(pscore)
         if rank > prank:
             lines.append(f"⚠️ 국면 하향: <b>{plabel} → {label}</b> · 권장 주식비중 {band}")
+        elif rank < prank:
+            lines.append(f"🟢 국면 상향: <b>{plabel} → {label}</b> · 권장 주식비중 {band}")
         else:
             lines.append(f"국면: <b>{label}</b> · 권장 주식비중 {band}")
         parts = []
@@ -108,9 +111,11 @@ def should_alert(last, prev):
     prank, plabel, _ = regime(pscore)
     if rank > prank:
         return True, f"국면 하향 {plabel}→{label}"
+    if rank < prank:
+        return True, f"국면 상향 {plabel}→{label}"
     if drop >= DROP_PT:
         return True, f"스코어 {drop:.1f}점 하락"
-    return False, f"하락 조건 미충족 (변화 {score - pscore:+.1f})"
+    return False, f"알림 조건 미충족 (변화 {score - pscore:+.1f})"
 
 
 def main():
@@ -128,7 +133,8 @@ def main():
     prev = rows[-2] if len(rows) >= 2 else None
 
     state = json.loads(STATE_PATH.read_text(encoding="utf-8")) if STATE_PATH.exists() else {}
-    if state.get("last_sent_date") == last["date"] and not args.force:
+    if (state.get("last_sent_date") == last["date"]
+            and not args.force and not args.dry_run):
         print(f"오늘({last['date']})은 이미 발송함 — 스킵")
         return
 
