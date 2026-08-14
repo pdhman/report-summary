@@ -169,19 +169,53 @@ def build(out=None, nav_active=None):
              + kpi("투자자예탁금", deposit[-1], deposit[-2], "조원", 2)
              + kpi("미수금 대비 반대매매비중", ratio[-1], ratio[-2], "%", 2))
 
+    # 기간 선택: 이력이 쌓일수록 전체 차트가 빽빽해져 최근 흐름이 안 보인다.
+    # 기간별로 SVG 를 미리 구워 두고 버튼으로 표시만 전환한다(축 스케일도
+    # 기간에 맞게 다시 계산되는 효과). 기본은 전체.
+    RANGES = [("all", "전체", None), ("1y", "1년", 365),
+              ("6m", "6개월", 182), ("3m", "3개월", 91)]
+
+    def _cut(days):
+        if days is None:
+            return 0
+        floor = pd.Timestamp(dates[-1]) - pd.Timedelta(days=days)
+        for i, ds in enumerate(dates):
+            if pd.Timestamp(ds) >= floor:
+                return i
+        return 0
+
+    def _panes(cid, series, unit, dec):
+        """기간별 차트 4벌. data-range 로 감싸 JS 가 표시를 전환한다."""
+        out = []
+        for key, _, days in RANGES:
+            i0 = _cut(days)
+            sl = [(n, ys[i0:], cl, cd) for n, ys, cl, cd in series]
+            hidden = "" if key == "all" else " style=\"display:none\""
+            out.append(f'<div class="rangepane" data-range="{key}"{hidden}>'
+                       + line_chart(f"{cid}-{key}", dates[i0:], sl, unit, dec)
+                       + '</div>')
+        return "".join(out)
+
+    range_bar = ('<div class="rangebar">'
+                 + "".join(f'<button type="button" data-range="{k}"'
+                           + (' class="on"' if k == "all" else "")
+                           + f'>{lab}</button>' for k, lab, _ in RANGES)
+                 + '</div>')
+
     charts = (
-        '<section><h2>신용거래융자 잔고</h2>'
+        range_bar
+        + '<section><h2>신용거래융자 잔고</h2>'
         '<p class="sub">빚내서 산 주식 규모. 시장 별로 나눠 본다. 단위: 조원</p>'
         '<div class="legend"><span class="lg"><i style="--cl:%s;--cd:%s"></i>유가증권</span>'
         '<span class="lg"><i style="--cl:%s;--cd:%s"></i>코스닥</span></div>' % (S1L, S1D, S2L, S2D)
-        + line_chart("c1", dates, [("유가증권", credit_ks, S1L, S1D),
-                                   ("코스닥", credit_kq, S2L, S2D)], "조원", 2) + '</section>'
+        + _panes("c1", [("유가증권", credit_ks, S1L, S1D),
+                        ("코스닥", credit_kq, S2L, S2D)], "조원", 2) + '</section>'
         + '<section><h2>투자자예탁금</h2>'
           '<p class="sub">증시 대기 자금. 단위: 조원</p>'
-        + line_chart("c2", dates, [("예탁금", deposit, S1L, S1D)], "조원", 2) + '</section>'
+        + _panes("c2", [("예탁금", deposit, S1L, S1D)], "조원", 2) + '</section>'
         + '<section><h2>미수금 대비 반대매매 비중</h2>'
           '<p class="sub">값이 튀면 강제 청산 압력이 커졌다는 신호. 단위: %</p>'
-        + line_chart("c3", dates, [("반대매매비중", ratio, S1L, S1D)], "%", 2) + '</section>'
+        + _panes("c3", [("반대매매비중", ratio, S1L, S1D)], "%", 2) + '</section>'
     )
 
     rows = "".join(
@@ -226,6 +260,10 @@ def build(out=None, nav_active=None):
   .legend {{ display:flex; gap:14px; margin:6px 0 2px; }}
   .lg {{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink2); }}
   .lg i {{ width:14px; height:3px; border-radius:2px; background:var(--cl); }}
+  .rangebar {{ display:flex; gap:6px; margin:0 0 14px; }}
+  .rangebar button {{ background:var(--surface); border:1px solid var(--line); color:var(--ink2);
+    font:inherit; font-size:13px; padding:6px 14px; border-radius:18px; cursor:pointer; }}
+  .rangebar button.on {{ background:var(--ink); color:var(--page); border-color:var(--ink); font-weight:600; }}
   .chartbox {{ position:relative; }}
   .chart {{ width:100%; height:auto; display:block; overflow:visible; }}
   .grid {{ stroke:var(--grid); stroke-width:1; }}
@@ -300,6 +338,24 @@ def build(out=None, nav_active=None):
       cross.style.display = 'none'; tip.style.display = 'none';
     }});
   }});
+
+  // 기간 선택: 미리 구워둔 기간별 차트의 표시만 전환. 선택은 기억한다.
+  var KEY = 'leverage-range';
+  function setRange(r) {{
+    document.querySelectorAll('.rangepane').forEach(function (p) {{
+      p.style.display = (p.dataset.range === r) ? '' : 'none';
+    }});
+    document.querySelectorAll('.rangebar button').forEach(function (b) {{
+      b.classList.toggle('on', b.dataset.range === r);
+    }});
+    try {{ localStorage.setItem(KEY, r); }} catch (e) {{}}
+  }}
+  document.querySelectorAll('.rangebar button').forEach(function (b) {{
+    b.addEventListener('click', function () {{ setRange(b.dataset.range); }});
+  }});
+  var saved = null;
+  try {{ saved = localStorage.getItem(KEY); }} catch (e) {{}}
+  if (saved && document.querySelector('.rangepane[data-range="' + saved + '"]')) setRange(saved);
 }})();
 </script>
 </body></html>'''
