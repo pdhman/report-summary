@@ -43,6 +43,12 @@
   header h1{font-size:22px;margin:0 0 4px;}
   header .sub{color:var(--text-secondary);font-size:13px;}
   header .sub a{color:var(--text-secondary);}
+  .navtabs{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0;}
+  .navtabs a{padding:7px 16px;border:1px solid var(--border);border-radius:8px;
+    background:var(--surface-1);color:var(--text-secondary);text-decoration:none;
+    font-size:13px;font-weight:600;}
+  .navtabs a:hover{border-color:var(--baseline);color:var(--text-primary);}
+  .navtabs a.active{background:var(--s1);border-color:var(--s1);color:#fff;cursor:default;}
   .datebar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 0;
            padding:10px 14px;border:1px solid var(--border);border-radius:8px;
            background:var(--surface-1);font-size:13px;color:var(--text-secondary);}
@@ -104,8 +110,11 @@
   <header>
     <h1>한국 시장 사이클 모델</h1>
     <div class="sub"><b>Global → 반도체 → Breadth → Euphoria</b> — 지수 레벨이 아니라 강세장의 단계를 확인한다
-      · 기준일: <span id="asof"></span> · 생성: <span id="genAt"></span>
-      · <a href="dashboard.html">AI 사이클 리스크 모니터 →</a></div>
+      · 기준일: <span id="asof"></span> · 생성: <span id="genAt"></span></div>
+    <nav class="navtabs">
+      <a href="dashboard.html">🌐 AI 사이클 리스크 모니터</a>
+      <a class="active" aria-current="page">🇰🇷 한국 시장 사이클 모델</a>
+    </nav>
     <div class="datebar">
       <span>과거 시점 보기</span>
       <input type="date" id="selDate">
