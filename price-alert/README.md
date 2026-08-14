@@ -1,8 +1,12 @@
 # price-alert — 보유종목 급등락 카카오톡 알림
 
 prop-dashboard `data.js`의 보유종목을 평일 09:00~15:30, 10분 간격으로 감시해
-전일 종가 대비 등락률이 단계 임계값(기본 ±3% → ±5% → ±7%)을 돌파하면
-카카오톡 **나와의 채팅**으로 알림을 보낸다. 같은 단계·방향은 하루 1회만 알린다.
+전일 종가 대비 등락률이 단계 임계값(기본 ±5% → ±7% → ±10%)을 돌파하면 알림을 보낸다.
+같은 단계·방향은 하루 1회만 알린다.
+
+발송 채널(`config.json`의 `channels`):
+- **telegram** — 기존 알파노트 봇 재활용(`../telegram/config.json`). **푸시 알림이 울리는 주 채널.**
+- **kakao** — 나와의 채팅. 내가 보낸 메시지라 알림이 안 울리므로 무음 기록용.
 
 - 시세: 네이버 증권 폴링 API(배치) + 종목별 basic API 폴백. 표준 라이브러리만 사용(pip 불필요).
 - 실행: Windows 작업 스케줄러(로컬 전용). **보유종목 데이터·토큰은 절대 커밋 금지** —
@@ -60,9 +64,12 @@ python price-alert/alert_monitor.py --force     # 장시간 가드 무시하고 
    ]
    ```
    (data.js가 없으면 자동으로 이 파일을 읽는다. 종목이 바뀌면 직접 수정할 것)
-3. 카카오 인증: `python kakao_auth.py` → REST API 키 입력 → 브라우저 동의
-   (같은 카카오 앱을 그대로 쓰면 되고, 콘솔 설정을 다시 할 필요는 없다)
-4. 스케줄 등록: `powershell -NoProfile -ExecutionPolicy Bypass -File register_task.ps1`
+3. 텔레그램: `telegram.json`을 만들어 기존 봇 정보를 넣는다
+   (`{"bot_token": "...", "chat_id": "..."}` — 이 PC의 telegram/config.json 값 그대로)
+4. 카카오도 쓰려면: `python kakao_auth.py` → REST API 키 입력 → 브라우저 동의
+   (같은 카카오 앱을 그대로 쓰면 되고, 콘솔 설정을 다시 할 필요는 없다.
+   텔레그램만 쓰려면 config.json의 channels에서 "kakao"를 빼면 된다)
+5. 스케줄 등록: `powershell -NoProfile -ExecutionPolicy Bypass -File register_task.ps1`
 
 ## 문제 해결
 

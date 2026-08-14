@@ -24,6 +24,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import kakao  # noqa: E402
 import quote  # noqa: E402
+import telegram_notify  # noqa: E402
 
 KST = timezone(timedelta(hours=9))
 
@@ -107,6 +108,27 @@ def save_state(state, path):
             os.unlink(tmp)
 
 
+def send_alert(text, channels):
+    """설정된 채널로 발송. 하나라도 성공하면 True (상태 저장 기준).
+
+    텔레그램은 알림이 울리는 주 채널, 카카오(나와의 채팅)는 무음 기록용.
+    """
+    ok = False
+    for ch in channels:
+        try:
+            if ch == "telegram":
+                telegram_notify.send_message(text)
+            elif ch == "kakao":
+                kakao.send_message(text)
+            else:
+                log(f"WARN: 알 수 없는 채널 '{ch}' — 무시")
+                continue
+            ok = True
+        except Exception as e:  # noqa: BLE001 — 한 채널 실패가 다른 채널을 막지 않게
+            log(f"WARN: {ch} 발송 실패: {e}")
+    return ok
+
+
 def check_thresholds(holdings, quotes, thresholds, state):
     """알림 대상 판정. (알림 줄 목록, 반영할 pending 상태) 반환.
 
@@ -145,10 +167,15 @@ def main():
     cfg = load_config()
     now = datetime.now(KST)
 
+    channels = cfg.get("channels", ["kakao"])
+
     if args.test:
-        kakao.refresh_access_token()
-        kakao.send_message(f"[주가알림 테스트 {now:%H:%M}] 연동 정상 ✅")
-        log("테스트 메시지 발송 완료")
+        if "kakao" in channels:
+            kakao.refresh_access_token()
+        if not send_alert(f"[주가알림 테스트 {now:%H:%M}] 연동 정상 ✅", channels):
+            log("ERROR: 모든 채널 발송 실패")
+            return 1
+        log(f"테스트 메시지 발송 완료 ({', '.join(channels)})")
         return 0
 
     if not (args.force or args.dry_run) and not in_market_hours(cfg, now):
@@ -161,7 +188,7 @@ def main():
         return 0
     log(f"보유종목 {len(holdings)}개: " + ", ".join(f"{h['name']}({h['code']})" for h in holdings))
 
-    if not args.dry_run:
+    if not args.dry_run and "kakao" in channels:
         kakao.refresh_access_token()  # 조용한 날에도 토큰 문제를 표면화
 
     quotes = quote.fetch_quotes([h["code"] for h in holdings], log=log)
@@ -190,7 +217,9 @@ def main():
         log("dry-run — 발송 생략. 메시지:\n" + msg)
         return 0
 
-    kakao.send_message(msg)  # 실패 시 예외 → 상태 미저장 → 다음 틱에 재시도
+    if not send_alert(msg, channels):
+        log("ERROR: 모든 채널 발송 실패 — 상태 미저장, 다음 틱에 재시도")
+        return 1
     for code, dirs in pending.items():
         state["alerted"].setdefault(code, {}).update(dirs)
     save_state(state, cfg["state_file"])
