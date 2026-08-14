@@ -9,7 +9,6 @@
 
   <!-- ============ 날짜 선택 (과거 시점 보기) ============ -->
   <div class="datepick">
-    <span class="dp-label">과거 시점 보기</span>
     <input type="date" id="dp-date">
     <button class="dp-btn" id="dp-prev" aria-label="이전 거래일">&#9664;</button>
     <button class="dp-btn" id="dp-next" aria-label="다음 거래일">&#9654;</button>
@@ -169,7 +168,6 @@
 
   /* ---- 날짜 선택 (과거 시점 보기) ---- */
   .datepick { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
-  .dp-label { color:var(--muted); font-size:13px; font-weight:600; }
   #dp-date { border:1px solid var(--line); background:var(--panel); color:var(--ink);
     border-radius:10px; padding:7px 10px; font:inherit; font-size:13.5px;
     font-variant-numeric:tabular-nums; color-scheme:inherit; }

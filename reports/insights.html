@@ -1,4 +1,4 @@
-<!doctype html><html lang='ko'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>리포트 인사이트</title></head><body><div class="wrap"><div class="datepick"><span class="dp-label">과거 시점 보기</span><input type="date" class="dp-date" value="2026-08-14" min="2026-07-14" max="2026-08-14"><button class="dp-btn dp-prev" aria-label="이전 날짜">&#9664;</button><button class="dp-btn dp-next" aria-label="다음 날짜">&#9654;</button><button class="dp-btn dp-latest">최신으로</button><script>window.__HUBDATES = ["20260814", "20260813", "20260812", "20260811", "20260810", "20260807", "20260806", "20260805", "20260804", "20260803", "20260731", "20260730", "20260729", "20260728", "20260727", "20260724", "20260723", "20260722", "20260721", "20260720", "20260716", "20260714"];</script></div><div id="view"><div class="day" id="day-20260814">
+<!doctype html><html lang='ko'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>리포트 인사이트</title></head><body><div class="wrap"><div class="datepick"><input type="date" class="dp-date" value="2026-08-14" min="2026-07-14" max="2026-08-14"><button class="dp-btn dp-prev" aria-label="이전 날짜">&#9664;</button><button class="dp-btn dp-next" aria-label="다음 날짜">&#9654;</button><button class="dp-btn dp-latest">최신으로</button><script>window.__HUBDATES = ["20260814", "20260813", "20260812", "20260811", "20260810", "20260807", "20260806", "20260805", "20260804", "20260803", "20260731", "20260730", "20260729", "20260728", "20260727", "20260724", "20260723", "20260722", "20260721", "20260720", "20260716", "20260714"];</script></div><div id="view"><div class="day" id="day-20260814">
   <header>
     <div class="eyebrow">리포트서머리 · 애널리스트 리포트 분석</div>
     <h1>리포트 인사이트</h1>
@@ -3397,25 +3397,16 @@ function _tgTheme(){
   .bottomnav .nl { font-size:11px; font-weight:600; }
   body { padding-bottom:92px; }
 </style><style>
-  .datewrap { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
-  .datewrap.noscroll .dnav { display:none; }
-  .dnav { flex:0 0 auto; width:32px; height:32px; border-radius:50%; border:1px solid var(--line);
-    background:var(--panel); color:var(--muted); font-size:18px; line-height:1; cursor:pointer;
-    display:flex; align-items:center; justify-content:center; padding:0 0 2px; font-family:inherit;
+  .datepick { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .dp-date { border:1px solid var(--line, #e6e8eb); background:var(--panel, var(--bg, #fff));
+    color:var(--ink, #1a1d21); border-radius:10px; padding:7px 10px; font:inherit;
+    font-size:13.5px; font-variant-numeric:tabular-nums; color-scheme:light dark; }
+  .dp-btn { border:1px solid var(--line, #e6e8eb); background:var(--panel, var(--bg, #fff));
+    color:var(--muted, #6b7280); border-radius:10px; min-width:36px; height:34px;
+    padding:0 12px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;
     transition:color .15s,border-color .15s,opacity .15s; }
-  .dnav:hover { color:var(--accent); border-color:var(--accent); }
-  .dnav.edge { opacity:.25; pointer-events:none; }
-  .datebar { flex:1 1 auto; display:flex; gap:8px; overflow-x:auto; padding:2px;
-    scrollbar-width:none; -webkit-overflow-scrolling:touch; }
-  .datebar::-webkit-scrollbar { display:none; }
-  .datebar .chip { flex:0 0 auto; text-decoration:none; color:var(--muted);
-    border:1px solid var(--line); background:var(--panel); border-radius:20px; padding:8px 14px;
-    font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;
-    transition:color .15s,background .15s,border-color .15s; }
-  .datebar .chip .cy { opacity:.55; font-size:11px; font-weight:600; }
-  .datebar .chip:hover { border-color:var(--accent); color:var(--accent); }
-  .datebar .chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-  .datebar .chip.active .cy { opacity:.8; }
+  .dp-btn:hover:not(:disabled) { color:var(--accent, #3b5bdb); border-color:var(--accent, #3b5bdb); }
+  .dp-btn:disabled { opacity:.3; cursor:default; }
   #view > .day { animation:fadein .18s ease; }
   @keyframes fadein { from { opacity:0; } to { opacity:1; } }
 </style><script>

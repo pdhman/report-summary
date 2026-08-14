@@ -1,19 +1,3 @@
-DATEBAR_CSS = """<style>
-  .datepick { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
-  .dp-label { color:var(--muted); font-size:13px; font-weight:600; }
-  .dp-date { border:1px solid var(--line); background:var(--panel); color:var(--ink);
-    border-radius:10px; padding:7px 10px; font:inherit; font-size:13.5px;
-    font-variant-numeric:tabular-nums; color-scheme:inherit; }
-  .dp-btn { border:1px solid var(--line); background:var(--panel); color:var(--muted);
-    border-radius:10px; min-width:36px; height:34px; padding:0 12px; font-family:inherit;
-    font-size:13px; font-weight:600; cursor:pointer;
-    transition:color .15s,border-color .15s,opacity .15s; }
-  .dp-btn:hover:not(:disabled) { color:var(--accent); border-color:var(--accent); }
-  .dp-btn:disabled { opacity:.3; cursor:default; }
-  #view > .day { animation:fadein .18s ease; }
-  @keyframes fadein { from { opacity:0; } to { opacity:1; } }
-</style>"""
-
 # -*- coding: utf-8 -*-
 """
 모든 페이지 공용 요소.
@@ -148,7 +132,6 @@ def _datebar(dates, active):
     def iso(y):
         return f"{y[:4]}-{y[4:6]}-{y[6:]}"
     return ('<div class="datepick">'
-            '<span class="dp-label">과거 시점 보기</span>'
             f'<input type="date" class="dp-date" value="{iso(active)}" '
             f'min="{iso(dates[-1])}" max="{iso(dates[0])}">'
             '<button class="dp-btn dp-prev" aria-label="이전 날짜">&#9664;</button>'
@@ -158,26 +141,19 @@ def _datebar(dates, active):
             '</div>')
 
 
+# 허브 페이지들은 --panel 을 정의하지 않는 곳이 있어(--bg 만 있음) 반드시
+# fallback 을 준다. fallback 이 없으면 브라우저 기본(검정 테두리)이 노출된다.
 DATEBAR_CSS = """<style>
-  .datewrap { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
-  .datewrap.noscroll .dnav { display:none; }
-  .dnav { flex:0 0 auto; width:32px; height:32px; border-radius:50%; border:1px solid var(--line);
-    background:var(--panel); color:var(--muted); font-size:18px; line-height:1; cursor:pointer;
-    display:flex; align-items:center; justify-content:center; padding:0 0 2px; font-family:inherit;
+  .datepick { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .dp-date { border:1px solid var(--line, #e6e8eb); background:var(--panel, var(--bg, #fff));
+    color:var(--ink, #1a1d21); border-radius:10px; padding:7px 10px; font:inherit;
+    font-size:13.5px; font-variant-numeric:tabular-nums; color-scheme:light dark; }
+  .dp-btn { border:1px solid var(--line, #e6e8eb); background:var(--panel, var(--bg, #fff));
+    color:var(--muted, #6b7280); border-radius:10px; min-width:36px; height:34px;
+    padding:0 12px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;
     transition:color .15s,border-color .15s,opacity .15s; }
-  .dnav:hover { color:var(--accent); border-color:var(--accent); }
-  .dnav.edge { opacity:.25; pointer-events:none; }
-  .datebar { flex:1 1 auto; display:flex; gap:8px; overflow-x:auto; padding:2px;
-    scrollbar-width:none; -webkit-overflow-scrolling:touch; }
-  .datebar::-webkit-scrollbar { display:none; }
-  .datebar .chip { flex:0 0 auto; text-decoration:none; color:var(--muted);
-    border:1px solid var(--line); background:var(--panel); border-radius:20px; padding:8px 14px;
-    font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;
-    transition:color .15s,background .15s,border-color .15s; }
-  .datebar .chip .cy { opacity:.55; font-size:11px; font-weight:600; }
-  .datebar .chip:hover { border-color:var(--accent); color:var(--accent); }
-  .datebar .chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-  .datebar .chip.active .cy { opacity:.8; }
+  .dp-btn:hover:not(:disabled) { color:var(--accent, #3b5bdb); border-color:var(--accent, #3b5bdb); }
+  .dp-btn:disabled { opacity:.3; cursor:default; }
   #view > .day { animation:fadein .18s ease; }
   @keyframes fadein { from { opacity:0; } to { opacity:1; } }
 </style>"""
