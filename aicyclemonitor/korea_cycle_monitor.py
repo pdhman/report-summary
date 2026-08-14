@@ -501,15 +501,19 @@ def assemble(mh, factors, sub, raw, rev, phase_latest, phase_labels, revb, lev):
         s = recent[k].dropna()
         factor_last[k] = round(float(s.iloc[-1]), 1) if len(s) else None
 
-    # 목표주가 평활(시작=100 인덱스)
+    # 목표주가 평활(시작=100 인덱스) — 종목별 시작일이 달라도 공통 날짜축으로
+    # 정렬해서 내보낸다 (축이 어긋나면 차트가 선을 잇지 못하고 점만 남는다)
     tp_idx = {}
-    for code, r in rev.items():
-        if r is None:
-            continue
-        sm = r["smooth"].dropna()
-        if len(sm):
-            tp_idx[FIRMS[code]] = {"dates": [f"{d:%Y-%m-%d}" for d in sm.index[::3]],
-                                   "values": _round(sm[::3] / sm.iloc[0] * 100, 1)}
+    smooths = {c: r["smooth"].dropna() for c, r in rev.items()
+               if r and len(r["smooth"].dropna())}
+    if smooths:
+        axis = pd.date_range(min(s.index.min() for s in smooths.values()),
+                             max(s.index.max() for s in smooths.values()))[::3]
+        tp_dates = [f"{d:%Y-%m-%d}" for d in axis]
+        for code, sm in smooths.items():
+            aligned = sm.reindex(axis).ffill()
+            tp_idx[FIRMS[code]] = {"dates": tp_dates,
+                                   "values": _round(aligned / sm.iloc[0] * 100, 1)}
 
     data = {
         "generated_at": f"{dt.datetime.now():%Y-%m-%d %H:%M}",
