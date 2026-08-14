@@ -89,3 +89,31 @@ Actions 자동화가 기본이므로 로컬 스케줄러는 등록하지 않아�
 - `run_monitor.bat` / `register_weekly_task.bat` — Windows 자동화 (대안 경로)
 - 데이터: `manual_data.json`, `gpu_rental_history.csv`, `revenue_history.csv`, `fred_*_history.csv` (repo 포함)
 - 생성물: `dashboard.html` (git 제외, 배포본은 `reports/aicycle.html`)
+
+---
+
+# 한국 시장 사이클 모델 (korea_cycle_monitor.py)
+
+켄 피셔식 접근 — "지수 레벨·밸류에이션을 예측하지 말고 강세장의 단계를 확인하라."
+**Global → 반도체 → Breadth → Euphoria** 프레임으로 5개 팩터를 0~100점 채점, 가중 합산해
+Market Regime Score 를 만든다. 기존에 쌓아온 데이터 자산을 전부 재사용한다.
+
+| 팩터 (가중치) | 하위지표 | 소스 |
+|---|---|---|
+| ① Global Trend (25) | S&P500 200일선 이격도, VIX, 달러 60일 모멘텀 | Yahoo (3년, kc_cache 병합) |
+| ② 반도체·이익 리비전 (25) | SOX 이격도, 삼전·하이닉스 목표주가 60일 기울기, 메모리 사이클 국면, 전종목 영업이익(E) 상향비율, 삼전·하이닉스 주가 추세 | 리포트서머리.xlsx · memory-cycle · 퀀트데이터 주간 스냅샷 · Yahoo |
+| ③ Market Breadth (20) | MA200/MA50 위 비율, ADR20, 52주 신고가 비율, 맥클렐런 | reports/data/market_history.csv (breadth_build) |
+| ④ 신용·유동성 (15) | 예탁금 20일 증가율, 반대매매 비중, 신용/예탁금, 美 HY OAS | market_leverage_collector · FRED(allorigins 폴백) |
+| ⑤ Euphoria (15, 역방향) | 저가주 거래대금 비중, 상한가 수, 회전율, 신용융자 20일 증가율 | market_history · 레버리지 |
+
+- 채점: 하위지표를 자기 히스토리 백분위(0~100)로 변환(방향 통일) 후 평균, 팩터는 5일 평활.
+  목표주가 기울기·사이클 국면은 규칙 기반 매핑(히스토리 짧아 백분위 부적합).
+- 국면: ≥80 Strong Bull(주식 90~100%) / 65~ Bull(75~90%) / 50~ Neutral(50~75%)
+  / 35~ Risk-off(30~50%) / <35 Bear(현금·헤지).
+- 실행: `python korea_cycle_monitor.py` (또는 `run_korea_cycle.bat`), `--offline` 은 캐시만 사용.
+- 출력: `korea_cycle.html` + 배포 사본 `reports/korea_cycle.html`(그쪽 상호링크는 aicycle.html).
+  AI 사이클 대시보드 헤더와 상호 링크로 연결.
+- 누적: `kc_cache/global.csv`(글로벌 시세), `kc_cache/revision_breadth.csv`(리비전 폭),
+  `kc_cache/score_log.csv`(일별 점수 기록 — 재계산으로 과거 백분위가 흔들려도 당시 기록 보존).
+- 주의: 종목선정(TAIGAN·팩터랭킹)과 분리된 **시장 국면 판단 전용 레이어**. market_history 가
+  평일 16:35 갱신된 뒤(17시 이후) 실행해야 당일 데이터가 반영된다.

@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>한국 시장 사이클 모델 — Global → 반도체 → Breadth → Euphoria</title>
+<style>
+  .viz-root{
+    color-scheme: light;
+    --page:#f9f9f7; --surface-1:#fcfcfb;
+    --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#898781;
+    --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,0.10);
+    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+    --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+    --good-text:#006300;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])) .viz-root{
+      color-scheme: dark;
+      --page:#0d0d0d; --surface-1:#1a1a19;
+      --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#898781;
+      --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+      --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+      --good-text:#0ca30c;
+    }
+  }
+  :root[data-theme="dark"] .viz-root{
+    color-scheme: dark;
+    --page:#0d0d0d; --surface-1:#1a1a19;
+    --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#898781;
+    --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --good-text:#0ca30c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;
+       background:#f9f9f7;color:#0b0b0b;}
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])) body{background:#0d0d0d;color:#ffffff;}
+  }
+  :root[data-theme="dark"] body{background:#0d0d0d;color:#ffffff;}
+  .viz-root{max-width:1080px;margin:0 auto;padding:28px 20px 60px;}
+  header h1{font-size:22px;margin:0 0 4px;}
+  header .sub{color:var(--text-secondary);font-size:13px;}
+  header .sub a{color:var(--text-secondary);}
+  .datebar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 0;
+           padding:10px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--surface-1);font-size:13px;color:var(--text-secondary);}
+  .datebar input[type=date]{background:var(--page);color:var(--text-primary);
+           border:1px solid var(--border);border-radius:6px;padding:3px 8px;
+           font:inherit;color-scheme:inherit;}
+  .datebar button{background:var(--page);color:var(--text-primary);border:1px solid var(--border);
+           border-radius:6px;padding:3px 10px;font:inherit;font-size:12.5px;cursor:pointer;}
+  .datebar button:hover{border-color:var(--baseline);}
+  .datebar .selnote{color:var(--s2);font-weight:600;font-size:12.5px;}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:20px 0 8px;}
+  .tile{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+  .tile .label{font-size:12.5px;color:var(--text-secondary);}
+  .tile .value{font-size:28px;font-weight:600;margin:2px 0;font-variant-numeric:tabular-nums;}
+  .tile .delta{font-size:11.5px;color:var(--text-muted);}
+  .tile.hero{grid-column:span 2;}
+  .tile.hero .value{font-size:40px;}
+  @media(max-width:560px){.tile.hero{grid-column:span 1;}}
+  .status{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;
+          padding:2px 8px;border-radius:999px;border:1px solid var(--border);}
+  .status .ic{font-size:11px;}
+  .status.good{color:var(--good-text);} .status.warning{color:var(--text-primary);}
+  .status.serious{color:var(--critical);} .status.critical{color:var(--critical);}
+  section{margin-top:34px;}
+  section>h2{font-size:16px;margin:0 0 2px;}
+  section>.desc{font-size:13px;color:var(--text-secondary);margin:0 0 12px;}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;}
+  @media(max-width:920px){.cards{grid-template-columns:1fr;}}
+  .card{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px 10px;}
+  .card h3{font-size:13.5px;margin:0 0 2px;font-weight:600;}
+  .card .note{font-size:11.5px;color:var(--text-muted);margin:0 0 6px;}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0 4px;font-size:12px;color:var(--text-secondary);}
+  .legend .key{display:inline-flex;align-items:center;gap:5px;}
+  .legend .sw{width:10px;height:10px;border-radius:3px;display:inline-block;}
+  .chart{position:relative;}
+  .chart svg{display:block;width:100%;}
+  .tooltip{position:absolute;pointer-events:none;background:var(--surface-1);border:1px solid var(--border);
+           border-radius:8px;padding:7px 10px;font-size:12px;box-shadow:0 3px 12px rgba(0,0,0,.12);
+           display:none;z-index:5;min-width:120px;}
+  .tooltip .tx{color:var(--text-muted);margin-bottom:3px;}
+  .tooltip .row{display:flex;align-items:center;gap:6px;justify-content:space-between;color:var(--text-secondary);}
+  .tooltip .row b{color:var(--text-primary);font-weight:600;font-variant-numeric:tabular-nums;}
+  details.tbl{margin:4px 0 6px;}
+  details.tbl summary{font-size:12px;color:var(--text-muted);cursor:pointer;}
+  table{border-collapse:collapse;width:100%;font-size:12px;margin-top:6px;}
+  th,td{text-align:right;padding:4px 8px;border-bottom:1px solid var(--grid);
+        font-variant-numeric:tabular-nums;color:var(--text-secondary);}
+  th{color:var(--text-muted);font-weight:600;} th:first-child,td:first-child{text-align:left;}
+  .alerts td:first-child,.alerts th:first-child{text-align:left;}
+  .alerts td:nth-child(2),.alerts th:nth-child(2){text-align:left;}
+  .empty{padding:26px 10px;text-align:center;color:var(--text-muted);font-size:13px;
+         border:1px dashed var(--grid);border-radius:8px;margin:8px 0;}
+  footer{margin-top:40px;font-size:12px;color:var(--text-muted);line-height:1.7;}
+  footer a{color:var(--text-secondary);}
+</style>
+</head>
+<body>
+<div class="viz-root">
+  <header>
+    <h1>한국 시장 사이클 모델</h1>
+    <div class="sub"><b>Global → 반도체 → Breadth → Euphoria</b> — 지수 레벨이 아니라 강세장의 단계를 확인한다
+      · 기준일: <span id="asof"></span> · 생성: <span id="genAt"></span>
+      · <a href="dashboard.html">AI 사이클 리스크 모니터 →</a></div>
+    <div class="datebar">
+      <span>과거 시점 보기</span>
+      <input type="date" id="selDate">
+      <button id="btnPrev" title="이전 거래일">◀</button>
+      <button id="btnNext" title="다음 거래일">▶</button>
+      <button id="btnLatest">최신으로</button>
+      <span class="selnote" id="selNote"></span>
+    </div>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section>
+    <h2>Market Regime Score</h2>
+    <p class="desc">5개 팩터 가중 합산 (Global 25 · 반도체/이익 25 · Breadth 20 · 유동성 15 · Euphoria 15)
+      — 80↑ Strong Bull · 65↑ Bull · 50↑ Neutral · 35↑ Risk-off · 35↓ Bear</p>
+    <div class="cards">
+      <div class="card"><h3>종합 스코어 추이 (0~100)</h3>
+        <p class="note">가로선 = 국면 경계 (35 / 50 / 65 / 80)</p>
+        <div id="ch-composite"></div></div>
+      <div class="card"><h3>KOSPI 종가 (같은 기간)</h3>
+        <p class="note">스코어와 지수를 나란히 — "지수가 올라도 스코어가 꺾이면 내부가 약해지는 것"</p>
+        <div id="ch-kospi"></div></div>
+      <div class="card"><h3>팩터별 현재 점수</h3>
+        <p class="note">0~100, 높을수록 우호적 (Euphoria 는 과열이 없을수록 높음)</p>
+        <div id="ch-factors"></div></div>
+      <div class="card"><h3>팩터 점수 추이</h3>
+        <p class="note">Global · 반도체/이익 · Breadth · 유동성 (Euphoria 는 별도 섹션)</p>
+        <div id="ch-factorline"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>① Global Trend — 리스크온인가</h2>
+    <p class="desc">한국은 글로벌 위험선호의 베타 — 미국 추세가 꺾이면 한국 강세장은 지속되기 어렵다</p>
+    <div class="cards">
+      <div class="card"><h3>S&amp;P500 · SOX 200일선 이격도 (%)</h3>
+        <p class="note">0 위 = 장기 추세 위. SOX 는 반도체 팩터에도 사용</p>
+        <div id="ch-gdist"></div></div>
+      <div class="card"><h3>VIX</h3>
+        <p class="note">낮고 안정 = 위험선호 유지</p>
+        <div id="ch-vix"></div></div>
+      <div class="card"><h3>달러인덱스 (DXY)</h3>
+        <p class="note">달러 강세 = 신흥국·한국 역풍, 약세 = 우호</p>
+        <div id="ch-dxy"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>② 반도체 사이클 · 이익 리비전 — 이익이 계속 늘고 있는가</h2>
+    <p class="desc">"금리가 아니라 EPS 방향" — 삼전·하이닉스 컨센서스와 전종목 리비전 폭</p>
+    <div class="cards">
+      <div class="card"><h3>목표주가 컨센서스 (20일 평활, 시작=100)</h3>
+        <p class="note">리포트서머리 증권사 목표주가 중앙값 — 기울기가 꺾이면 리비전 정체(피크 경계 신호)</p>
+        <div id="ch-target"></div></div>
+      <div class="card"><h3>전종목 영업이익(E) 상향 비율 (%)</h3>
+        <p class="note">퀀트데이터 주간 스냅샷 비교 — 컨센서스가 있는 ~670종목 중 상향/(상향+하향), 50% 위 = 상향 우세</p>
+        <div id="ch-revb"></div></div>
+      <div class="card"><h3>삼성전자 · SK하이닉스 200일선 이격도 (%)</h3>
+        <p class="note">주가 추세 확인 — 메모리 사이클 국면은 상단 타일 참고</p>
+        <div id="ch-semid"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>③ Market Breadth — 상승이 시장 전체로 확산되고 있는가</h2>
+    <p class="desc">삼전·하이닉스가 지수를 끌어올려도 내부가 좁아지면 경계 — 알파노트 시장 건전성 데이터 재사용</p>
+    <div class="cards">
+      <div class="card"><h3>이동평균선 위 종목 비율 (%)</h3>
+        <p class="note">전체 시장 기준 — 20일 · 50일 · 200일</p>
+        <div id="ch-ma"></div></div>
+      <div class="card"><h3>맥클렐런 오실레이터</h3>
+        <p class="note">등락종목수 기반 단기 모멘텀 — 0 위 = 확산 우세</p>
+        <div id="ch-mco"></div></div>
+      <div class="card"><h3>52주 신고가 · 신저가 종목 수</h3>
+        <p class="note">지수 신고가인데 신고가 종목이 줄면 전형적 약화 신호</p>
+        <div id="ch-nhnl"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>④ 신용 · 유동성 — 자금이 들어오는가, 조달이 막히는가</h2>
+    <p class="desc">국내 증시 대기자금과 강제청산 압력 + 미국 하이일드 스프레드(글로벌 신용 온도)</p>
+    <div class="cards">
+      <div class="card"><h3>신용융자 · 예탁금 (조원)</h3>
+        <p class="note">예탁금 증가 = 대기자금 유입, 신용융자 급증은 Euphoria 팩터에서 감점</p>
+        <div id="ch-lev"></div></div>
+      <div class="card"><h3>반대매매 비중 · 신용/예탁금 비율 (%)</h3>
+        <p class="note">반대매매 급증 = 강제청산 압력, 신용/예탁금 상승 = 취약성 누적</p>
+        <div id="ch-liqr"></div></div>
+      <div class="card"><h3>美 하이일드 OAS (bp)</h3>
+        <p class="note">FRED — 급등 = 글로벌 신용경색, 한국 위험자산에 직결</p>
+        <div id="ch-hy"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>⑤ Euphoria — 도취 단계인가</h2>
+    <p class="desc">강세장은 밸류에이션이 아니라 "부실 기업까지 무차별 급등"에서 끝난다 — 과열일수록 스코어 감점</p>
+    <div class="cards">
+      <div class="card"><h3>과열 종합 게이지 (0~100)</h3>
+        <p class="note">저가주 비중 · 상한가 수 · 회전율 · 신용융자 증가율의 백분위 평균 — 높을수록 도취</p>
+        <div id="ch-heat"></div></div>
+      <div class="card"><h3>저가주 거래대금 비중 · 회전율 (%)</h3>
+        <p class="note">2,000원 미만 종목 거래대금 비중 — 잡주 순환매의 직접 지표</p>
+        <div id="ch-penny"></div></div>
+      <div class="card"><h3>상한가 종목 수 (일별)</h3>
+        <p class="note">상한가 남발 = 투기 열기</p>
+        <div id="ch-capup"></div></div>
+      <div class="card"><h3>신용융자 20일 증가율 (%)</h3>
+        <p class="note">빚투 가속 — 급격한 증가가 위험 신호</p>
+        <div id="ch-crmom"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>체크리스트</h2>
+    <p class="desc">하위지표별 현재값 · 점수(0~100) — 60↑ 정상 · 40~60 주의 · 40↓ 경계</p>
+    <div class="card"><div class="alerts" id="alertTable"></div></div>
+  </section>
+
+  <footer id="foot">
+    데이터: Yahoo Finance(S&amp;P500·SOX·VIX·DXY·삼전·하이닉스) · FRED(하이일드 OAS, 차단 시 allorigins 폴백) ·
+    리포트서머리.xlsx(증권사 목표주가, 매일 자동 크롤링) · 알파노트 market_history(전종목 등락·신고저·이평·거래대금) ·
+    market_leverage_collector(신용융자·예탁금·반대매매) · 퀀트데이터 주간 스냅샷(영업이익 컨센서스) ·
+    memory-cycle(삼전·하이닉스 분기 OPM 국면)<br>
+    IPO 청약경쟁률·공모주 수익률은 무료 시계열 소스가 없어 Euphoria 팩터에서 제외 (저가주·상한가·회전율·신용증가율로 근사).<br>
+    <span id="histNote"></span> 시장 국면의 기록이며 투자 판단·권유가 아님.
+  </footer>
+</div>
+
+<script>
+const DATA = __DATA_JSON__;
+
+/* ── 팔레트 슬롯(고정 순서: 순환 금지) ── */
+const css = s => getComputedStyle(document.querySelector('.viz-root')).getPropertyValue(s).trim();
+let SLOT = [], INK = {};
+function refreshColors(){
+  SLOT = ['--s1','--s2','--s3','--s4'].map(css);
+  INK = {primary:css('--text-primary'), secondary:css('--text-secondary'), muted:css('--text-muted'),
+         grid:css('--grid'), baseline:css('--baseline'), surface:css('--surface-1'),
+         good:css('--good-text'), critical:css('--critical')};
+}
+
+/* ── 유틸 ── */
+const fmt = (v,d=1) => v==null ? '—' : Number(v).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:0});
+function niceTicks(min,max,n=5){
+  if(min===max){min-=1;max+=1;}
+  const span=max-min, step0=span/n, mag=Math.pow(10,Math.floor(Math.log10(step0)));
+  const step=[1,2,2.5,5,10].map(m=>m*mag).find(s=>span/s<=n+1)||mag*10;
+  const lo=Math.floor(min/step)*step, hi=Math.ceil(max/step)*step, out=[];
+  for(let v=lo;v<=hi+1e-9;v+=step) out.push(+v.toFixed(10));
+  return out;
+}
+const svgEl=(t,a)=>{const e=document.createElementNS('http://www.w3.org/2000/svg',t);
+  for(const k in a) e.setAttribute(k,a[k]); return e;};
+
+/* ── 라인 차트 (opts.ymin/ymax 고정축, opts.hlines 기준선 지원) ── */
+function lineChart(elId, series, opts={}){
+  const host=document.getElementById(elId); if(!host) return;
+  host.innerHTML='';
+  series=series.filter(s=>s&&s.values&&s.values.some(v=>v!=null));
+  if(!series.length){host.innerHTML='<div class="empty">데이터 없음 — 수집 대기</div>';return;}
+  if(!opts.labels&&series.length>1){
+    const d0=series[0].dates;
+    if(series.some(s=>s.dates.length!==d0.length||s.dates[0]!==d0[0]||s.dates[s.dates.length-1]!==d0[d0.length-1])){
+      const all=[...new Set([].concat(...series.map(s=>s.dates)))].sort();
+      series=series.map(s=>{const idx={};s.dates.forEach((d,i)=>idx[d]=s.values[i]);
+        return {name:s.name,dates:all,values:all.map(d=>idx[d]??null)};});
+    }
+  }
+  const labels=opts.labels||series[0].dates;
+  const unit=opts.unit||'';
+  if(series.length>1){
+    const lg=document.createElement('div');lg.className='legend';
+    series.forEach((s,i)=>{lg.insertAdjacentHTML('beforeend',
+      `<span class="key"><span class="sw" style="background:${SLOT[i]}"></span>${s.name}</span>`);});
+    host.appendChild(lg);
+  }
+  const wrap=document.createElement('div');wrap.className='chart';host.appendChild(wrap);
+  const W=Math.max(320,host.clientWidth||430), H=opts.h||210;
+  const M={t:14,r:56,b:26,l:44};
+  const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
+  wrap.appendChild(svg);
+  const tip=document.createElement('div');tip.className='tooltip';wrap.appendChild(tip);
+
+  const n=labels.length;
+  const allV=series.flatMap(s=>s.values).filter(v=>v!=null);
+  let lo=opts.ymin!=null?opts.ymin:Math.min(...allV);
+  let hi=opts.ymax!=null?opts.ymax:Math.max(...allV);
+  let ticks=niceTicks(lo,hi,4);
+  if(opts.ymin!=null) ticks=ticks.filter(t=>t>=opts.ymin);
+  if(opts.ymax!=null) ticks=ticks.filter(t=>t<=opts.ymax);
+  const ymin=opts.ymin!=null?opts.ymin:ticks[0], ymax=opts.ymax!=null?opts.ymax:ticks[ticks.length-1];
+  const X=i=>M.l+(n<=1?0:(W-M.l-M.r)*i/(n-1));
+  const Y=v=>M.t+(H-M.t-M.b)*(1-(v-ymin)/(ymax-ymin));
+  ticks.forEach(t=>{
+    svg.appendChild(svgEl('line',{x1:M.l,x2:W-M.r,y1:Y(t),y2:Y(t),stroke:INK.grid,'stroke-width':1}));
+    const tx=svgEl('text',{x:M.l-6,y:Y(t)+4,'text-anchor':'end','font-size':10.5,fill:INK.muted,
+      style:'font-variant-numeric:tabular-nums'});
+    tx.textContent=fmt(t,0); svg.appendChild(tx);
+  });
+  svg.appendChild(svgEl('line',{x1:M.l,x2:W-M.r,y1:Y(ymin),y2:Y(ymin),stroke:INK.baseline,'stroke-width':1}));
+  (opts.hlines||[]).forEach(hl=>{
+    if(hl.y<ymin||hl.y>ymax) return;
+    svg.appendChild(svgEl('line',{x1:M.l,x2:W-M.r,y1:Y(hl.y),y2:Y(hl.y),stroke:INK.baseline,'stroke-width':1}));
+    if(hl.label){
+      const t=svgEl('text',{x:W-M.r+4,y:Y(hl.y)+3.5,'font-size':9.5,fill:INK.muted});
+      t.textContent=hl.label; svg.appendChild(t);
+    }
+  });
+  const xtick=Math.max(1,Math.round(n/6));
+  for(let i=0;i<n;i+=xtick){
+    const t=svgEl('text',{x:X(i),y:H-8,'text-anchor':'middle','font-size':10.5,fill:INK.muted});
+    t.textContent=String(labels[i]).slice(0,7); svg.appendChild(t);
+  }
+  // 선택 날짜 마커 (과거 시점 보기)
+  if(opts.markDate){
+    let mi=-1;
+    for(let i=0;i<n;i++){ if(String(labels[i])<=opts.markDate) mi=i; else break; }
+    if(mi>=0){
+      svg.appendChild(svgEl('line',{x1:X(mi),x2:X(mi),y1:M.t,y2:H-M.b,
+        stroke:INK.muted,'stroke-width':1.5}));
+      svg.appendChild(svgEl('path',{d:`M ${X(mi)-4} ${M.t} L ${X(mi)+4} ${M.t} L ${X(mi)} ${M.t+6} Z`,
+        fill:INK.muted}));
+    }
+  }
+  const usedLabelY=[];
+  series.forEach((s,si)=>{
+    const col=SLOT[si];
+    const pts=s.values.map((v,i)=>v==null?null:[X(i),Y(v)]);
+    const d=pts.map((p,i)=>p?(i&&pts[i-1]?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1):'').join('');
+    svg.appendChild(svgEl('path',{d,fill:'none',stroke:col,'stroke-width':2,
+      'stroke-linejoin':'round','stroke-linecap':'round'}));
+    const last=pts.filter(Boolean).pop();
+    if(last){
+      svg.appendChild(svgEl('circle',{cx:last[0],cy:last[1],r:4,fill:col,stroke:INK.surface,'stroke-width':2}));
+      const lv=s.values.filter(v=>v!=null).pop();
+      const txt=(series.length<=2?fmt(lv):s.name);
+      const estW=String(txt).length*6.6;
+      const collide=usedLabelY.some(y=>Math.abs(y-last[1])<12);
+      if(!collide && last[0]+8+estW<=W-2){
+        const t=svgEl('text',{x:last[0]+8,y:last[1]+4,'font-size':11,fill:INK.secondary,
+          style:'font-variant-numeric:tabular-nums'});
+        t.textContent=txt; svg.appendChild(t);
+        usedLabelY.push(last[1]);
+      }
+    }
+  });
+  const cross=svgEl('line',{y1:M.t,y2:H-M.b,stroke:INK.baseline,'stroke-width':1,visibility:'hidden'});
+  svg.appendChild(cross);
+  svg.addEventListener('mousemove',ev=>{
+    const r=svg.getBoundingClientRect();
+    const x=(ev.clientX-r.left)*W/r.width;
+    const i=Math.max(0,Math.min(n-1,Math.round((x-M.l)/((W-M.l-M.r)/Math.max(1,n-1)))));
+    cross.setAttribute('x1',X(i));cross.setAttribute('x2',X(i));cross.setAttribute('visibility','visible');
+    tip.style.display='block';
+    tip.innerHTML=`<div class="tx">${labels[i]}</div>`+series.map((s,si)=>
+      `<div class="row"><span class="key"><span class="sw" style="background:${SLOT[si]};width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px"></span>${s.name}</span><b>${fmt(s.values[i])}${unit}</b></div>`).join('');
+    const px=X(i)*r.width/W;
+    tip.style.left=(px>r.width*0.6?px-tip.offsetWidth-12:px+12)+'px';
+    tip.style.top='14px';
+  });
+  svg.addEventListener('mouseleave',()=>{tip.style.display='none';cross.setAttribute('visibility','hidden');});
+  const det=document.createElement('details');det.className='tbl';
+  det.innerHTML='<summary>표 보기</summary>';
+  const tb=document.createElement('table');
+  tb.innerHTML='<tr><th>구분</th>'+series.map(s=>`<th>${s.name}</th>`).join('')+'</tr>';
+  const step=Math.max(1,Math.round(n/12));
+  for(let i=0;i<n;i+=step){
+    tb.insertAdjacentHTML('beforeend',`<tr><td>${labels[i]}</td>`+
+      series.map(s=>`<td>${fmt(s.values[i])}${unit}</td>`).join('')+'</tr>');
+  }
+  det.appendChild(tb);host.appendChild(det);
+}
+
+/* ── 가로 막대 ── */
+function hbarChart(elId, items, unit='%', domain){
+  const host=document.getElementById(elId); if(!host) return;
+  host.innerHTML='';
+  items=items.filter(it=>it.value!=null);
+  if(!items.length){host.innerHTML='<div class="empty">데이터 없음</div>';return;}
+  const W=Math.max(320,host.clientWidth||430), rowH=34;
+  const lw=Math.max(...items.map(it=>String(it.label).length))*6.6+12;
+  const M={t:8,r:56,b:22,l:Math.max(56,Math.ceil(lw))};
+  const H=M.t+M.b+rowH*items.length;
+  const wrap=document.createElement('div');wrap.className='chart';host.appendChild(wrap);
+  const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
+  wrap.appendChild(svg);
+  const minV=domain?domain[0]:Math.min(...items.map(i=>i.value),0);
+  const maxV=domain?domain[1]:Math.max(...items.map(i=>i.value),0);
+  const ticks=niceTicks(minV,maxV,4).filter(t=>!domain||(t>=domain[0]&&t<=domain[1]));
+  const t0=domain?domain[0]:ticks[0], tn=domain?domain[1]:ticks[ticks.length-1];
+  const X=v=>M.l+(W-M.l-M.r)*(v-t0)/((tn-t0)||1);
+  ticks.forEach(t=>{
+    svg.appendChild(svgEl('line',{x1:X(t),x2:X(t),y1:M.t,y2:H-M.b,stroke:INK.grid,'stroke-width':1}));
+    const tx=svgEl('text',{x:X(t),y:H-6,'text-anchor':'middle','font-size':10.5,fill:INK.muted});
+    tx.textContent=fmt(t,0);svg.appendChild(tx);
+  });
+  svg.appendChild(svgEl('line',{x1:X(Math.max(0,t0)),x2:X(Math.max(0,t0)),y1:M.t,y2:H-M.b,stroke:INK.baseline,'stroke-width':1}));
+  items.forEach((it,i)=>{
+    const y=M.t+rowH*i+(rowH-22)/2, x0=X(Math.max(0,t0)), xv=X(it.value), neg=it.value<Math.max(0,t0);
+    const p=neg
+      ?`M ${x0} ${y} L ${xv+4} ${y} Q ${xv} ${y} ${xv} ${y+4} L ${xv} ${y+18} Q ${xv} ${y+22} ${xv+4} ${y+22} L ${x0} ${y+22} Z`
+      :`M ${x0} ${y} L ${xv-4} ${y} Q ${xv} ${y} ${xv} ${y+4} L ${xv} ${y+18} Q ${xv} ${y+22} ${xv-4} ${y+22} L ${x0} ${y+22} Z`;
+    svg.appendChild(svgEl('path',{d:p,fill:it.color||SLOT[0]}));
+    const lb=svgEl('text',{x:M.l-6,y:y+15,'text-anchor':'end','font-size':11.5,fill:INK.secondary});
+    lb.textContent=it.label;svg.appendChild(lb);
+    let inside,vx,anchor;
+    if(neg){inside=(xv-6)<(M.l+44);vx=inside?xv+6:xv-6;anchor=inside?'start':'end';}
+    else{inside=(xv+6)>(W-M.r-4);vx=inside?xv-6:xv+6;anchor=inside?'end':'start';}
+    const vl=svgEl('text',{x:vx,y:y+15,'text-anchor':anchor,'font-size':11,
+      fill:inside?INK.surface:INK.secondary,style:'font-variant-numeric:tabular-nums'});
+    vl.textContent=fmt(it.value)+unit;svg.appendChild(vl);
+  });
+}
+
+/* ── 상태 배지 ── */
+const STATUS_META={good:{ic:'●',t:'정상'},warning:{ic:'▲',t:'주의'},serious:{ic:'■',t:'경계'},critical:{ic:'■',t:'위험'}};
+function badge(st,txt){const m=STATUS_META[st]||STATUS_META.good;
+  return `<span class="status ${st}"><span class="ic">${m.ic}</span>${txt||m.t}</span>`;}
+
+const FACTOR_KO={global:'① Global',semi:'② 반도체·이익',breadth:'③ Breadth',liq:'④ 유동성',euphoria:'⑤ Euphoria'};
+
+/* ── 날짜 선택(타임머신) 상태 ── */
+const DTS=DATA.series.dates;
+let SEL=null;                       // 선택 거래일 인덱스, null = 최신
+function lastValidIdx(){
+  for(let i=DTS.length-1;i>=0;i--) if(DATA.series.composite[i]!=null) return i;
+  return DTS.length-1;
+}
+function curIdx(){ return SEL==null?lastValidIdx():SEL; }
+function atOrBefore(arr,i){         // i 시점 값(없으면 직전 값으로 소급)
+  if(!arr) return null;
+  for(let j=Math.min(i,arr.length-1);j>=0;j--) if(arr[j]!=null) return arr[j];
+  return null;
+}
+const REG=[[80,'Strong Bull','90~100%','good'],[65,'Bull','75~90%','good'],
+           [50,'Neutral','50~75%','warning'],[35,'Risk-off','30~50%','serious'],
+           [-1,'Bear','현금·헤지 확대','critical']];
+function regimeOf(s){
+  if(s==null) return {label:'—',band:'—',cls:'warning'};
+  for(const [lo,label,band,cls] of REG) if(s>=lo) return {label,band,cls};
+}
+function scoreStatus(sc){
+  return sc==null?null:(sc>=60?'good':(sc>=40?'warning':'serious'));
+}
+
+/* ── 렌더 ── */
+function renderAll(){
+  refreshColors();
+  document.getElementById('genAt').textContent=DATA.generated_at;
+  document.getElementById('asof').textContent=DATA.asof;
+  document.getElementById('histNote').textContent=DATA.meta.history_note+'.';
+
+  const S=DATA.series, dts=DTS;
+  const idx=curIdx(), selDate=dts[idx], isPast=(SEL!=null&&SEL!==lastValidIdx());
+  const mark=isPast?{markDate:selDate}:{};
+
+  // 날짜 컨트롤 동기화
+  const inp=document.getElementById('selDate');
+  inp.min=dts[0]; inp.max=dts[dts.length-1]; inp.value=selDate;
+  document.getElementById('selNote').textContent=
+    isPast?`${selDate} 시점 표시 중 — 차트 세로선 위치`:'';
+
+  // 타일: 종합(히어로) + 팩터 5개 — 선택 날짜 기준
+  const score=atOrBefore(S.composite,idx);
+  const rg=regimeOf(score);
+  const phase=(DATA.phase_labels||[])[idx];
+  const kospi=atOrBefore(S.kospi,idx);
+  let tiles=`<div class="tile hero"><div class="label">Market Regime${isPast?' · '+selDate:''} ${badge(rg.cls,rg.label)}</div>
+    <div class="value">${fmt(score)}</div>
+    <div class="delta">권장 주식비중 ${rg.band}${kospi!=null?' · KOSPI '+fmt(kospi,0):''}${phase?' · '+phase:''}</div></div>`;
+  const weights=DATA.meta.weights;
+  for(const k in weights){
+    const sc=atOrBefore(S.factors[k],idx);
+    tiles+=`<div class="tile"><div class="label">${FACTOR_KO[k]}</div>
+      <div class="value">${fmt(sc)}</div><div class="delta">가중치 ${weights[k]} ${sc==null?'':badge(scoreStatus(sc))}</div></div>`;
+  }
+  document.getElementById('tiles').innerHTML=tiles;
+
+  lineChart('ch-composite',[{name:'종합',dates:dts,values:S.composite}],
+    {ymin:0,ymax:100,hlines:[{y:35,label:'Bear'},{y:50,label:'R-off'},{y:65,label:'Bull'},{y:80,label:'S.Bull'}],...mark});
+  lineChart('ch-kospi',[{name:'KOSPI',dates:dts,values:S.kospi}],{...mark});
+  hbarChart('ch-factors',Object.keys(weights).map((k,i)=>({
+    label:FACTOR_KO[k],value:atOrBefore(S.factors[k],idx),color:SLOT[i%4]})),'',[0,100]);
+  lineChart('ch-factorline',[
+    {name:'Global',dates:dts,values:S.factors.global},
+    {name:'반도체·이익',dates:dts,values:S.factors.semi},
+    {name:'Breadth',dates:dts,values:S.factors.breadth},
+    {name:'유동성',dates:dts,values:S.factors.liq},
+  ],{ymin:0,ymax:100,...mark});
+
+  // ① Global
+  const G=DATA.global;
+  lineChart('ch-gdist',[{name:'S&P500',dates:dts,values:G.spx_d200},
+                        {name:'SOX',dates:dts,values:G.sox_d200}],{unit:'%',...mark});
+  lineChart('ch-vix',[{name:'VIX',dates:dts,values:G.vix}],{h:180,...mark});
+  lineChart('ch-dxy',[{name:'DXY',dates:dts,values:G.dxy}],{h:180,...mark});
+
+  // ② 반도체·이익
+  const SM=DATA.semi, ti=SM.target_idx||{};
+  lineChart('ch-target',Object.keys(ti).map(k=>({name:k,dates:ti[k].dates,values:ti[k].values})),{...mark});
+  if(SM.rev_breadth){
+    lineChart('ch-revb',[{name:'상향 비율',dates:SM.rev_breadth.dates,values:SM.rev_breadth.values}],
+      {labels:SM.rev_breadth.dates,unit:'%',ymin:0,ymax:100,hlines:[{y:50,label:'중립'}],h:190,...mark});
+  } else {
+    document.getElementById('ch-revb').innerHTML='<div class="empty">퀀트데이터 스냅샷 2개 이상 필요</div>';
+  }
+  lineChart('ch-semid',[{name:'삼성전자',dates:dts,values:SM.ss_d200},
+                        {name:'SK하이닉스',dates:dts,values:SM.hx_d200}],{unit:'%',...mark});
+
+  // ③ Breadth
+  const B=DATA.breadth;
+  lineChart('ch-ma',[{name:'MA20 위',dates:dts,values:B.ma20},
+                     {name:'MA50 위',dates:dts,values:B.ma50},
+                     {name:'MA200 위',dates:dts,values:B.ma200}],{unit:'%',ymin:0,ymax:100,hlines:[{y:50}],...mark});
+  lineChart('ch-mco',[{name:'McClellan',dates:dts,values:B.mco}],{hlines:[{y:0}],h:190,...mark});
+  lineChart('ch-nhnl',[{name:'신고가',dates:dts,values:B.nh},
+                       {name:'신저가',dates:dts,values:B.nl}],{h:190,...mark});
+
+  // ④ 유동성
+  const L=DATA.liq;
+  lineChart('ch-lev',[{name:'신용융자',dates:dts,values:L.credit},
+                      {name:'예탁금',dates:dts,values:L.deposit}],{unit:'조',...mark});
+  lineChart('ch-liqr',[{name:'반대매매',dates:dts,values:L.liq_ratio},
+                       {name:'신용/예탁금',dates:dts,values:L.cd_ratio}],{unit:'%',...mark});
+  lineChart('ch-hy',[{name:'HY OAS',dates:dts,values:L.hyoas}],{unit:'bp',h:180,...mark});
+
+  // ⑤ Euphoria
+  const E=DATA.euphoria;
+  lineChart('ch-heat',[{name:'과열 게이지',dates:dts,values:E.heat}],
+    {ymin:0,ymax:100,hlines:[{y:70,label:'과열'}],h:190,...mark});
+  lineChart('ch-penny',[{name:'저가주 비중',dates:dts,values:E.penny_share},
+                        {name:'회전율',dates:dts,values:E.turnover}],{unit:'%',h:190,...mark});
+  lineChart('ch-capup',[{name:'상한가',dates:dts,values:E.cap_up}],{h:180,...mark});
+  lineChart('ch-crmom',[{name:'신용 20일 증가율',dates:dts,values:E.credit_mom}],{unit:'%',hlines:[{y:0}],h:180,...mark});
+
+  // 체크리스트 — 선택 날짜 기준으로 값·점수·상태 계산
+  const RS=DATA.raw_series||{}, SS=DATA.sub_series||{};
+  const rows=(DATA.checklist||[]).map(a=>{
+    const sc=atOrBefore(SS[a.key],idx);
+    let val;
+    if(a.parts==='PHASE'){
+      val=phase||'—';
+    }else{
+      val=a.parts.map(([lb,rk,nd,suf])=>{
+        const v=atOrBefore(RS[rk],idx);
+        return (lb?lb+' ':'')+(v==null?'—':fmt(v,nd)+suf);
+      }).join(' · ');
+    }
+    return `<tr><td>${a.pillar}</td><td>${a.name}</td>
+     <td>${val}</td><td>${sc==null?'—':fmt(sc,0)}</td>
+     <td style="text-align:left">${sc==null?'<span class="status">수집 대기</span>':badge(scoreStatus(sc))}</td></tr>`;
+  }).join('');
+  document.getElementById('alertTable').innerHTML=
+    `<table><tr><th>팩터</th><th>지표</th><th>${isPast?selDate+' 값':'현재값'}</th><th>점수</th><th style="text-align:left">상태</th></tr>${rows}</table>`;
+}
+
+/* ── 날짜 컨트롤 ── */
+function setSel(i){
+  i=Math.max(0,Math.min(DTS.length-1,i));
+  SEL=(i===lastValidIdx())?null:i;
+  renderAll();
+}
+document.getElementById('selDate').addEventListener('change',ev=>{
+  const v=ev.target.value;
+  if(!v) return;
+  let j=0;
+  for(let i=0;i<DTS.length;i++){ if(DTS[i]<=v) j=i; else break; }
+  setSel(j);
+});
+document.getElementById('btnPrev').addEventListener('click',()=>setSel(curIdx()-1));
+document.getElementById('btnNext').addEventListener('click',()=>setSel(curIdx()+1));
+document.getElementById('btnLatest').addEventListener('click',()=>{SEL=null;renderAll();});
+
+renderAll();
+let rsz;window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(renderAll,200);});
+if(window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',renderAll);
+</script>
+</body>
+</html>

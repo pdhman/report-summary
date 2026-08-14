@@ -7,3 +7,5 @@ __pycache__/
 
 # 루트 .gitignore 의 전역 *.json 규칙 예외 — 수동 입력 데이터는 repo에 포함
 !manual_data.json
+korea_cycle.html
+korea_cycle_log.txt
