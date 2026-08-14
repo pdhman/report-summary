@@ -271,11 +271,12 @@ _FEED_JS = """
     document.getElementById('xfAcc').insertAdjacentHTML('beforeend',
       '<option value="' + esc(a.handle) + '">' + (a.grade === 2 ? '\\u2605\\u2605 ' : '') + esc(a.name) + '</option>');
   });
-  // 상단 날짜 바와 연동: 날짜 칩 클릭 시 피드도 해당 날짜로 필터
-  document.addEventListener('click', function (e) {
-    var chip = e.target.closest && e.target.closest('.datebar .chip');
-    if (!chip) return;
-    var y = chip.dataset.ymd;
+  // 상단 날짜 선택과 연동: 날짜를 바꾸면 피드도 해당 날짜로 필터.
+  // 페이지 로드 시 최초 표시(hubdate 1회)는 사용자의 선택이 아니므로 건너뛴다.
+  var _hubSeen = false;
+  document.addEventListener('hubdate', function (e) {
+    if (!_hubSeen) { _hubSeen = true; return; }
+    var y = e.detail && e.detail.ymd;
     if (!y) return;
     state.date = y.slice(0, 4) + '-' + y.slice(4, 6) + '-' + y.slice(6, 8);
     var c = document.getElementById('xfDateClear');

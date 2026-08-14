@@ -7,11 +7,13 @@
     <div class="date" id="hd-date"></div>
   </header>
 
-  <!-- ============ 날짜 바 (최근 280거래일) ============ -->
-  <div class="datewrap" id="dw">
-    <button class="dnav" data-dir="-1" aria-label="이전" onclick="_scrollDates(this)">&#8249;</button>
-    <div class="datebar" id="db"></div>
-    <button class="dnav" data-dir="1" aria-label="다음" onclick="_scrollDates(this)">&#8250;</button>
+  <!-- ============ 날짜 선택 (과거 시점 보기) ============ -->
+  <div class="datepick">
+    <span class="dp-label">과거 시점 보기</span>
+    <input type="date" id="dp-date">
+    <button class="dp-btn" id="dp-prev" aria-label="이전 거래일">&#9664;</button>
+    <button class="dp-btn" id="dp-next" aria-label="다음 거래일">&#9654;</button>
+    <button class="dp-btn dp-latest" id="dp-latest">최신으로</button>
   </div>
 
   <!-- ============ 종합 스코어 ============ -->
@@ -165,25 +167,17 @@
   .chip:hover { border-color:var(--accent); color:var(--accent); }
   .chip.active { background:var(--accent); border-color:var(--accent); color:#fff; }
 
-  /* ---- 날짜 바 ---- */
-  .datewrap { display:flex; align-items:center; gap:6px; margin:0 0 14px; }
-  .datewrap.noscroll .dnav { display:none; }
-  .dnav { flex:0 0 auto; width:30px; height:30px; border-radius:50%; border:1px solid var(--line);
-    background:var(--panel); color:var(--muted); font-size:17px; line-height:1; cursor:pointer;
-    display:flex; align-items:center; justify-content:center; padding:0 0 2px; font-family:inherit;
-    transition:color .15s,border-color .15s,opacity .15s; }
-  .dnav:hover { color:var(--accent); border-color:var(--accent); }
-  .dnav.edge { opacity:.25; pointer-events:none; }
-  .datebar { flex:1 1 auto; display:flex; gap:8px; overflow-x:auto; padding:2px;
-    scrollbar-width:none; -webkit-overflow-scrolling:touch; }
-  .datebar::-webkit-scrollbar { display:none; }
-  .dchip { flex:0 0 auto; border:1px solid var(--line); background:var(--panel); color:var(--muted);
-    border-radius:20px; padding:7px 13px; font-size:13px; font-weight:700; font-variant-numeric:tabular-nums;
-    white-space:nowrap; cursor:pointer; font-family:inherit; transition:color .15s,background .15s,border-color .15s; }
-  .dchip .cy { opacity:.55; font-size:11px; font-weight:600; }
-  .dchip:hover { border-color:var(--accent); color:var(--accent); }
-  .dchip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-  .dchip.active .cy { opacity:.8; }
+  /* ---- 날짜 선택 (과거 시점 보기) ---- */
+  .datepick { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
+  .dp-label { color:var(--muted); font-size:13px; font-weight:600; }
+  #dp-date { border:1px solid var(--line); background:var(--panel); color:var(--ink);
+    border-radius:10px; padding:7px 10px; font:inherit; font-size:13.5px;
+    font-variant-numeric:tabular-nums; color-scheme:inherit; }
+  .dp-btn { border:1px solid var(--line); background:var(--panel); color:var(--muted);
+    border-radius:10px; min-width:36px; height:34px; padding:0 12px; font-family:inherit;
+    font-size:13px; font-weight:600; cursor:pointer; transition:color .15s,border-color .15s,opacity .15s; }
+  .dp-btn:hover:not(:disabled) { color:var(--accent); border-color:var(--accent); }
+  .dp-btn:disabled { opacity:.3; cursor:default; }
   #day-sum { font-size:12.5px; margin:2px 2px 10px; }
 
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
@@ -661,37 +655,32 @@ function updateDaySum(){
 }
 function selectDate(i){
   state.d = i; state.date = D.dates[i];
-  el('db').querySelectorAll('.dchip').forEach(function(c){ c.classList.toggle('active', +c.dataset.i === i); });
-  var act = el('db').querySelector('.dchip.active');
-  if(act) act.scrollIntoView({block:'nearest', inline:'center'});
+  el('dp-date').value = state.date;
+  el('dp-prev').disabled = (i === 0);
+  el('dp-next').disabled = (i === D.dates.length - 1);
+  el('dp-latest').disabled = (i === D.dates.length - 1);
   renderHeader(); renderGauges(); updateDaySum(); renderTiles(); renderAll();
 }
-function _scrollDates(btn){
-  var bar = el('db');
-  bar.scrollBy({left:(+btn.dataset.dir) * Math.round(bar.clientWidth * 0.6), behavior:'smooth'});
-}
-function updateDnav(){
-  var w = el('dw'), bar = el('db'), btns = w.querySelectorAll('.dnav');
-  var max = bar.scrollWidth - bar.clientWidth;
-  w.classList.toggle('noscroll', max <= 2);
-  btns[0].classList.toggle('edge', bar.scrollLeft <= 2);
-  btns[1].classList.toggle('edge', bar.scrollLeft >= max - 2);
-}
 function buildDatebar(){
-  var db = el('db'), html = '';
-  for(var i = D.dates.length - 1; i >= 0; i--){   // 최신이 왼쪽
-    var d = D.dates[i];
-    html += '<button class="dchip' + (i === state.d ? ' active' : '') + '" data-i="' + i + '">' +
-            '<span class="cy">' + d.slice(2,4) + '.</span>' + d.slice(5,7) + '·' + d.slice(8) + '</button>';
-  }
-  db.innerHTML = html;
-  db.addEventListener('click', function(e){
-    var b = e.target.closest('.dchip'); if(!b) return;
-    selectDate(+b.dataset.i);
+  var inp = el('dp-date');
+  inp.min = D.dates[0];
+  inp.max = D.dates[D.dates.length - 1];
+  inp.value = state.date;
+  el('dp-prev').disabled = (state.d === 0);
+  el('dp-next').disabled = (state.d === D.dates.length - 1);
+  el('dp-latest').disabled = (state.d === D.dates.length - 1);
+  inp.addEventListener('change', function(){
+    var v = inp.value; if(!v) return;
+    var i = D.dates.indexOf(v);
+    if(i === -1){   // 휴장일이면 그 이전 가장 가까운 거래일로
+      for(var k = D.dates.length - 1; k >= 0; k--){ if(D.dates[k] <= v){ i = k; break; } }
+      if(i === -1) i = 0;
+    }
+    selectDate(i);
   });
-  db.addEventListener('scroll', updateDnav, {passive:true});
-  window.addEventListener('resize', updateDnav);
-  updateDnav();
+  el('dp-prev').addEventListener('click', function(){ if(state.d > 0) selectDate(state.d - 1); });
+  el('dp-next').addEventListener('click', function(){ if(state.d < D.dates.length - 1) selectDate(state.d + 1); });
+  el('dp-latest').addEventListener('click', function(){ selectDate(D.dates.length - 1); });
 }
 
 if (D) {

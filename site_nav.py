@@ -1,3 +1,19 @@
+DATEBAR_CSS = """<style>
+  .datepick { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .dp-label { color:var(--muted); font-size:13px; font-weight:600; }
+  .dp-date { border:1px solid var(--line); background:var(--panel); color:var(--ink);
+    border-radius:10px; padding:7px 10px; font:inherit; font-size:13.5px;
+    font-variant-numeric:tabular-nums; color-scheme:inherit; }
+  .dp-btn { border:1px solid var(--line); background:var(--panel); color:var(--muted);
+    border-radius:10px; min-width:36px; height:34px; padding:0 12px; font-family:inherit;
+    font-size:13px; font-weight:600; cursor:pointer;
+    transition:color .15s,border-color .15s,opacity .15s; }
+  .dp-btn:hover:not(:disabled) { color:var(--accent); border-color:var(--accent); }
+  .dp-btn:disabled { opacity:.3; cursor:default; }
+  #view > .day { animation:fadein .18s ease; }
+  @keyframes fadein { from { opacity:0; } to { opacity:1; } }
+</style>"""
+
 # -*- coding: utf-8 -*-
 """
 모든 페이지 공용 요소.
@@ -16,6 +32,7 @@
 import os
 import re
 import glob
+import json
 
 _ITEMS = [
     ("home",     "🏠", "홈",      "index.html"),      # 오늘의 요약 대시보드
@@ -121,17 +138,23 @@ NAV_CSS = """<style>
 # ---- 허브(날짜 바 + 본문 전환) ----------------------------------------------
 
 def _datebar(dates, active):
-    chips = []
-    for ymd in dates:
-        cls = "chip active" if ymd == active else "chip"
-        chips.append(
-            f'<a class="{cls}" data-ymd="{ymd}" href="#{ymd}" onclick="return _showDay(this)">'
-            f'<span class="cy">{ymd[2:4]}.</span>{ymd[4:6]}·{ymd[6:]}</a>'
-        )
-    return ('<div class="datewrap">'
-            '<button class="dnav" data-dir="-1" aria-label="이전 날짜" onclick="_scrollDates(this)">&#8249;</button>'
-            f'<div class="datebar">{"".join(chips)}</div>'
-            '<button class="dnav" data-dir="1" aria-label="다음 날짜" onclick="_scrollDates(this)">&#8250;</button>'
+    """날짜 선택 컨트롤: 달력 입력 + 이전/다음 + 최신으로.
+
+    예전에는 날짜 칩을 가로 스크롤로 늘어놓았는데, 이력이 쌓일수록 과거로
+    가기 힘들다(2026-08 사용자 요청으로 한국 사이클 모델의 방식으로 통일).
+    dates 는 YYYYMMDD 내림차순(최신 먼저). 본문 패널(#day-YYYYMMDD) 전환은
+    HUB_JS 가 담당하고, 날짜가 바뀔 때 document 에 'hubdate' 이벤트를 쏜다.
+    """
+    def iso(y):
+        return f"{y[:4]}-{y[4:6]}-{y[6:]}"
+    return ('<div class="datepick">'
+            '<span class="dp-label">과거 시점 보기</span>'
+            f'<input type="date" class="dp-date" value="{iso(active)}" '
+            f'min="{iso(dates[-1])}" max="{iso(dates[0])}">'
+            '<button class="dp-btn dp-prev" aria-label="이전 날짜">&#9664;</button>'
+            '<button class="dp-btn dp-next" aria-label="다음 날짜">&#9654;</button>'
+            '<button class="dp-btn dp-latest">최신으로</button>'
+            f'<script>window.__HUBDATES = {json.dumps(dates)};</script>'
             '</div>')
 
 
@@ -160,38 +183,47 @@ DATEBAR_CSS = """<style>
 </style>"""
 
 HUB_JS = """<script>
-  function _showDay(el){
-    document.querySelectorAll('.datebar .chip').forEach(function(c){ c.classList.remove('active'); });
-    el.classList.add('active');
-    var ymd = el.dataset.ymd;
-    document.querySelectorAll('#view > .day').forEach(function(d){
-      d.style.display = (d.id === 'day-' + ymd) ? '' : 'none';
+  // 날짜 선택(달력 + 이전/다음 + 최신으로). __HUBDATES 는 YYYYMMDD 내림차순.
+  (function(){
+    var DS = window.__HUBDATES || [];
+    if(!DS.length) return;
+    var cur = 0;   // DS 인덱스(0 = 최신)
+    function iso(y){ return y.slice(0,4) + '-' + y.slice(4,6) + '-' + y.slice(6); }
+    function show(i){
+      cur = Math.max(0, Math.min(DS.length - 1, i));
+      var ymd = DS[cur];
+      document.querySelectorAll('#view > .day').forEach(function(d){
+        d.style.display = (d.id === 'day-' + ymd) ? '' : 'none';
+      });
+      var inp = document.querySelector('.dp-date');
+      if(inp) inp.value = iso(ymd);
+      var q = function(s){ return document.querySelector(s); };
+      if(q('.dp-prev')) q('.dp-prev').disabled = (cur === DS.length - 1);
+      if(q('.dp-next')) q('.dp-next').disabled = (cur === 0);
+      if(q('.dp-latest')) q('.dp-latest').disabled = (cur === 0);
+      history.replaceState(null, '', '#' + ymd);
+      document.dispatchEvent(new CustomEvent('hubdate', { detail:{ ymd: ymd } }));
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+      var inp = document.querySelector('.dp-date');
+      if(inp) inp.addEventListener('change', function(){
+        var v = inp.value; if(!v) return;
+        var ymd = v.replace(/-/g, '');
+        var i = DS.indexOf(ymd);
+        if(i === -1){   // 발행일이 아니면 그 이전 가장 가까운 날짜로
+          for(var k = 0; k < DS.length; k++){ if(DS[k] <= ymd){ i = k; break; } }
+          if(i === -1) i = DS.length - 1;
+        }
+        show(i);
+      });
+      var on = function(sel, fn){ var b = document.querySelector(sel); if(b) b.addEventListener('click', fn); };
+      on('.dp-prev', function(){ show(cur + 1); });
+      on('.dp-next', function(){ show(cur - 1); });
+      on('.dp-latest', function(){ show(0); });
+      var h = location.hash.slice(1);
+      if(h && DS.indexOf(h) !== -1){ show(DS.indexOf(h)); } else { show(0); }
     });
-    history.replaceState(null, '', '#' + ymd);
-    el.scrollIntoView({ block:'nearest', inline:'center' });
-    return false;
-  }
-  function _scrollDates(btn){
-    var bar = btn.parentElement.querySelector('.datebar');
-    if(bar){ bar.scrollBy({ left:(+btn.dataset.dir) * Math.round(bar.clientWidth * 0.6), behavior:'smooth' }); }
-  }
-  function _updateDnav(){
-    document.querySelectorAll('.datewrap').forEach(function(w){
-      var bar = w.querySelector('.datebar'), btns = w.querySelectorAll('.dnav');
-      if(!bar || btns.length < 2) return;
-      var max = bar.scrollWidth - bar.clientWidth;
-      w.classList.toggle('noscroll', max <= 2);
-      btns[0].classList.toggle('edge', bar.scrollLeft <= 2);
-      btns[1].classList.toggle('edge', bar.scrollLeft >= max - 2);
-    });
-  }
-  document.addEventListener('DOMContentLoaded', function(){
-    var h = location.hash.slice(1);
-    if(h){ var el = document.querySelector('.datebar .chip[data-ymd="' + h + '"]'); if(el){ _showDay(el); } }
-    document.querySelectorAll('.datebar').forEach(function(b){ b.addEventListener('scroll', _updateDnav, { passive:true }); });
-    window.addEventListener('resize', _updateDnav);
-    _updateDnav();
-  });
+  })();
 </script>"""
 
 
