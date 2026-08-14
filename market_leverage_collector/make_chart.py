@@ -70,11 +70,14 @@ def line_chart(cid, dates, series, unit, decimals=1):
         ticks.append(f'<line x1="{ML}" y1="{Y(v):.1f}" x2="{ML + pw}" y2="{Y(v):.1f}" class="grid"/>'
                      f'<text x="{ML - 10}" y="{Y(v) + 4:.1f}" class="ax ax-y">{v:,.{decimals}f}</text>')
 
-    # x 눈금 5개(날짜)
+    # x 눈금 5개(날짜). 1년 넘는 구간은 연도 없인 어느 해인지 알 수 없어
+    # 'YY-MM' 로, 1년 이내는 기존처럼 'MM-DD' 로 표기한다.
     xt = []
     step = max((len(dates) - 1) // 4, 1)
+    multi_year = dates and dates[0][:4] != dates[-1][:4]
     for i in range(0, len(dates), step):
-        xt.append(f'<text x="{X(i):.1f}" y="{MT + ph + 22}" class="ax ax-x">{dates[i][5:]}</text>')
+        lab = f"{dates[i][2:4]}-{dates[i][5:7]}" if multi_year else dates[i][5:]
+        xt.append(f'<text x="{X(i):.1f}" y="{MT + ph + 22}" class="ax ax-x">{lab}</text>')
 
     paths, dots, labels = [], [], []
     for name, ys, cl, cd in series:

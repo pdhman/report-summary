@@ -455,6 +455,17 @@ def main() -> None:
             df = collect_rendered_table(url)
 
             csv_path = DATA_DIR / f"{name}.csv"
+            # 화면은 최근 조회창(약 3개월)만 보여준다. 덮어쓰면 backfill.py 로
+            # 채운 과거 이력이 지워지므로, 기존 CSV 와 날짜 기준으로 병합한다.
+            # 오늘 수집분이 최신이니 겹치는 날짜는 새 값을 쓴다.
+            if csv_path.exists() and "구 분" in df.columns:
+                old = pd.read_csv(csv_path)
+                df = pd.concat([df, old], ignore_index=True)
+                df = df.drop_duplicates(subset=["구 분"], keep="first")
+                order = pd.to_datetime(df["구 분"], errors="coerce")
+                df = (df.assign(_d=order).dropna(subset=["_d"])
+                        .sort_values("_d", ascending=False)
+                        .drop(columns="_d").reset_index(drop=True))
             df.to_csv(
                 csv_path,
                 index=False,
