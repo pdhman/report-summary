@@ -25,6 +25,7 @@
         <div class="score-sub" id="g-conc"></div>
         <div class="score-sub" id="g-vol"></div>
         <div class="score-sub" id="g-lev"></div>
+        <div class="score-sub" id="g-fg"></div>
       </div>
     </div>
     <div class="fn" id="day-sum"></div>
@@ -35,7 +36,8 @@
     </div>
     <p class="fn">각 스코어는 수집된 전체 기간(현재 <span id="fn-days"></span>거래일) 대비 백분위.
       추세(폭)=이평선 위 비율·ADR·신고가율·McClellan / 투기 열기=저가주 비중·상한가·회전율(개인 투기) /
-      쏠림=TOP10 거래대금 집중도(종합 체온 미반영) / 변동성=VKOSPI·실현변동성 / 레버리지=신용융자 증가율·예탁금 대비 신용·반대매매비중.
+      쏠림=TOP10 거래대금 집중도(종합 체온 미반영) / 변동성=VKOSPI·실현변동성 / 레버리지=신용융자 증가율·예탁금 대비 신용·반대매매비중 /
+      공포탐욕=CNN 방식 한국판 6요소(지수/125일MA·신고-신저 폭·상승 거래대금 비중·변동성 역·원달러 역·신용잔고 증가) 평균, 종합 체온과 별도.
       <br>단, <b>쏠림만 백분위가 아니라 TOP10 비중 원값(%)을 그대로 표시</b>하고 고정 기준으로 판정한다
       (30% 미만 분산 · 30~45 보통 · 45~55 쏠림 · 55% 이상 극단 쏠림).
       수집 기간이 짧아 백분위가 최근 국면에서 포화되기 때문이다.</p>
@@ -421,7 +423,8 @@ var SCORE_DEFS = {
              raw:function(i){ return D.spec.top10_share[i]; },
              bands:[30, 45, 55] },
   vol:     { name:'변동성', labels:['매우 낮음','낮음','보통','높음','매우 높음'] },
-  lev:     { name:'레버리지', labels:['매우 가벼움','가벼움','보통','무거움','과중'] }};
+  lev:     { name:'레버리지', labels:['매우 가벼움','가벼움','보통','무거움','과중'] },
+  fg:      { name:'공포탐욕', labels:['극단 공포','공포','중립','탐욕','극단 탐욕'] }};
 function zone(v){ for(var i=0;i<ZONES.length;i++){ if(v < ZONES[i].max) return i; } return 4; }
 // 경계 n개 → 구간 n+1개. v<bands[0]:0 … 마지막 경계 이상:bands.length
 function bandZone(v, bands){ for(var i=0;i<bands.length;i++){ if(v < bands[i]) return i; } return bands.length; }
@@ -564,7 +567,8 @@ function renderScoreChart(){
     { key:'spec', color:'var(--up)', width:1.5, on:true },
     { key:'conc', color:'var(--violet)', width:1.5, on:false },
     { key:'vol', color:'var(--amber)', width:1.5, on:false },
-    { key:'lev', color:'var(--dn)', width:1.5, on:false }];
+    { key:'lev', color:'var(--dn)', width:1.5, on:false },
+    { key:'fg', color:'var(--accent)', width:1.8, on:true }];
   if(!renderScoreChart.state) renderScoreChart.state = defs.map(function(d){ return d.on; });
   var st = renderScoreChart.state;
   var lg = el('lg-score');
@@ -640,6 +644,7 @@ function renderHeader(){
 function renderGauges(){
   gauge('g-overall', 'overall'); gauge('g-trend', 'trend'); gauge('g-spec', 'spec');
   gauge('g-conc', 'conc'); gauge('g-vol', 'vol'); gauge('g-lev', 'lev');
+  gauge('g-fg', 'fg');
 }
 function updateDaySum(){
   var i = state.d, A = D.markets.all, parts = [];
