@@ -56,13 +56,37 @@ git add ("briefs/{0}.md" -f $date)
 git diff --staged --quiet
 if ($LASTEXITCODE -eq 0) {
     Write-Host "변경 내용이 없습니다 (같은 날짜에 동일한 글)." -ForegroundColor Yellow
+    # 이전 실행이 커밋만 남기고 push 에 실패했을 수 있다 - 밀린 커밋이 있으면 마저 민다
+    git fetch origin main 2>&1 | Out-Null
+    $ahead = (git rev-list --count "origin/main..HEAD" 2>$null)
+    if ($ahead -and [int]$ahead -gt 0) {
+        Write-Host ("푸시되지 않은 커밋 {0}개 발견 - 지금 게시합니다." -f $ahead) -ForegroundColor Yellow
+        git pull --rebase --autostash origin main | Out-Null
+        git push origin main 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) { Write-Host "게시 완료!" -ForegroundColor Green }
+        else { Write-Host "푸시 실패 - 클로드에게 알려주세요." -ForegroundColor Red }
+    }
 } else {
     git commit -m ("시황 브리핑 {0} 게시" -f $date) | Out-Null
-    git pull --rebase origin main | Out-Null
-    git push origin main
+    # --autostash: 다른 자동화가 남긴 미커밋 파일이 있어도 pull 이 막히지 않게
+    # (2026-08-18 실사고: unstaged 파일로 pull 실패 -> push 거절인데 '게시 완료' 출력)
+    # 봇 커밋과의 push 경쟁은 pull 후 최대 3회 재시도로 해소한다.
+    $pushed = $false
+    for ($try = 1; $try -le 3; $try++) {
+        git pull --rebase --autostash origin main | Out-Null
+        git push origin main 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) { $pushed = $true; break }
+        Write-Host ("push 재시도 {0}/3..." -f $try) -ForegroundColor Yellow
+        Start-Sleep -Seconds 5
+    }
     Write-Host ""
-    Write-Host "게시 완료! 1~2분 뒤 아래 주소에서 확인:" -ForegroundColor Green
-    Write-Host ("  https://pdhman.github.io/report-summary/brief_{0}.html" -f $ymd) -ForegroundColor Cyan
-    Write-Host "  (목록: https://pdhman.github.io/report-summary/ 상단 '시황' 배너)"
+    if ($pushed) {
+        Write-Host "게시 완료! 1~2분 뒤 아래 주소에서 확인:" -ForegroundColor Green
+        Write-Host ("  https://pdhman.github.io/report-summary/brief_{0}.html" -f $ymd) -ForegroundColor Cyan
+        Write-Host "  (목록: https://pdhman.github.io/report-summary/ 상단 '시황' 배너)"
+    } else {
+        Write-Host "푸시 실패 - 게시되지 않았습니다. 커밋은 로컬에 남아 있으니" -ForegroundColor Red
+        Write-Host "잠시 후 이 스크립트를 다시 실행하거나 클로드에게 알려주세요." -ForegroundColor Red
+    }
 }
 Read-Host "엔터를 누르면 종료"
