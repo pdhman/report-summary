@@ -83,7 +83,15 @@ def parse_report(date):
     body = section(text, "주제별 정리") or ""
     topics = re.findall(r"^###\s+(.+?)\s*$", body, re.M)
 
-    return count_line, topics, section(text, "코멘트")
+    comment = section(text, "코멘트")
+    if comment is None:
+        # 폴백: '## 코멘트' 헤딩 대신 '**코멘트**: ...' 인라인 문단으로 쓰인 경우
+        m = re.search(r"^\*\*코멘트\*\*\s*[:：]\s*(.*?)(?=^##\s|^---\s*$|\Z)", text, re.M | re.S)
+        comment = m.group(1).strip() if m else None
+    if comment is None:
+        print("[경고] 리포트에서 코멘트 섹션을 찾지 못했습니다 — 코멘트 없이 발송합니다.", file=sys.stderr)
+
+    return count_line, topics, comment
 
 
 def paragraphs(md):
