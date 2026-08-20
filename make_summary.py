@@ -420,6 +420,13 @@ def build():
             lab = labels[min(4, int(c["overall"] // 20))]
             body += (f'<div class="krow"><span class="k-name">종합 체온</span>'
                      f'<span class="k-val">{c["overall"]:.0f} · {lab}</span></div>')
+        if c.get("fg") is not None:
+            # CNN 원판 구간: 0~25 극단공포 / 25~45 공포 / 45~55 중립 / 55~75 탐욕 / 75~ 극단탐욕
+            fg = c["fg"]
+            fg_lab = ("극단 공포" if fg < 25 else "공포" if fg < 45 else
+                      "중립" if fg < 55 else "탐욕" if fg < 75 else "극단 탐욕")
+            body += (f'<div class="krow"><span class="k-name">공포탐욕</span>'
+                     f'<span class="k-val">{fg:.0f} · {fg_lab}</span></div>')
         if c.get("ma200") is not None:
             body += (f'<div class="krow"><span class="k-name">200일선 위</span>'
                      f'<span class="k-val">{c["ma200"]:.1f}%</span></div>')
