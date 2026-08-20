@@ -29,6 +29,7 @@
       </div>
     </div>
     <div class="fn" id="day-sum"></div>
+    <div class="fn keyfigs" id="key-figs"></div>
     <div class="chart-block">
       <div class="ct">스코어 추이 <span class="cd">범례 클릭으로 표시/숨김 · 전 기간 백분위(0~100)</span></div>
       <div class="legend" id="lg-score"></div>
@@ -178,7 +179,11 @@
     font-size:13px; font-weight:600; cursor:pointer; transition:color .15s,border-color .15s,opacity .15s; }
   .dp-btn:hover:not(:disabled) { color:var(--accent); border-color:var(--accent); }
   .dp-btn:disabled { opacity:.3; cursor:default; }
-  #day-sum { font-size:12.5px; margin:2px 2px 10px; }
+  #day-sum { font-size:12.5px; margin:2px 2px 4px; }
+  .keyfigs { font-size:12px; line-height:1.9; margin:0 2px 10px; color:var(--muted); }
+  .keyfigs b { color:var(--ink); font-variant-numeric:tabular-nums; }
+  .keyfigs .kf-raw { font-size:11px; opacity:.8; }
+  .keyfigs .kf-sep { margin:0 7px; opacity:.45; }
 
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
   .grid2 .wide { grid-column:1 / -1; }
@@ -656,6 +661,42 @@ function updateDaySum(){
   if(D.vkospi[i] != null) parts.push('VKOSPI ' + fmt(D.vkospi[i],2));
   el('day-sum').innerHTML = '<b>' + state.date + '</b>' + (parts.length ? ' · ' + parts.join(' · ') : '');
 }
+/* 핵심 수치 행: 공포탐욕 구성요소 + 매크로(NFCI·美10Y·VIX·환율).
+   요소별 시계열은 저장하지 않으므로 항상 "최신" 기준 — 날짜 선택과 무관하게 1회 렌더. */
+function renderKeyFigs(){
+  var box = el('key-figs'); if(!box) return;
+  var rows = [];
+  var fd = (D.scores || {}).fg_detail;
+  if(fd && fd.length){
+    var items = fd.map(function(f){
+      // '+' 부호는 변화율형(u 에 vs·/ 포함)에만 — 비중 레벨값(상승대금 등)엔 붙이지 않는다
+      var signed = f.u && (f.u.indexOf('vs') !== -1 || f.u.indexOf('/') !== -1);
+      var raw = (f.r == null) ? '' :
+        ' <span class="kf-raw">(' + (signed && f.r > 0 ? '+' : '') + f.r + (f.u || '') + ')</span>';
+      return f.n + ' <b>' + f.p + '</b>' + raw;
+    });
+    rows.push('공포탐욕 <b>' + fmt(D.scores.fg, 0) + '</b> = ' +
+              items.join('<span class="kf-sep">|</span>') +
+              ' <span class="kf-raw">· 백분위 0=공포 100=탐욕, 괄호는 원시값</span>');
+  }
+  var m = D.macro || {};
+  var mp = [];
+  function chg(o, unit, dp){
+    if(o.chg == null) return '';
+    var v = dp != null ? o.chg.toFixed(dp) : o.chg;
+    return ' <span class="kf-raw">(' + (o.chg > 0 ? '+' : '') + v + (unit || '') + ')</span>';
+  }
+  if(m.nfci)   mp.push('NFCI <b>' + m.nfci.v.toFixed(2) + '</b>' + chg(m.nfci, '', 2) +
+                       ' <span class="kf-raw">' + m.nfci.date + ' 주간</span>');
+  if(m.us10y)  mp.push('미국채10Y <b>' + m.us10y.v.toFixed(2) + '%</b>' + chg(m.us10y, '%p', 2));
+  if(m.vix)    mp.push('VIX <b>' + m.vix.v.toFixed(1) + '</b>' + chg(m.vix, '', 1));
+  if(m.usdkrw) mp.push('원달러 <b>' + fmt(m.usdkrw.v, 1) + '</b>' + chg(m.usdkrw, '원', 1));
+  if(mp.length)
+    rows.push('매크로: ' + mp.join('<span class="kf-sep">·</span>') +
+              ' <span class="kf-raw">· 미국 지표는 현지 전일 기준</span>');
+  box.innerHTML = rows.join('<br>');
+  box.style.display = rows.length ? '' : 'none';
+}
 function selectDate(i){
   state.d = i; state.date = D.dates[i];
   el('dp-date').value = state.date;
@@ -692,7 +733,7 @@ if (D) {
   el('ft-note').textContent = '지표 정의: ' + D.meta.notes +
     ' A/D·신고저·이평 비율은 스팩 제외 전 상장종목 기준. VKOSPI 는 인베스팅닷컴 수집값.';
   buildDatebar();
-  renderHeader(); renderGauges(); updateDaySum();
+  renderHeader(); renderGauges(); updateDaySum(); renderKeyFigs();
   renderTiles();
   renderAll();
   el('tab-market').addEventListener('click', function(e){
