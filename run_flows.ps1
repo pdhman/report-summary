@@ -77,8 +77,17 @@ try {
                 exit 1
             }
         }
-        git push origin main 2>&1 | Add-Content -Path $log -Encoding UTF8
-        if ($LASTEXITCODE -ne 0) { Write-Log 'ERROR: git push failed'; exit 1 }
+        # pull 과 push 사이에 다른 자동화가 먼저 푸시하면 리젝된다(2026-08-21
+        # 실사고). 리젝 시 다시 pull --rebase 후 재시도.
+        $pushed = $false
+        for ($p = 0; $p -lt 3; $p++) {
+            git push origin main 2>&1 | Add-Content -Path $log -Encoding UTF8
+            if ($LASTEXITCODE -eq 0) { $pushed = $true; break }
+            Write-Log ("push rejected, retry {0}/3" -f ($p + 1))
+            Start-Sleep -Seconds 5
+            git pull --rebase -X theirs origin main 2>&1 | Add-Content -Path $log -Encoding UTF8
+        }
+        if (-not $pushed) { Write-Log 'ERROR: git push failed after retries'; exit 1 }
         Write-Log 'OK: pushed flow data'
         & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $proj 'trigger_deploy.ps1')
         Write-Log ("deploy trigger exit: {0}" -f $LASTEXITCODE)
