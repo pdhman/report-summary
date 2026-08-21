@@ -33,6 +33,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import numpy as np
 import pandas as pd
 import FinanceDataReader as fdr
 
@@ -179,6 +180,9 @@ def adjust_corporate_actions(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.sort_values(["code", "date"]).reset_index(drop=True)
     ratio = df.groupby("code")["close"].transform(lambda s: s / s.shift(1))
+    # 종가 0 데이터 글리치는 ratio 가 0/inf 이 되어 factor 를 0/inf 로 오염시킨다
+    # (2026-08-21 volume/0 → inf → OverflowError). 유한 양수 ratio 만 이벤트로 본다.
+    ratio = ratio.where(np.isfinite(ratio) & (ratio > 0))
     ev = (ratio > 1 + PRICE_LIMIT) | (ratio < 1 - PRICE_LIMIT)
     if not ev.any():
         return df
@@ -218,7 +222,8 @@ def write_json(ohlcv: pd.DataFrame, uni: pd.DataFrame) -> int:
         if g.empty:
             continue
         bars = [[int(d.strftime("%Y%m%d")), round(float(o), 1), round(float(h), 1),
-                 round(float(l), 1), round(float(c), 1), int(v) if pd.notna(v) else 0]
+                 round(float(l), 1), round(float(c), 1),
+                 int(v) if pd.notna(v) and np.isfinite(v) else 0]
                 for d, o, h, l, c, v in zip(g["date"], g["open"], g["high"],
                                             g["low"], g["close"], g["volume"])]
         payload = {"symbol": f"{code}.{suffix}", "name": name, "currency": "KRW",
