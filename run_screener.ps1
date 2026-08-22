@@ -70,7 +70,7 @@ if ((Test-Path $err) -and ((Get-Item $err).Length -eq 0)) { Remove-Item $err }
 # --- 보고서(HTML) 생성 및 브라우저로 열기 ---
 & cmd /c "`"$py`" enrich_fundamentals.py >> `"$out`" 2>&1"
 & cmd /c "`"$py`" make_report.py >> `"$out`" 2>&1"
-$report = Get-ChildItem (Join-Path $proj 'reports\report_*.html') -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Desc | Select-Object -First 1
+$report = Get-ChildItem (Join-Path $proj 'docs\report_*.html') -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Desc | Select-Object -First 1
 if ($report) { Start-Process $report.FullName }
 
 # --- Git 아카이브에 이력 커밋 ---
@@ -78,15 +78,15 @@ if ($report) { Start-Process $report.FullName }
 
 # --- GitHub(report_summary origin/main)에 리포트 게시 ---
 # report_*.html + 허브/요약 + 스크리너 xlsx push. push 되면 GitHub Actions(daily-insights)가
-# reports/** 트리거로 사이트를 재배포한다. (봇 커밋은 [skip ci]라 루프 없음)
+# docs/** 트리거로 사이트를 재배포한다. (봇 커밋은 [skip ci]라 루프 없음)
 # xlsx 는 러너의 요약 대시보드(주도주 카드) 생성에 필요하다.
-& git -C $proj add "reports/report_*.html" "reports/index.html" "reports/screener.html" "종목탐색_TOP30.xlsx" 2>&1 | Out-File $out -Append -Encoding utf8
+& git -C $proj add "docs/report_*.html" "docs/index.html" "docs/screener.html" "종목탐색_TOP30.xlsx" 2>&1 | Out-File $out -Append -Encoding utf8
 # 대기본(pending)은 생성·삭제가 오가므로 그 한 경로만 -A 로 스테이징한다.
 # 러너도 이 파일을 우선 읽어야 잠긴 회차의 결과가 사이트에 반영된다.
 & git -C $proj add -A -- "종목탐색_TOP30.pending.xlsx" 2>&1 | Out-File $out -Append -Encoding utf8
 & git -C $proj diff --staged --quiet
 if ($LASTEXITCODE -ne 0) {
-    & git -C $proj checkout -- reports/ 2>&1 | Out-File $out -Append -Encoding utf8
+    & git -C $proj checkout -- docs/ 2>&1 | Out-File $out -Append -Encoding utf8
     & git -C $proj commit -m "screener: report $(Get-Date -Format 'yyyy-MM-dd')" 2>&1 | Out-File $out -Append -Encoding utf8
     & git -C $proj pull --rebase -X theirs origin main 2>&1 | Out-File $out -Append -Encoding utf8
     if ($LASTEXITCODE -ne 0) {

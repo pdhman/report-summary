@@ -11,11 +11,9 @@ on:
       - "aicyclemonitor/**"
       - ".github/workflows/weekly-aicycle.yml"
 
-# 히스토리 CSV 커밋(contents) + GitHub Pages 배포(pages, id-token)
+# 히스토리 CSV·대시보드 커밋 — 사이트는 브랜치 서빙(main /docs)이라 push 가 곧 배포
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: weekly-aicycle
@@ -43,36 +41,22 @@ jobs:
           PYTHONUTF8: "1"
         run: python aicyclemonitor/ai_cycle_monitor.py
 
-      - name: Publish dashboard into reports/
-        run: cp aicyclemonitor/dashboard.html reports/aicycle.html
+      - name: Publish dashboard into docs/
+        run: cp aicyclemonitor/dashboard.html docs/aicycle.html
 
       - name: Commit history + dashboard
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add aicyclemonitor reports/aicycle.html
+          git add aicyclemonitor docs/aicycle.html
           if git diff --staged --quiet; then
             echo "변경 없음 — 커밋 건너뜀"
           else
             git commit -m "aicycle: $(date -u +%Y-%m-%d) 주간 갱신 [skip ci]"
-            # daily-insights 등 다른 워크플로우와 push 경쟁 시 리베이스 후 재시도,
-            # 그래도 밀리면 배포는 계속 진행한다 — 실패로 처리하지 않음.
-            git pull --rebase -X theirs origin main || true
-            git push || echo "push 건너뜀 (동시 실행이 먼저 커밋함) — 배포는 계속"
+            # 다른 워크플로우·로컬 파이프라인과 push 경쟁 시 리베이스 후 재시도
+            for i in 1 2 3; do
+              git push && break
+              git pull --rebase -X theirs origin main || true
+              sleep 5
+            done
           fi
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: reports
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4

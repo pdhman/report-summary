@@ -1,7 +1,7 @@
 ﻿# =====================================================================
 # 시장 건전성 일일 갱신 (Windows 작업 스케줄러용)
 #  - 평일 16:35 (작업명 시장건전성_1635_수집): quant-data\breadth_build.py 로
-#    폭 지표·VKOSPI 계산 → reports\market_data.js + data\market_history.csv
+#    폭 지표·VKOSPI 계산 → docs\market_data.js + data\market_history.csv
 #    갱신 → 알파노트 요약(index.html) 재생성 → 커밋·푸시·배포
 #  - 16:20 차트데이터 작업이 만든 ohlcv_full.parquet 를 그대로 재사용하므로
 #    차트데이터 작업이 끝날 때까지 먼저 기다린다 (최대 12분).
@@ -75,7 +75,7 @@ try {
         Start-Sleep -Seconds 10
     }
 
-    git add reports 2>&1 | Add-Content -Path $log -Encoding UTF8
+    git add docs 2>&1 | Add-Content -Path $log -Encoding UTF8
     git diff --staged --quiet
     if ($LASTEXITCODE -ne 0) {
         git commit -m ("market: {0:yyyy-MM-dd} 시장 건전성 갱신" -f (Get-Date)) 2>&1 | Add-Content -Path $log -Encoding UTF8

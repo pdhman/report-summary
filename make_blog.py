@@ -3,10 +3,10 @@
 '투자전략' 섹션 생성기.
 
 입력: blog/<YYYY-MM-DD>.html  (scrape_blog.py 가 만든 본문 조각: header + article.prose)
-출력: reports/blog_YYYYMMDD.html  (날짜별 페이지)
-      reports/index.html          (투자전략 허브: 날짜 바 + 최신 본문)
+출력: docs/blog_YYYYMMDD.html  (날짜별 페이지)
+      docs/index.html          (투자전략 허브: 날짜 바 + 최신 본문)
 
-본문의 이미지는 reports/blogimg/ 를 가리킨다(scrape_blog 가 저장).
+본문의 이미지는 docs/blogimg/ 를 가리킨다(scrape_blog 가 저장).
 """
 import os
 import re
@@ -16,7 +16,7 @@ from make_brief import _SHARED_STYLE   # .prose 등 공용 타이포그래피 �
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 BLOG_DIR = os.path.join(BASE, "blog")
-OUT_DIR = os.path.join(BASE, "reports")
+OUT_DIR = os.path.join(BASE, "docs")
 
 _EXTRA = """<style>
   .bhead { border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:22px; }

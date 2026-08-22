@@ -13,11 +13,11 @@
   - 수급모니터링/data/*.csv                     : 투자자별 수급 요약 타일
 
 출력:
-  - reports/data/market_history.csv : 일일 지표 마스터(누적 병합, git 추적 → 백업 겸용)
+  - docs/data/market_history.csv : 일일 지표 마스터(누적 병합, git 추적 → 백업 겸용)
       * 누적선(A/D라인·McClellan 등)은 저장하지 않고 매번 병합 히스토리에서 재계산
         — parquet 롤링 윈도우(550일)가 지나가도 연속성이 유지된다.
-  - reports/market_data.js          : window.MARKET_DATA = {...} (market.html 이 읽음)
-  - reports/data/market_summary.json: make_summary.py 홈 카드용 최신 요약
+  - docs/market_data.js          : window.MARKET_DATA = {...} (market.html 이 읽음)
+  - docs/data/market_summary.json: make_summary.py 홈 카드용 최신 요약
 
 주의:
   - 거래대금은 종가×거래량 근사(네이버 일봉에 거래대금 없음). 비중·집중도 지표라
@@ -54,7 +54,7 @@ OHLCV_PATH = os.path.join(BASE, "cache", "ohlcv_full.parquet")
 UNI_PATH = os.path.join(BASE, "output", "퀀트데이터_latest.csv")
 LOG_DIR = os.path.join(BASE, "logs")
 
-REPORTS = os.path.join(PROJ, "reports")
+REPORTS = os.path.join(PROJ, "docs")
 HIST_PATH = os.path.join(REPORTS, "data", "market_history.csv")
 JS_PATH = os.path.join(REPORTS, "market_data.js")
 SUMMARY_PATH = os.path.join(REPORTS, "data", "market_summary.json")

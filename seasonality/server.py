@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """알파노트 + 분석(차트·계절성) 서버 (포트 8766).
 
-reports/(알파노트 전체)를 정적으로 서빙하고, yfinance 프록시 API를 함께 제공한다.
+docs/(알파노트 전체)를 정적으로 서빙하고, yfinance 프록시 API를 함께 제공한다.
     GET /api/ohlcv?symbol=AAPL   → 일봉 OHLCV (차트용, 무조정 실거래가)
     GET /api/closes?symbol=AAPL  → 수정종가 (계절성용, 배당·분할 반영)
 둘 다 10분 캐시. API에는 CORS를 허용해 file:// 나 8778(정적 서버)로 연
@@ -17,7 +17,7 @@ import yfinance as yf
 from flask import Flask, jsonify, request, send_from_directory
 
 BASE = Path(__file__).parent
-REPORTS = BASE.parent / "reports"
+REPORTS = BASE.parent / "docs"
 app = Flask(__name__)
 
 _cache = {}

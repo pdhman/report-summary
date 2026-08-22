@@ -3,7 +3,7 @@
 #  - Every day 17:30 KST: scrape new posts from the Naver blog,
 #    rebuild the strategy pages/hub, then commit & push.
 #  - The push triggers the daily-insights workflow (paths: blog/**,
-#    reports/**), which redeploys the GitHub Pages site.
+#    docs/**), which redeploys the GitHub Pages site.
 #  - ASCII-only on purpose: powershell.exe 5.1 misreads BOM-less UTF-8.
 #    Paths come from $PSScriptRoot, never hard-coded.
 # =====================================================================
@@ -37,7 +37,7 @@ try {
     & $py -u (Join-Path $proj 'make_blog.py') 2>&1 | Add-Content -Path $log -Encoding UTF8
     if ($LASTEXITCODE -ne 0) { Write-Log "ERROR: make_blog exit $LASTEXITCODE"; exit 1 }
 
-    git add blog reports 2>&1 | Add-Content -Path $log -Encoding UTF8
+    git add blog docs 2>&1 | Add-Content -Path $log -Encoding UTF8
     git diff --staged --quiet
     if ($LASTEXITCODE -ne 0) {
         git commit -m ("blog: {0:yyyy-MM-dd} auto update" -f (Get-Date)) 2>&1 | Add-Content -Path $log -Encoding UTF8

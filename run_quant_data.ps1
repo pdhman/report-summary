@@ -3,7 +3,7 @@
 #  - Every Friday 17:00: collect all-market quant data (price, momentum,
 #    fundamentals + consensus estimates) into quant-data\output\.
 #  - Then build RS screener data (quant-data\rs_build.py) into
-#    reports\rs_data.js and commit/push/deploy (same pattern as
+#    docs\rs_data.js and commit/push/deploy (same pattern as
 #    run_flows.ps1). Only rs files are staged - quant-data CSVs stay
 #    local (untracked).
 #  - Python writes its own UTF-8 log to quant-data\logs\; this wrapper
@@ -65,7 +65,7 @@ try {
         Start-Sleep -Seconds 10
     }
 
-    git add reports/rs_data.js reports/rs.html 2>&1 | Add-Content -Path $log -Encoding UTF8
+    git add docs/rs_data.js docs/rs.html 2>&1 | Add-Content -Path $log -Encoding UTF8
     git diff --staged --quiet
     if ($LASTEXITCODE -ne 0) {
         git commit -m ("rs: {0:yyyy-MM-dd} RS screener data update" -f (Get-Date)) 2>&1 | Add-Content -Path $log -Encoding UTF8

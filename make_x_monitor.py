@@ -5,8 +5,8 @@ X(트위터) 모니터링 리포트 게시기.
 입력: x-monitor/reports/*.md   (X 리스트 수집·요약 일일 리포트)
       x-monitor/data/*.json    (수집 원문 — 피드 섹션 데이터)
       x-monitor/accounts.json  (모니터링 계정, grade 2=★★ / 1=★)
-출력: reports/x_YYYYMMDD.html  (날짜별 리포트 페이지, 디자인 통일)
-      reports/x.html           (허브: 상단 통계·필터·피드 + 하단 날짜별 리포트)
+출력: docs/x_YYYYMMDD.html  (날짜별 리포트 페이지, 디자인 통일)
+      docs/x.html           (허브: 상단 통계·필터·피드 + 하단 날짜별 리포트)
 
 make_summary.card_x() 에서 호출된다. x-monitor 폴더가 없는 환경(예: 과거
 체크아웃)에서는 조용히 건너뛰어 다른 카드에 영향을 주지 않는다.
@@ -22,7 +22,7 @@ from make_brief import _SHARED_STYLE
 BASE = os.path.dirname(os.path.abspath(__file__))
 SRC_DIR = os.path.join(BASE, "x-monitor", "reports")
 DATA_DIR = os.path.join(BASE, "x-monitor", "data")
-OUT_DIR = os.path.join(BASE, "reports")
+OUT_DIR = os.path.join(BASE, "docs")
 FEED_MAX = 500          # 허브에 임베드할 최근 포스트 수 상한
 CARD_TOPICS = 3         # '오늘의 요약' 카드에 노출할 주제 수
 

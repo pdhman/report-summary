@@ -5,7 +5,7 @@
 - PostTitleListAsync API 로 글 목록을 열거 → 제목에 '주도'+'섹터' 포함 & 최근 N일치만.
 - 각 글: 모바일 페이지(m.blog.naver.com)에서 se-main-container 의 본문을
   '순서대로'(텍스트/이미지 섞인 채) 추출.
-- 이미지는 reports/blogimg/ 에 다운로드하고 로컬 경로로 치환.
+- 이미지는 docs/blogimg/ 에 다운로드하고 로컬 경로로 치환.
 - 결과 본문 조각을 blog/<YYYY-MM-DD>.html 로 저장(헤더/스타일 없는 fragment).
   → make_blog.py 가 이를 읽어 페이지/허브로 렌더한다.
 
@@ -22,7 +22,7 @@ import urllib.parse
 BLOG_ID = "pdhman"
 BASE = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(BASE, "blog")            # 본문 조각
-IMG_DIR = os.path.join(BASE, "reports", "blogimg")  # 이미지(사이트에서 서빙)
+IMG_DIR = os.path.join(BASE, "docs", "blogimg")  # 이미지(사이트에서 서빙)
 CUTOFF = "2026-06-16"                            # 이 날짜 이후만 (최근 한달치)
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/120 Safari/537.36")

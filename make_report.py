@@ -3,7 +3,7 @@
 주도섹터 필터링 결과 → 깔끔한 HTML 보고서 생성기
 
 - 종목탐색_TOP30.xlsx 의 '가장 최근 날짜' 데이터를 읽어
-- reports\report_YYYYMMDD.html 로 self-contained(단일 파일) 보고서를 만든다.
+- docs\report_YYYYMMDD.html 로 self-contained(단일 파일) 보고서를 만든다.
 - 매일 실행 래퍼(run_screener.ps1)의 마지막 단계에서 호출된다.
 """
 import os
@@ -19,7 +19,7 @@ XLSX = "종목탐색_TOP30.xlsx"
 # PermissionError 로 그날 리포트가 통째로 누락). 그럴 때 스크리너가 전체본을
 # 아래 pending 파일에 대신 써두고, 잠금이 풀린 다음 실행에서 본 파일로 병합한다.
 PENDING = "종목탐색_TOP30.pending.xlsx"
-OUT_DIR = "reports"
+OUT_DIR = "docs"
 
 
 def xlsx_path():
@@ -196,7 +196,7 @@ def build_empty(date_str):
 
 
 def _write_report(today, date_str):
-    """today(DataFrame; 비어 있을 수 있음) → reports/report_YYYYMMDD.html 생성."""
+    """today(DataFrame; 비어 있을 수 있음) → docs/report_YYYYMMDD.html 생성."""
     # 요약 통계 (0종목이어도 안전하게)
     n = len(today)
     n_new = int((today["streak"] == 1).sum()) if (n and "streak" in today.columns) else 0

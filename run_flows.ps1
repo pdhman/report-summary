@@ -55,7 +55,7 @@ try {
         Start-Sleep -Seconds 10
     }
 
-    git add 수급모니터링 reports 2>&1 | Add-Content -Path $log -Encoding UTF8
+    git add 수급모니터링 docs 2>&1 | Add-Content -Path $log -Encoding UTF8
     git diff --staged --quiet
     if ($LASTEXITCODE -ne 0) {
         git commit -m ("flows: {0:yyyy-MM-dd} 수급 수집" -f (Get-Date)) 2>&1 | Add-Content -Path $log -Encoding UTF8

@@ -12,7 +12,7 @@ Global → 반도체 → Breadth → Euphoria 순서로 5개 팩터를 0~100점�
                                memory-cycle/data/quarterly.csv(메모리 사이클 국면),
                                quant-data 주간 스냅샷(전종목 영업이익(E) 상향비율),
                                삼전·하이닉스 주가 200일선 이격도
-  ③ Market Breadth    (20)     reports/data/market_history.csv (breadth_build.py 산출)
+  ③ Market Breadth    (20)     docs/data/market_history.csv (breadth_build.py 산출)
                                — MA200/MA50 위 비율·ADR20·신고/신저·맥클렐런
   ④ 신용·유동성       (15)     market_leverage_collector(예탁금·반대매매·신용/예탁금),
                                FRED 하이일드 OAS(레벨+90일 변화, allorigins 폴백)
@@ -56,7 +56,7 @@ ROOT = os.path.dirname(BASE)
 CACHE = os.path.join(BASE, "kc_cache")
 os.makedirs(CACHE, exist_ok=True)
 
-MARKET_HIST = os.path.join(ROOT, "reports", "data", "market_history.csv")
+MARKET_HIST = os.path.join(ROOT, "docs", "data", "market_history.csv")
 LEV_DIR = os.path.join(ROOT, "market_leverage_collector", "data")
 MC_QUARTERLY = os.path.join(ROOT, "memory-cycle", "data", "quarterly.csv")
 MC_CONSENSUS = os.path.join(ROOT, "memory-cycle", "data", "consensus.csv")
@@ -68,7 +68,7 @@ REVB_CACHE = os.path.join(CACHE, "revision_breadth.csv")
 SCORE_LOG = os.path.join(CACHE, "score_log.csv")
 TEMPLATE = os.path.join(BASE, "korea_cycle_template.html")
 OUTPUT = os.path.join(BASE, "korea_cycle.html")
-DEPLOY = os.path.join(ROOT, "reports", "korea_cycle.html")   # 알파노트 배포 사본
+DEPLOY = os.path.join(ROOT, "docs", "korea_cycle.html")   # 알파노트 배포 사본
 
 FIRMS = {"005930": "삼성전자", "000660": "SK하이닉스"}
 WEIGHTS = {"global": 25, "semi": 25, "breadth": 20, "liq": 15, "euphoria": 15}
@@ -595,7 +595,7 @@ def render(data):
     with open(OUTPUT, "w", encoding="utf-8") as f:
         f.write(html)
     log(f"대시보드 생성 완료 → {OUTPUT}")
-    # reports/ 배포 사본 — 그쪽에선 AI 대시보드 파일명이 aicycle.html
+    # docs/ 배포 사본 — 그쪽에선 AI 대시보드 파일명이 aicycle.html
     if os.path.isdir(os.path.dirname(DEPLOY)):
         with open(DEPLOY, "w", encoding="utf-8") as f:
             f.write(html.replace('href="dashboard.html"', 'href="aicycle.html"'))

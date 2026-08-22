@@ -10,7 +10,7 @@
       · 현재가는 FinanceDataReader 의 KRX 상장종목 종가로 조회
       · 한 종목이 여러 번 등장하면 '이번달 최초 리포트'를 진입 기준으로 삼는다.
 
-출력: reports/insights_YYYYMMDD.html  (YYYYMMDD = 가장 최근 수집일)
+출력: docs/insights_YYYYMMDD.html  (YYYYMMDD = 가장 최근 수집일)
 """
 import os
 import re
@@ -20,7 +20,7 @@ import pandas as pd
 import site_nav
 
 XLSX = "리포트서머리.xlsx"
-OUT_DIR = "reports"
+OUT_DIR = "docs"
 TOP_GAP = 5      # 괴리율 TOP N
 TOP_RET = 10     # 실제 상승률 TOP N
 

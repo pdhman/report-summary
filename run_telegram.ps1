@@ -1,7 +1,7 @@
 ﻿# =====================================================================
 # 알파노트 요약 텔레그램 발송 (Windows 작업 스케줄러용)
 #  - 평일 16:50 (작업명 텔레그램요약_1650_발송)
-#  - reports\market_data.js / 수급모니터링\dashboard_data.js / reports\rs_data.js
+#  - docs\market_data.js / 수급모니터링\dashboard_data.js / docs\rs_data.js
 #    를 읽어 핵심 지표만 요약해 텔레그램으로 보낸다. 수집은 하지 않는다.
 #  - --to both: 개인 대화방 + 공개 채널(@daily_alphanote) 양쪽에 보낸다.
 #    채널 발송은 봇이 채널 관리자여야 하므로, 관리자에서 빠지면 여기서 실패한다.
@@ -26,7 +26,7 @@ try {
     # 시장건전성(16:35, market_data.js 생산자)이 오늘자를 만들 때까지 대기 (최대 15분).
     # 휴장일 등으로 갱신이 없으면 그대로 진행한다 — 요약 본문에 "최신 데이터가
     # N월 N일 기준" 경고가 붙으므로 조용히 옛 데이터를 보내는 일은 없다.
-    $md = Join-Path $proj 'reports\market_data.js'
+    $md = Join-Path $proj 'docs\market_data.js'
     for ($i = 0; $i -lt 90; $i++) {
         $t = Get-ScheduledTask -TaskName '시장건전성_1635_수집' -ErrorAction SilentlyContinue
         $running = ($t -and $t.State -eq 'Running')

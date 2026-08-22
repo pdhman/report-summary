@@ -6,7 +6,7 @@
   1. 유니버스 = output/퀀트데이터_latest.csv (코드·회사명·시장)
   2. cache/ohlcv_full.parquet 에 OHLCV 일봉 증분 캐싱 (FDR·네이버 소스,
      collect.py 의 종가 캐시와 같은 방식 — 여기는 시가/고가/저가/거래량 포함)
-  3. chart_json/ 에 종목별 JSON 생성 (reports/data/*.json 과 같은 포맷,
+  3. chart_json/ 에 종목별 JSON 생성 (docs/data/*.json 과 같은 포맷,
      chart.html 이 그대로 읽는다): {symbol,name,currency,bars:[[ymd,o,h,l,c,v],..]}
   4. chart_json/ 을 매번 새 git 저장소로 초기화해 chart-data 브랜치로
      강제 푸시 — 커밋이 항상 1개라 저장소 히스토리가 쌓이지 않는다.

@@ -102,14 +102,14 @@ def run():
     import make_insights
     make_insights.build()
 
-    # 시황 브리핑(briefs/*.md → reports/brief_*.html) 생성
+    # 시황 브리핑(briefs/*.md → docs/brief_*.html) 생성
     try:
         import make_brief
         make_brief.build()
     except Exception as e:
         print(f"[경고] 시황 브리핑 생성 건너뜀: {e}")
 
-    # 투자전략(blog/*.html → reports/blog_*.html + index.html 허브) 생성
+    # 투자전략(blog/*.html → docs/blog_*.html + index.html 허브) 생성
     try:
         import make_blog
         make_blog.build()

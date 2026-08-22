@@ -21,7 +21,7 @@ import datetime
 import site_nav
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-OUT_DIR = os.path.join(BASE, "reports")
+OUT_DIR = os.path.join(BASE, "docs")
 
 
 def esc(s):
@@ -234,7 +234,7 @@ def card_flows():
     """수급 동향: 최근 거래일 투자자별 순매수 + 대시보드 페이지(flow.html) 재생성.
 
     수급모니터링/ 의 CSV·dashboard_data.js 는 로컬 작업(수급동향_1740_수집)이
-    매일 갱신·푸시한다. 여기서는 대시보드를 reports/ 경로로 복사만 한다.
+    매일 갱신·푸시한다. 여기서는 대시보드를 docs/ 경로로 복사만 한다.
     """
     import csv
     flow_dir = os.path.join(BASE, "수급모니터링")

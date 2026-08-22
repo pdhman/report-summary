@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""KRX 전 종목 이름↔코드 목록 생성 (reports/data/krx.js).
+"""KRX 전 종목 이름↔코드 목록 생성 (docs/data/krx.js).
 
 분석 탭 검색창에서 '코미코' 처럼 한글 종목명으로 찾을 수 있게 한다.
 가격 데이터는 담지 않으므로 파일이 작다(약 70KB).
@@ -14,7 +14,7 @@ from pathlib import Path
 import pandas as pd
 import FinanceDataReader as fdr
 
-OUT = Path(__file__).parent.parent / "reports" / "data" / "krx.js"
+OUT = Path(__file__).parent.parent / "docs" / "data" / "krx.js"
 
 
 def main() -> None:

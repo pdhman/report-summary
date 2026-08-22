@@ -4,8 +4,8 @@
 
 입력: briefs/*.md  (Gemini 등에서 받은 시황 정리글을 마크다운으로 붙여넣은 파일)
       · 파일명에 날짜(YYYY-MM-DD 또는 YYYYMMDD)를 포함시킨다. 예) briefs/2026-07-16.md
-출력: reports/brief_YYYYMMDD.html  (날짜별 시황 페이지, 디자인 통일)
-      reports/briefs.html          (시황 아카이브 목록)
+출력: docs/brief_YYYYMMDD.html  (날짜별 시황 페이지, 디자인 통일)
+      docs/briefs.html          (시황 아카이브 목록)
 
 run_screener / sync_report_summary 파이프라인에서 build_index 앞에 호출된다.
 """
@@ -18,7 +18,7 @@ import site_nav
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 BRIEF_DIR = os.path.join(BASE, "briefs")
-OUT_DIR = os.path.join(BASE, "reports")
+OUT_DIR = os.path.join(BASE, "docs")
 
 _SHARED_STYLE = """
 <style>

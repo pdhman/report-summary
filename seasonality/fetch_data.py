@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """분석 탭(차트·계절성)이 서버 없이도 동작하도록 유니버스 일봉을 정적 파일로 굽는다.
 
-산출물 (reports/data/):
+산출물 (docs/data/):
     <티커>.json   {"symbol","name","group","currency","bars":[[yyyymmdd,o,h,l,c,v,adj], ...]}
                   o/h/l/c/v = 무조정 실거래가(차트), adj = 수정종가(계절성)
                   한 줄에 하루씩 기록해 매일 갱신 시 git diff 가 몇 줄만 바뀐다.
@@ -37,7 +37,7 @@ import yfinance as yf
 from universe import UNIVERSE, flat
 
 BASE = Path(__file__).parent
-OUT_DIR = BASE.parent / "reports" / "data"
+OUT_DIR = BASE.parent / "docs" / "data"
 INDEX_FILE = OUT_DIR / "index.js"
 
 # 야후 데이터에 공백이 있는 종목을, 그 종목이 추종하는 지수로 메운다.

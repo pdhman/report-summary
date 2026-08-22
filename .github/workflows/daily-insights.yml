@@ -1,5 +1,11 @@
 name: Daily Report Insights
 
+# 2026-08-22 부터 사이트는 GitHub Pages "브랜치 서빙"(main /docs)으로 자동
+# 배포된다 — 커밋을 push 하면 그 자체가 배포다. 그래서 이 워크플로는
+# '클라우드에서 인사이트 HTML 을 생성해 커밋'하는 일만 하고, Pages 배포
+# 잡은 없다. (예전 Actions 배포 방식은 배포 잡이 직렬이라 로컬 파이프라인
+# 7~8개가 push 할 때마다 잡이 쌓여 대기·취소·경쟁이 났다.)
+
 on:
   workflow_run:
     # 크롤러(Daily Report Summary)가 끝나면 곧바로 실행 — 스케줄 지연이 커도
@@ -15,25 +21,11 @@ on:
     # 그날 확정 종가로 덮어쓴다. (미국 종목은 이미 전일 확정치라 변화 없음)
     - cron: "33 7 * * *"
   workflow_dispatch: {} # 깃허브에서 수동 실행 버튼 제공
-  push:
-    branches: [main]
-    # 소스/코드 변경 시에만 재배포. 봇이 만드는 reports/ 커밋은 제외해 무한루프 방지.
-    paths:
-      - "**.py"
-      # aicyclemonitor 는 전용 워크플로우(weekly-aicycle)가 배포 — 여기서 제외해
-      # 두 워크플로우가 동시에 Pages를 배포하며 서로 덮어쓰는 경쟁을 방지
-      - "!aicyclemonitor/**"
-      - "requirements.txt"
-      - ".github/workflows/daily-insights.yml"
-      - "briefs/**" # 시황 브리핑 붙여넣고 푸시하면 자동 배포
-      - "reports/**" # 로컬 스크리너가 리포트를 push 하면 사이트 재배포 (봇 커밋은 [skip ci]로 제외)
-      - "blog/**" # 블로그(투자전략) 본문 갱신 시 재배포
+  # push 트리거는 제거 — 브랜치 서빙에서는 push = 배포라, 여기서 다시 돌 이유가
+  # 소스 변경 시 인사이트 재생성뿐인데 그건 다음 스케줄 실행이 해준다.
 
-# 생성된 HTML 커밋(contents) + GitHub Pages 배포(pages, id-token)
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: daily-insights
@@ -65,7 +57,7 @@ jobs:
 
       # 분석 탭(차트·계절성)이 서버 없이 동작하도록 기본 티커 일봉을 정적 파일로 굽는다.
       # 야후가 러너 IP를 일시 차단해도 스크립트가 기존 데이터를 유지하므로,
-      # 실패해도 배포는 계속한다(continue-on-error).
+      # 실패해도 커밋은 계속한다(continue-on-error).
       - name: Build market data (분석 탭 정적 데이터)
         continue-on-error: true
         env:
@@ -75,34 +67,19 @@ jobs:
           # 검색용 KRX 전종목 이름·코드 목록(신규 상장·사명 변경 반영)
           python seasonality/build_krx_index.py
 
-      - name: Commit generated reports
+      - name: Commit generated docs (push = 배포)
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add reports/
+          git add docs/
           if git diff --staged --quiet; then
             echo "변경 없음 — 커밋 건너뜀"
           else
             git commit -m "insights: $(date -u +%Y-%m-%d) 자동 생성 [skip ci]"
-            # push 이벤트 실행과 수동 트리거 실행이 동시에 돌면 push 경쟁이
-            # 생긴다. 리베이스 후 재시도하고, 그래도 밀리면(다른 실행이 이미
-            # 같은 내용을 커밋함) 배포는 계속 진행한다 — 실패로 처리하지 않음.
-            git pull --rebase -X theirs origin main || true
-            git push || echo "push 건너뜀 (동시 실행이 먼저 커밋함) — 배포는 계속"
+            # 로컬 파이프라인과 push 경쟁이 나면 리베이스 후 최대 3회 재시도
+            for i in 1 2 3; do
+              git push && break
+              git pull --rebase -X theirs origin main || true
+              sleep 5
+            done
           fi
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: reports # index.html 이 랜딩 페이지
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4

@@ -2,9 +2,9 @@
 """알파노트 대시보드 핵심 지표를 텔레그램으로 요약 발송한다.
 
 데이터는 이미 각 수집기가 만들어 둔 JS 파일에서 읽는다 (재수집 없음):
-  reports/market_data.js        시장 건전성 (평일 16:35)
+  docs/market_data.js        시장 건전성 (평일 16:35)
   수급모니터링/dashboard_data.js  투자자별 수급 (평일 15:40)
-  reports/rs_data.js            RS 스크리너 (주간)
+  docs/rs_data.js            RS 스크리너 (주간)
 
 사용:
   python send_summary.py            발송
@@ -130,7 +130,7 @@ def section_flows(lines):
 def section_rs(lines, top=5, min_n=5):
     # min_n 은 rs.html 의 기본값(state.minN)과 맞춘다. 대시보드 '테마 랭킹'에
     # 보이는 순위와 요약이 달라지면 어느 쪽이 맞는지 헷갈리므로 기준을 하나로 둔다.
-    path = BASE / "reports" / "rs_data.js"
+    path = BASE / "docs" / "rs_data.js"
     if not path.exists():
         return
     rs = load_js(path)
@@ -155,7 +155,7 @@ def section_etf(lines, top=5):
     etfs 배열 필드: [코드, 이름, 시장, 시총, 대금, RS, 1M, 3M, 6M, 12M,
                     고점대비, MA200, 유형idx, -1, [], 레버플래그]
     """
-    path = BASE / "reports" / "rs_data.js"
+    path = BASE / "docs" / "rs_data.js"
     if not path.exists():
         return
     rs = load_js(path)
@@ -178,7 +178,7 @@ def section_etf(lines, top=5):
 
 
 def build_message():
-    m = load_js(BASE / "reports" / "market_data.js")
+    m = load_js(BASE / "docs" / "market_data.js")
     asof = m.get("asof", "")
     try:
         title_date = datetime.strptime(asof, "%Y-%m-%d").strftime("%m/%d")

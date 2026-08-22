@@ -45,7 +45,7 @@ try {
         Start-Sleep -Seconds 10
     }
 
-    git add market_leverage_collector/data reports 2>&1 | Add-Content -Path $log -Encoding UTF8
+    git add market_leverage_collector/data docs 2>&1 | Add-Content -Path $log -Encoding UTF8
     git diff --staged --quiet
     if ($LASTEXITCODE -ne 0) {
         git commit -m ("leverage: {0:yyyy-MM-dd} 수집" -f (Get-Date)) 2>&1 | Add-Content -Path $log -Encoding UTF8

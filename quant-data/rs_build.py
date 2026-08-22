@@ -13,7 +13,7 @@ RS 스크리너 데이터 빌더 — 주간 퀀트데이터 CSV 기반.
     RS90+ 비중. 테마는 3종목 이상만.
   - 테마에서 SPAC 제외: '기업인수목적' 테마 + 종목명에 '스팩' 포함 종목
 
-출력: ../reports/rs_data.js  (window.RS_DATA = {...})
+출력: ../docs/rs_data.js  (window.RS_DATA = {...})
 
 실행:  python rs_build.py
        python rs_build.py --csv output/퀀트데이터_20260805_new.csv
@@ -42,7 +42,7 @@ OUT_DIR = os.path.join(BASE, "output")
 CACHE_DIR = os.path.join(BASE, "cache")
 ETF_OHLCV = os.path.join(CACHE_DIR, "etf_ohlcv.parquet")
 ETF_LIST_JSON = os.path.join(CACHE_DIR, "etf_list.json")   # chart_build 가 읽는다
-REPORTS_DIR = os.path.normpath(os.path.join(BASE, "..", "reports"))
+REPORTS_DIR = os.path.normpath(os.path.join(BASE, "..", "docs"))
 OUT_JS = os.path.join(REPORTS_DIR, "rs_data.js")
 
 CLASS_COLS = ("섹터", "업종", "테마")
