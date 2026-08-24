@@ -83,10 +83,17 @@ def _ensure_fresh_xlsx(xlsx):
     """
     try:
         import pytz
-        today = datetime.datetime.now(pytz.timezone("Asia/Seoul")).date()
+        now = datetime.datetime.now(pytz.timezone("Asia/Seoul"))
+        # 크롤러가 09:23 에 드라이브를 갱신하므로, 'mtime 이 오늘'만으로는
+        # 부족하다 — 오늘 08:52 파일로 09:5x 에 만들면 어제 데이터가 박제된다
+        # (2026-08-24 실사고). 09:35 이후에는 mtime 도 09:35 를 넘어야 신선.
+        cutoff = now.replace(hour=9, minute=35, second=0, microsecond=0)
+        fresh_after = cutoff if now >= cutoff else now.replace(hour=0, minute=0,
+                                                               second=0, microsecond=0)
         if os.path.exists(xlsx):
-            mtime = datetime.datetime.fromtimestamp(os.path.getmtime(xlsx)).date()
-            if mtime >= today:
+            mtime = datetime.datetime.fromtimestamp(os.path.getmtime(xlsx),
+                                                    pytz.timezone("Asia/Seoul"))
+            if mtime >= fresh_after:
                 return
         import sync_report_summary
         sync_report_summary.download_from_drive()
