@@ -43,8 +43,73 @@ description: X(트위터) 관심 계정 모니터링 실행 — Chrome으로 X �
 
 ## 수집
 
-1. 새 탭에서 `list_url` 열기. X 리스트 타임라인은 최신순(reverse-chronological).
-2. javascript_tool로 화면에 렌더된 트윗을 구조화 추출 (참여 지표 포함):
+새 탭에서 `list_url` 을 열고 로그인을 확인한 뒤, **아래 A(GraphQL)를 기본으로 쓴다.**
+B(DOM 스크래핑)는 A가 막혔을 때만 쓰는 폴백이다.
+
+### A. 기본 경로 — GraphQL API 직접 호출 (렌더링 불필요)
+
+DOM 스크롤보다 **압도적으로 빠르고, 잘린 글의 전문까지 한 번에 확보**된다.
+1회 요청에 40개 엔트리를 받고, 6페이지면 3일치(300건+)가 끝난다.
+(2026-08-18 폴백으로 도입 → 2026-08-24 실측 후 기본 절차로 승격.)
+
+1. **queryId 추출** — 번들 교체 시 바뀌므로 매번 재추출한다.
+   ```js
+   const links=[...document.querySelectorAll('link[rel=prefetch],link[rel=preload],script[src]')]
+     .map(l=>l.href||l.src).filter(u=>/client-web|responsive-web/.test(u));
+   let found=null;
+   for (const u of [...new Set(links)]) {
+     try { const t = await fetch(u).then(r=>r.text());
+       const m = t.match(/queryId:"([\w-]+)",operationName:"ListLatestTweetsTimeline"/);
+       if (m) { found=m[1]; window.__src=t; break; }
+     } catch(e){}
+   }
+   found   // 2026-08 기준 "1LE3u14FJjPZUHKFGzos2g"
+   ```
+2. **features 구성** — 같은 위치의 `featureSwitches` 를 전부 true 로.
+   ```js
+   const t=window.__src, i=t.indexOf('operationName:"ListLatestTweetsTimeline"');
+   const fs=t.slice(i,i+6000).match(/featureSwitches:\[([^\]]+)\]/);
+   window.__FEAT={};
+   fs[1].split(',').map(s=>s.replace(/['"]/g,'').trim()).filter(Boolean).forEach(k=>window.__FEAT[k]=true);
+   Object.keys(window.__FEAT).length   // 2026-08 기준 38개
+   ```
+3. **페이지 fetch** — 공개 웹 Bearer + ct0 쿠키. `credentials:"include"` 필수.
+   ```js
+   window.__BEARER="Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
+   window.__ct0=document.cookie.match(/ct0=([^;]+)/)[1];
+   window.__fetchPage = async (cursor) => {
+     const variables = {listId:"<리스트ID>", count:40, ...(cursor?{cursor}:{})};
+     const url = "https://x.com/i/api/graphql/<qid>/ListLatestTweetsTimeline?variables="
+       + encodeURIComponent(JSON.stringify(variables))
+       + "&features=" + encodeURIComponent(JSON.stringify(window.__FEAT));
+     const r = await fetch(url,{headers:{authorization:window.__BEARER,
+       "x-csrf-token":window.__ct0,"x-twitter-auth-type":"OAuth2Session",
+       "x-twitter-active-user":"yes","content-type":"application/json"},credentials:"include"});
+     return {status:r.status, json: r.ok ? await r.json() : (await r.text()).slice(0,300)};
+   };
+   ```
+4. **파싱** — `data.list.tweets_timeline.timeline.instructions[].entries`
+   → `content.itemContent.tweet_results.result` (모듈은 `content.items[].item.itemContent...`).
+   - 결과가 `{tweet:{...}}` 로 한 겹 감싸져 오는 경우가 있으니 `if (res.tweet) res = res.tweet;`
+   - **리트윗**: `legacy.retweeted_status_result.result` 가 원문. `repost_by` 는 최상위 작성자명,
+     저장하는 `time` 은 **원문 시각**(정렬 위치는 리트윗 시각이라 서로 다르다).
+   - **긴 글 전문**: `note_tweet.note_tweet_results.result.text` 가 있으면 그게 전문이다.
+     → **★★ 계정 전문을 위해 status 페이지를 따로 방문할 필요가 없다.**
+   - 지표: `legacy.favorite_count`, `views.count`. 핸들: `core.user_results.result.core.screen_name`.
+   - 커서: `content.cursorType==="Bottom"` 인 엔트리의 `value`.
+5. **페이지네이션 종료 조건** — 각 페이지에서 **최상위(정렬 위치) 트윗의 최소 created_at**
+   을 따로 계산해, 그 값이 `last_run` 이전이 되면 중단한다.
+   리트윗이 섞이면 원문 시각이 몇 달 전일 수 있어, 저장용 `time` 의 최솟값을 종료 조건으로
+   쓰면 첫 페이지에서 바로 멈춰 버린다. 페이지 사이에 ~900ms 정도 쉰다.
+6. **필터링** — `time > last_run` 이고 `accounts.json` 핸들 목록에 있는 글만 남긴다
+   (인용·대화 상대는 리스트 밖 계정일 수 있다). 핸들은 대소문자 무시 비교 후
+   `accounts.json` 표기로 정규화. url 기준 중복 제거.
+
+> `lists/statuses.json`(v1.1)은 404로 사멸했다. GraphQL만 유효하다.
+
+### B. 폴백 — DOM 스크래핑 (A가 막혔을 때만)
+
+1. javascript_tool로 화면에 렌더된 트윗을 구조화 추출 (참여 지표 포함):
    ```js
    JSON.stringify([...document.querySelectorAll('article[data-testid="tweet"]')].map(a => {
      const link = [...a.querySelectorAll('a')].find(x => /\/status\/\d+$/.test(x.href) && x.querySelector('time'));
@@ -66,18 +131,24 @@ description: X(트위터) 관심 계정 모니터링 실행 — Chrome으로 X �
      };
    }))
    ```
-3. **스크롤은 반드시 `computer`의 scroll 액션으로** (CDP 입력 이벤트). 탭이 백그라운드일 때
-   JS `window.scrollBy()`는 가상 렌더링을 깨우지 못해 같은 글만 반복 추출된다.
-   스크롤 → 추출 반복, 가장 오래된 글의 time이 `last_run` 이전이 될 때까지
-   (최초 실행이거나 last_run이 오래됐으면 최근 24시간만 커버).
-   리스트 타임라인에서 특정 글을 못 찾거나 지표가 비면, 해당 글의 status URL을 직접
-   방문해 첫 article에서 같은 방식으로 추출하는 것이 확실한 폴백이다.
-4. `last_run` 이후 글만 남기고 url 기준 중복 제거. 리포스트(repost_by 있음)는 유지하되 표기.
-5. **★★(grade 2) 계정 전문 수집**: 수집된 글 중 ★★ 계정의 글이 잘려 있으면
-   (…로 끝나거나 문장 중간에서 끊김 — 타임라인은 긴 글을 자름) 해당 글의
-   status URL을 열어 `article[data-testid="tweet"] [data-testid="tweetText"]`의
-   innerText로 text를 교체한다. ★/무등급 글은 잘린 채로 둔다 (수집 시간 절약).
-   status 페이지로 이동하면 페이지 전역 변수가 날아가므로 **6번 회수를 끝낸 뒤** 실행한다.
+2. **스크롤은 반드시 `computer`의 scroll 액션으로** (CDP 입력 이벤트). JS `window.scrollBy()`는
+   `scrollY`만 바꾸고 가상 렌더링을 깨우지 못해 같은 글만 반복 추출된다(2026-08-24 재확인).
+   `repeat` 파라미터는 스크롤에 먹지 않으니 `scroll_amount`를 키우거나 액션을 여러 개 넣는다.
+3. **추출(grab) 호출은 `browser_batch` 밖에서 단독으로** 한다. 배치 안의 javascript_tool은
+   직전 스크롤의 재렌더를 반영하지 못해 이전 값을 그대로 돌려주는 일이 있다
+   (`scrollY`는 갱신되는데 article 수집 결과는 그대로 → 구간 누락). 배치에는 스크롤만 묶고,
+   grab은 배치 뒤에 standalone 으로 1회 호출하는 패턴이 안전하다.
+4. **한계 — 하루치를 넘기면 쓰지 말 것**: 실측상 약 23,000px 스크롤이 **6.5시간분**에
+   그쳤다(2026-08-24, 42계정 기준). 월요일 주말 브리핑처럼 72시간을 커버해야 하면
+   25만 px 이상이 필요해 사실상 불가능하다. 이 경우 A를 반드시 성사시킨다.
+5. 렌더된 화면의 최소 time이 `last_run` 이전이 될 때까지 스크롤→grab 반복.
+   특정 글을 못 찾거나 지표가 비면 해당 글의 status URL을 직접 방문해 같은 방식으로 추출.
+6. `last_run` 이후 글만 남기고 url 기준 중복 제거. 리포스트(repost_by 있음)는 유지하되 표기.
+7. **★★(grade 2) 계정 전문 수집**: ★★ 계정의 글이 잘려 있으면(…로 끝나거나 문장 중간에서
+   끊김 — 타임라인은 긴 글을 자름) 해당 글의 status URL을 열어
+   `article[data-testid="tweet"] [data-testid="tweetText"]`의 innerText로 text를 교체한다.
+   ★/무등급 글은 잘린 채로 둔다. status 페이지로 이동하면 페이지 전역 변수가 날아가므로
+   **아래 회수를 끝낸 뒤** 실행한다. (A 경로에서는 이 단계 자체가 불필요하다.)
 
 ### 수집 데이터 회수 (javascript_tool 출력 제한 우회)
 
@@ -92,30 +163,47 @@ gzip+base64 인코딩(내용 필터에 통째로 차단) · `execCommand('copy')
 다운로드(파일이 Downloads에 생성되지 않음) · 문자열 offset slice 반복(차단된 구간이 생기면
 인덱스가 어긋나 어느 구간이 빠졌는지 추적 불가).
 
+**로컬 서버로 빼내기도 불가** (2026-08-24 확인) — x.com의 응답 헤더 CSP가 세 경로를 모두 막는다:
+`fetch('http://127.0.0.1:PORT')` 는 `connect-src` 로 차단(`TypeError: Failed to fetch`,
+콘솔에도 안 남는다) · `<form method=POST target=_blank>` 는 `form-action` 으로 차단 ·
+`window.open()` 은 사용자 제스처가 없어 팝업 차단(`opened:false`).
+로컬 파이썬 서버 자체는 정상 동작하므로 서버를 의심하지 말 것. 아래 청크 분할이 유일한 경로다.
+
 **작동하는 방식** — 페이지 전역 배열에 모아두고 **글 단위로 결정론적으로 나눠 받는다**:
 ```js
-// 스크롤·추출이 끝난 뒤 한 번만 실행
+// 수집(A 또는 B)이 끝난 뒤 한 번만 실행. 누산기는 A면 window.__A, B면 window.__X.
 const clean = s => (s||'')
   .replace(/https?:\/\/\S+/g,'[link]')
   .replace(/\b[\w.\/-]*\.(com|io|org|net|co|be|ai)\b[\w.\/?=&%-]*/gi,'[link]')
   .replace(/\b(?=[\w-]*\d)(?=[\w-]*[A-Za-z])[\w-]{8,}\b/g,'#');  // 필터 유발 토큰 제거
-window.__P = Object.values(window.__X)
+const G2 = [/* accounts.json 의 grade 2 핸들 */];
+window.__P = Object.values(window.__A)
   .filter(x => x.time && x.time > LAST_RUN)
   .sort((a,b) => b.time.localeCompare(a.time))
-  .map(x => ({ url:x.url.replace(/\?.*$/,''), time:x.time, handle:x.handle,
-               text: clean(x.text).slice(0,240), repost_by:x.repost_by,
-               likes:x.likes, views:x.views }));
+  .map(x => ({ i:x.url.split('/status/')[1], t:x.time, h:x.handle,
+               // ★★는 전문(700자), ★는 200자만 — url은 핸들+id로 로컬에서 복원
+               x: clean(x.text).slice(0, G2.includes(x.handle) ? 700 : 200),
+               r:x.repost_by, l:x.likes, v:x.views }));
 window.__g = (k,n) => JSON.stringify(window.__P.slice(k,k+n));
 window.__P.length
 ```
-- **`window.__g(k,3)`을 `browser_batch`에 10개씩 묶어** 호출한다 (1회 왕복에 30건).
-  3건·본문 240자면 출력이 1,200자 아래로 유지되어 잘리지 않는다.
+- **★는 `__g(k,3)`, ★★가 섞인 구간은 `__g(k,2)`** 로 `browser_batch` 에 25~30개씩 묶는다
+  (1회 왕복에 50~90건). ★★ 700자 본문이 들어가면 3건은 자주 잘린다.
 - `time`은 **ISO 원본 그대로**, `repost_by`는 **원문 문자열 그대로** 넘긴다.
   (압축하려고 분 단위·불리언으로 줄이면 데이터 파일의 초 단위 시각과 리포스터 이름이 유실된다.)
+- **`[TRUNCATED]`가 나오면 그 청크의 뒤쪽 항목은 통째로 유실된다.** 예: `__g(9,3)` 출력이
+  2번째 항목 중간에서 잘렸다면 index 10은 부분, **11은 아예 못 받은 것**이다.
+  배치를 보낼 때 offset 순서를 적어두고, 잘린 청크마다 `k+1`·`k+2` 를 개별 재요청한다.
+  본문 뒷부분만 필요하면
+  `window.__P[k].h+'|'+window.__P[k].i+'|'+window.__P[k].l+'|'+window.__P[k].v+'||'+window.__P[k].x.slice(600,900)`
+  처럼 메타와 슬라이스를 나눠 받는다.
+- 배치 안 출력 개수를 세어 offset과 1:1로 맞출 것. 한 칸만 밀려도 어느 글이 빠졌는지
+  오판하게 된다(2026-08-24에 실제로 off-by-2 발생).
 - 개별 항목이 `[BLOCKED]`으로 오면 **그 글만 `__g(k,1)`로 단독 재요청**, 그래도 막히면
   메타(`{url,time,handle,likes,views}`)와 `__P[k].text.slice(0,120)` / `.slice(120,240)`을
   나눠 받는다. 인덱스 기반이라 어느 글이 빠졌는지 항상 명확하다.
-- 133건 기준 왕복 5회 정도면 끝난다.
+- 133건이면 왕복 5회, 335건(주말 포함 3일치)이면 **왕복 6~7회 + 잘린 항목 재요청 1회**
+  정도로 끝난다.
 
 ## 저장·리포트
 
