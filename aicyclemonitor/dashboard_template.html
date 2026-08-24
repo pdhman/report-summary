@@ -166,6 +166,10 @@
           SEC 실적·최근2Q×2 런레이트(자동). 경계 판정은 런레이트가 직전 4분기 합 아래로 꺾이는지(가속 멈춤).
           SEC 현금 capex 기준이라 Bloomberg 합계와 정의가 소폭 다름</p>
         <div id="ch-capex"></div></div>
+      <div class="card"><h3>메모리(MU) 매출 YoY (%)</h3>
+        <p class="note">HBM 주문의 카나리아 — 마이크론은 회계분기(2·5·8·11월 마감)가 빨라
+          빅테크·엔비디아보다 분기 신호가 먼저 찍힘. 물량 둔화는 매출 둔화로 나타남</p>
+        <div id="ch-mu"></div></div>
     </div>
   </section>
 
@@ -181,6 +185,10 @@
         <p class="note">투기등급(BB 이하) 회사채 스프레드 — 신용시장 전반의 위험선호 온도계.
           레벨이 투자등급의 3~5배라 축 왜곡을 피해 별도 표시. 급등 = 2008년형 스트레스</p>
         <div id="ch-hy"></div></div>
+      <div class="card"><h3>CCC 등급 OAS (bp)</h3>
+        <p class="note">최약체 투기등급의 조달비용(FRED) — '저신용 AI 사업자도 쉽게 빌리는가'의 프록시.
+          이례적 축소=과열, 90일 +150bp 급등=조달창구 폐쇄 신호</p>
+        <div id="ch-ccc"></div></div>
       <div class="card"><h3>네오클라우드 주가 (시작=100)</h3>
         <p class="note">CRWV·NBIS·IREN·APLD — GPU 담보 레버리지의 체온계</p>
         <div id="ch-neo"></div></div>
@@ -196,6 +204,10 @@
       <div class="card"><h3>빅테크 5Y CDS 레벨 (bp)</h3>
         <p class="note" id="cdsNote">개별 CDS는 유료라 언론 인용 스냅샷을 수동 기록 — 괄호는 연초 대비 변화</p>
         <div id="ch-cds"></div></div>
+      <div class="card"><h3>오라클 RPO 수주잔고 ($B)</h3>
+        <p class="note">장기 컴퓨팅 계약의 총량(SEC) — 증가 정체·감소 전환 = 계약 취소/사용률 하락의
+          정량 프록시. AI 랩發 계약 리스크가 숫자로 처음 찍히는 곳</p>
+        <div id="ch-rpo"></div></div>
     </div>
   </section>
 
@@ -466,6 +478,12 @@ function renderAll(){
     document.getElementById('ch-nvda').innerHTML=
       '<div class="empty">manual_data.json 의 nvda_dc_revenue_bil 에 분기 매출($B)을 입력하세요</div>';
   }
+  const mu=DATA.demand.mu_yoy||{};
+  if(mu.quarters&&mu.quarters.length){
+    lineChart('ch-mu',[{name:'MU',dates:mu.quarters,values:mu.yoy}],{labels:mu.quarters,unit:'%',h:190});
+  } else {
+    document.getElementById('ch-mu').innerHTML='<div class="empty">수집 대기</div>';
+  }
   const cap=DATA.demand.capex_total||{};
   if(cap.labels&&cap.labels.length){
     const capSeries=[{name:'컨센서스',dates:cap.labels,values:cap.values}];
@@ -485,6 +503,9 @@ function renderAll(){
   ].filter(Boolean),{unit:'bp'});
   lineChart('ch-hy',
     sp.HY_OAS?[{name:'HY OAS',dates:sp.HY_OAS.dates,values:sp.HY_OAS.values}]:[],
+    {unit:'bp',h:180});
+  lineChart('ch-ccc',
+    sp.CCC_OAS?[{name:'CCC OAS',dates:sp.CCC_OAS.dates,values:sp.CCC_OAS.values}]:[],
     {unit:'bp',h:180});
   const neo=DATA.leverage.neocloud_indexed||{};
   lineChart('ch-neo',Object.keys(neo).map(k=>({name:k,dates:neo[k].dates,values:neo[k].values})));
@@ -510,6 +531,12 @@ function renderAll(){
   } else {
     document.getElementById('ch-cds').innerHTML=
       '<div class="empty">manual_data.json 의 bigtech_cds_5y_bp 입력 대기</div>';
+  }
+  const rpo=DATA.leverage.orcl_rpo||{};
+  if(rpo.labels&&rpo.labels.length){
+    lineChart('ch-rpo',[{name:'ORCL RPO',dates:rpo.labels,values:rpo.values}],{labels:rpo.labels,unit:'B',h:180});
+  } else {
+    document.getElementById('ch-rpo').innerHTML='<div class="empty">SEC 수집 대기</div>';
   }
 
   // 경계 신호 표

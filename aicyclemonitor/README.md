@@ -5,8 +5,13 @@
 | 축 | 역사적 유형 | 추적 지표 | 소스 |
 |---|---|---|---|
 | ① 공급과잉 | 1999 닷컴 | GPU 임대가(H100·B200 임대중 중앙값), DC REIT(DLR·EQIX), 공실률 | 500.farm(vast.ai 미러) · Yahoo · CBRE(수동) |
-| ② 수요둔화 | 2022 긴축 | Hyperscaler 매출 YoY, 클라우드 부문 YoY, NVDA DC 매출 YoY, 5사 연간 capex(컨센서스 vs 실적·런레이트) | Yahoo·SEC(자동) · 실적발표·Bloomberg(수동) |
-| ③ 레버리지 | 2008 금융위기 | AA·BBB·HY OAS, 네오클라우드 주가, BDC 프록시, CRWV 분기 capex | FRED(→allorigins 폴백) · Yahoo · SEC |
+| ② 수요둔화 | 2022 긴축 | Hyperscaler 매출 YoY, 클라우드 부문 YoY, NVDA DC 매출 YoY, 5사 연간 capex(컨센서스 vs 실적·런레이트), MU 매출 YoY(HBM 프록시) | Yahoo·SEC(자동) · 실적발표·Bloomberg(수동) |
+| ③ 레버리지 | 2008 금융위기 | AA·BBB·HY·CCC OAS, 네오클라우드 주가, BDC 프록시, CRWV 분기 capex, ORCL RPO, 개별 CDS(수동) | FRED(→allorigins 폴백) · Yahoo · SEC |
+
+> **금융화 위험신호의 지표화** (2026-08 추가): '저신용 차입 용이성'→CCC OAS(자동),
+> '계약 취소·사용률 하락'→ORCL RPO 잔고 QoQ(자동), 'HBM 물량 둔화'→MU 매출 YoY(자동,
+> 회계분기가 빨라 조기 신호). 'GPU 담보가치'는 GPU 임대가(공급 축)가, '사모 크레딧
+> 스프레드'는 BDC 프록시가 이미 커버. 'GPU 대출 LTV'는 사적 계약 조건이라 지표화 불가.
 
 > 개별 기업 CDS(오라클·NVIDIA·브로드컴 등)는 Markit/Bloomberg 유료 독점이라 무료 추적 불가.
 > 대신 등급 버킷 OAS로 프록시: AA=하이퍼스케일러(MSFT AAA·GOOGL AA+·AMZN AA·META AA-)·NVIDIA급,

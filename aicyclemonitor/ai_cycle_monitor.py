@@ -46,6 +46,7 @@ GPU_HISTORY_CSV = os.path.join(BASE_DIR, "gpu_rental_history.csv")
 REVENUE_CACHE_CSV = os.path.join(BASE_DIR, "revenue_history.csv")
 CRWV_CAPEX_CSV = os.path.join(BASE_DIR, "crwv_capex_history.csv")
 HS_CAPEX_CSV = os.path.join(BASE_DIR, "hyperscaler_capex_history.csv")
+ORCL_RPO_CSV = os.path.join(BASE_DIR, "orcl_rpo_history.csv")
 CAPEX_CIK = {"GOOGL": "0001652044", "MSFT": "0000789019", "AMZN": "0001018724",
              "META": "0001326801", "ORCL": "0001341439"}
 CAPEX_CONCEPTS = ["PaymentsToAcquirePropertyPlantAndEquipment",
@@ -62,10 +63,12 @@ DC_REIT = ["DLR", "EQIX"]                          # 데이터센터 REIT
 PRIVATE_CREDIT = ["BIZD", "PBDC"]                  # BDC/사모신용 상장 프록시
 HYPERSCALER = ["MSFT", "GOOGL", "AMZN", "META"]
 ORACLE = "ORCL"
+MEMORY_TICKER = "MU"                               # HBM 주문 프록시 (회계분기 2·5·8·11월 — 조기 신호)
 FRED_SERIES = {
     "AA_OAS": "BAMLC0A2CAA",      # ICE BofA AA 회사채 OAS (MSFT/GOOGL/AMZN/META=AA급 프록시)
     "BBB_OAS": "BAMLC0A4CBBB",    # ICE BofA BBB 회사채 OAS (오라클=BBB 프록시)
     "HY_OAS": "BAMLH0A0HYM2",     # ICE BofA 하이일드 OAS
+    "CCC_OAS": "BAMLH0A3HYC",     # ICE BofA CCC 이하 OAS (최약체 차입 창구 — 저신용 조달 용이성)
 }
 PRICE_LOOKBACK = "2y"
 
@@ -83,6 +86,9 @@ TH = {
     "aa_oas_chg_90d": 30.0,        # AA OAS 90일 상승폭(bp) 이 값 이상 → 경계 (하이퍼스케일러급)
     "orcl_cds_level": 200.0,       # 오라클 5Y CDS(bp, 수동 스냅샷) 이 값 이상 → 경계
     "hy_oas_level": 450.0,         # 하이일드 OAS(bp) 이 값 이상 → 경계 (신용시장 전반 스트레스)
+    "ccc_oas_chg_90d": 150.0,      # CCC OAS 90일 상승폭(bp) 이 값 이상 → 경계 (최약체 조달창구 경색)
+    "orcl_rpo_qoq": 0.0,           # 오라클 RPO QoQ(%) 이 값 이하 → 경계 (계약 취소/전환 실패)
+    "mu_slowdown_q": 2,            # 마이크론 매출 YoY 연속 둔화 분기 이상 → 경계 (HBM 주문 프록시)
     "neocloud_drawdown": -50.0,    # 네오클라우드 평균 52주 낙폭(%) → 경계
     "crwv_capex_yoy": 0.0,         # CRWV 분기 capex YoY(%) 이 값 이하(감소 전환) → 경계
     "orcl_drawdown": -40.0,        # 오라클 52주 낙폭(%) → 경계
@@ -294,7 +300,7 @@ def fetch_hyperscaler_revenue():
         with open(REVENUE_CACHE_CSV, encoding="utf-8") as f:
             for t, q, v in csv.reader(f):
                 cache[(t, q)] = float(v)
-    for t in HYPERSCALER:
+    for t in HYPERSCALER + [MEMORY_TICKER]:
         try:
             inc = yf.Ticker(t).quarterly_income_stmt
             if inc is None or inc.empty or "Total Revenue" not in inc.index:
@@ -386,10 +392,45 @@ def fetch_hyperscaler_capex():
     return cache
 
 
-def revenue_yoy_series(cache):
+def fetch_orcl_rpo():
+    """오라클 RPO(잔여수행의무 잔고, 시점값)를 SEC XBRL에서 수집해 CSV 누적.
+    장기 컴퓨팅 계약의 총량 — 증가 정체·감소 전환이 '계약 취소/사용률 하락'의 정량 프록시."""
+    cache = {}
+    if os.path.exists(ORCL_RPO_CSV):
+        with open(ORCL_RPO_CSV, encoding="utf-8") as f:
+            for d, v in csv.reader(f):
+                cache[d] = float(v)
+    try:
+        import requests
+        r = requests.get("https://data.sec.gov/api/xbrl/companyconcept/CIK0001341439"
+                         "/us-gaap/RevenueRemainingPerformanceObligation.json",
+                         timeout=30, headers={"User-Agent": "aicyclemonitor personal research"})
+        r.raise_for_status()
+        best = {}  # end(시점) -> (filed, val)
+        for e in r.json().get("units", {}).get("USD", []):
+            en = e.get("end")
+            if en and e.get("val") is not None and (not e.get("start") or e["start"] == en):
+                if en not in best or e.get("filed", "") > best[en][0]:
+                    best[en] = (e.get("filed", ""), float(e["val"]))
+        for en, (_, v) in best.items():
+            if en >= "2023-01-01":
+                cache[en] = v
+        with open(ORCL_RPO_CSV, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            for d, v in sorted(cache.items()):
+                w.writerow([d, v])
+        if cache:
+            last = sorted(cache)[-1]
+            log(f"ORCL RPO(SEC): 최근 {last} ${cache[last]/1e9:.0f}B, 총 {len(cache)}개 분기")
+    except Exception as e:
+        log(f"ORCL RPO 수집 실패(기존 캐시 사용): {e}")
+    return cache
+
+
+def revenue_yoy_series(cache, tickers=HYPERSCALER):
     """분기 매출 캐시 → 티커별 YoY 시계열 {ticker: {"quarters":[...], "yoy":[...]}}"""
     out = {}
-    for t in HYPERSCALER:
+    for t in tickers:
         items = sorted((q, v) for (tk, q), v in cache.items() if tk == t)
         yoy_q, yoy_v = [], []
         bydate = dict(items)
@@ -454,9 +495,11 @@ def collect_live():
             out[c] = {"dates": d, "values": v}
         return out
 
-    # ── 수요: 분기 매출 YoY ──
+    # ── 수요: 분기 매출 YoY (+메모리 MU = HBM 주문 프록시) ──
     rev_cache = fetch_hyperscaler_revenue()
     rev_yoy = revenue_yoy_series(rev_cache)
+    mu_yoy = revenue_yoy_series(rev_cache, [MEMORY_TICKER]).get(
+        MEMORY_TICKER, {"quarters": [], "yoy": []})
 
     # ── 수요(공급자 프록시): NVIDIA DC 부문 매출 — 세그먼트라 XBRL에 없어 수동 입력 ──
     nv = manual.get("nvda_dc_revenue_bil", {}) or {}
@@ -504,6 +547,11 @@ def collect_live():
     crwv_capex = {"labels": [f"{d[:4]}Q{(int(d[5:7]) - 1) // 3 + 1}" for d, _ in crwv_cx],
                   "values": [round(v / 1e9, 2) for _, v in crwv_cx]}
 
+    # ── 레버리지: 오라클 RPO (장기 계약 잔고 — 취소/사용률 하락의 정량 프록시) ──
+    rp = sorted(fetch_orcl_rpo().items())
+    orcl_rpo = {"labels": [d[:7] for d, _ in rp],
+                "values": [round(v / 1e9, 0) for _, v in rp]}
+
     # ── 지표 계산 ──
     metrics = {}
     for model, key in [("H100 SXM", "gpu"), ("B200", "b200")]:
@@ -522,7 +570,7 @@ def collect_live():
         sum(v for v in [dd[t] for t in NEOCLOUD] if v is not None)
         / max(1, len([1 for t in NEOCLOUD if dd[t] is not None])), 1)
     metrics["orcl_dd"] = dd.get(ORACLE)
-    for name, key in [("BBB_OAS", "bbb"), ("AA_OAS", "aa")]:
+    for name, key in [("BBB_OAS", "bbb"), ("AA_OAS", "aa"), ("CCC_OAS", "ccc")]:
         if name in spreads:
             s = pd.Series(spreads[name]["values"],
                           index=pd.to_datetime(spreads[name]["dates"]))
@@ -545,6 +593,19 @@ def collect_live():
                 if d[:4] == str(int(last_d[:4]) - 1) and d[5:7] == last_d[5:7]]
         metrics["crwv_capex_yoy"] = pct(last_v, prev[0]) if prev else None
         metrics["crwv_capex_last_bil"] = round(last_v / 1e9, 1)
+    if len(rp) >= 2:
+        metrics["orcl_rpo_qoq"] = pct(rp[-1][1], rp[-2][1])
+        metrics["orcl_rpo_last_bil"] = round(rp[-1][1] / 1e9, 0)
+    mu_vals = [v for v in mu_yoy["yoy"] if v is not None]
+    if mu_vals:
+        k = 0
+        for i in range(len(mu_vals) - 1, 0, -1):
+            if mu_vals[i] < mu_vals[i - 1]:
+                k += 1
+            else:
+                break
+        metrics["mu_slowdown_q"] = k
+        metrics["mu_yoy_last"] = mu_vals[-1]
 
     data = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -559,6 +620,7 @@ def collect_live():
             "cloud_yoy": manual.get("cloud_segment_yoy", {}),
             "nvda_dc": nvda_dc,
             "capex_total": capex_total,
+            "mu_yoy": mu_yoy,
         },
         "leverage": {
             "spreads": spreads,
@@ -568,6 +630,7 @@ def collect_live():
             "drawdowns": dd,
             "crwv_capex": crwv_capex,
             "cds": manual.get("bigtech_cds_5y_bp", {}),
+            "orcl_rpo": orcl_rpo,
         },
         "metrics": metrics,
     }
@@ -626,6 +689,7 @@ def collect_sample():
     aa = peaked(58, 260, 50, 95, 0.01)
     bbb = peaked(105, 260, 92, 168, 0.01)
     hy = peaked(300, 260, 262, 445, 0.012)
+    ccc = peaked(680, 260, 590, 1050, 0.012)
     crwv = peaked(60, 270, 187, 62, 0.03)
     nbis = peaked(30, 300, 130, 55, 0.03)
     iren = peaked(9, 310, 75, 33, 0.03)
@@ -678,9 +742,12 @@ def collect_sample():
             "capex_total": {"labels": ["2025", "2026E", "2027E", "2028E"],
                             "values": [446.4, 813.1, 1119.6, 1267.1],
                             "actual": [446.4, 802.0, None, None]},
+            "mu_yoy": {"quarters": ["2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2"],
+                       "yoy": [38.3, 36.6, 30.3, 46.1, 44.0, 40.2]},
         },
         "leverage": {
-            "spreads": {"AA_OAS": pack(aa), "BBB_OAS": pack(bbb), "HY_OAS": pack(hy)},
+            "spreads": {"AA_OAS": pack(aa), "BBB_OAS": pack(bbb),
+                        "HY_OAS": pack(hy), "CCC_OAS": pack(ccc)},
             "neocloud_indexed": {t: pack(idx(v)) for t, v in neo.items()},
             "private_credit_indexed": {"BIZD": pack(idx(bizd)), "PBDC": pack(idx(pbdc))},
             "orcl_indexed": {"ORCL": pack(idx(orcl))},
@@ -691,6 +758,8 @@ def collect_sample():
             "cds": {"date": "2026-07-29", "source": "S&P Global MI (예시)",
                     "ytd_chg": {"ORCL": 70, "AVGO": 48, "META": 39, "NVDA": 32, "AMZN": 30, "GOOGL": 29},
                     "level": {"ORCL": 215, "META": 95, "NVDA": 82}},
+            "orcl_rpo": {"labels": ["2025-05", "2025-08", "2025-11", "2026-02", "2026-05"],
+                         "values": [138, 455, 523, 553, 638]},
         },
         "metrics": {
             "gpu_rent_chg_90d": round((gpu_vals[-1] / gpu_vals[-90] - 1) * 100, 1),
@@ -713,6 +782,12 @@ def collect_sample():
             "bbb_chg_90d_bp": round(bbb[-1] - bbb[-90], 0),
             "aa_last": aa[-1],
             "aa_chg_90d_bp": round(aa[-1] - aa[-90], 0),
+            "ccc_last": ccc[-1],
+            "ccc_chg_90d_bp": round(ccc[-1] - ccc[-90], 0),
+            "orcl_rpo_qoq": 15.4,
+            "orcl_rpo_last_bil": 638,
+            "mu_slowdown_q": 2,
+            "mu_yoy_last": 40.2,
         },
     }
     return data
@@ -787,6 +862,9 @@ def judge(data):
     v = m.get("capex_runrate_vs_ttm")
     add("수요", "5사 capex 런레이트 vs 직전 4분기 (SEC 자동)", v, "%",
         f"{TH['capex_runrate_vs_ttm']:.0f}% 이하 (가속 멈춤)", v is not None and v <= TH["capex_runrate_vs_ttm"])
+    v = m.get("mu_slowdown_q")
+    add("수요", "메모리(MU) 매출 YoY 연속 둔화 — HBM 주문 프록시", v, "개",
+        f"{TH['mu_slowdown_q']}분기 이상", v is not None and v >= TH["mu_slowdown_q"])
 
     v = m.get("bbb_last")
     add("레버리지", "BBB 회사채 OAS 수준 (오라클·브로드컴급)", v, "bp",
@@ -801,6 +879,12 @@ def judge(data):
     v = hy["values"][-1] if hy.get("values") else None
     add("레버리지", "하이일드 OAS 수준 (신용시장 전반)", v, "bp",
         f"{TH['hy_oas_level']:.0f}bp 이상", v is not None and v >= TH["hy_oas_level"])
+    v = m.get("ccc_chg_90d_bp")
+    add("레버리지", "CCC OAS 90일 상승폭 (최약체 조달창구)", v, "bp",
+        f"+{TH['ccc_oas_chg_90d']:.0f}bp 이상", v is not None and v >= TH["ccc_oas_chg_90d"])
+    v = m.get("orcl_rpo_qoq")
+    add("레버리지", "오라클 RPO QoQ (계약 취소·전환 프록시, SEC)", v, "%",
+        f"{TH['orcl_rpo_qoq']:.0f}% 이하 (감소 전환)", v is not None and v <= TH["orcl_rpo_qoq"])
     v = m.get("neocloud_dd_avg")
     add("레버리지", "네오클라우드 평균 52주 낙폭", v, "%",
         f"{TH['neocloud_drawdown']}% 이하", v is not None and v <= TH["neocloud_drawdown"])
@@ -998,6 +1082,10 @@ TEMPLATE = r"""<!DOCTYPE html>
           SEC 실적·최근2Q×2 런레이트(자동). 경계 판정은 런레이트가 직전 4분기 합 아래로 꺾이는지(가속 멈춤).
           SEC 현금 capex 기준이라 Bloomberg 합계와 정의가 소폭 다름</p>
         <div id="ch-capex"></div></div>
+      <div class="card"><h3>메모리(MU) 매출 YoY (%)</h3>
+        <p class="note">HBM 주문의 카나리아 — 마이크론은 회계분기(2·5·8·11월 마감)가 빨라
+          빅테크·엔비디아보다 분기 신호가 먼저 찍힘. 물량 둔화는 매출 둔화로 나타남</p>
+        <div id="ch-mu"></div></div>
     </div>
   </section>
 
@@ -1013,6 +1101,10 @@ TEMPLATE = r"""<!DOCTYPE html>
         <p class="note">투기등급(BB 이하) 회사채 스프레드 — 신용시장 전반의 위험선호 온도계.
           레벨이 투자등급의 3~5배라 축 왜곡을 피해 별도 표시. 급등 = 2008년형 스트레스</p>
         <div id="ch-hy"></div></div>
+      <div class="card"><h3>CCC 등급 OAS (bp)</h3>
+        <p class="note">최약체 투기등급의 조달비용(FRED) — '저신용 AI 사업자도 쉽게 빌리는가'의 프록시.
+          이례적 축소=과열, 90일 +150bp 급등=조달창구 폐쇄 신호</p>
+        <div id="ch-ccc"></div></div>
       <div class="card"><h3>네오클라우드 주가 (시작=100)</h3>
         <p class="note">CRWV·NBIS·IREN·APLD — GPU 담보 레버리지의 체온계</p>
         <div id="ch-neo"></div></div>
@@ -1028,6 +1120,10 @@ TEMPLATE = r"""<!DOCTYPE html>
       <div class="card"><h3>빅테크 5Y CDS 레벨 (bp)</h3>
         <p class="note" id="cdsNote">개별 CDS는 유료라 언론 인용 스냅샷을 수동 기록 — 괄호는 연초 대비 변화</p>
         <div id="ch-cds"></div></div>
+      <div class="card"><h3>오라클 RPO 수주잔고 ($B)</h3>
+        <p class="note">장기 컴퓨팅 계약의 총량(SEC) — 증가 정체·감소 전환 = 계약 취소/사용률 하락의
+          정량 프록시. AI 랩發 계약 리스크가 숫자로 처음 찍히는 곳</p>
+        <div id="ch-rpo"></div></div>
     </div>
   </section>
 
@@ -1298,6 +1394,12 @@ function renderAll(){
     document.getElementById('ch-nvda').innerHTML=
       '<div class="empty">manual_data.json 의 nvda_dc_revenue_bil 에 분기 매출($B)을 입력하세요</div>';
   }
+  const mu=DATA.demand.mu_yoy||{};
+  if(mu.quarters&&mu.quarters.length){
+    lineChart('ch-mu',[{name:'MU',dates:mu.quarters,values:mu.yoy}],{labels:mu.quarters,unit:'%',h:190});
+  } else {
+    document.getElementById('ch-mu').innerHTML='<div class="empty">수집 대기</div>';
+  }
   const cap=DATA.demand.capex_total||{};
   if(cap.labels&&cap.labels.length){
     const capSeries=[{name:'컨센서스',dates:cap.labels,values:cap.values}];
@@ -1317,6 +1419,9 @@ function renderAll(){
   ].filter(Boolean),{unit:'bp'});
   lineChart('ch-hy',
     sp.HY_OAS?[{name:'HY OAS',dates:sp.HY_OAS.dates,values:sp.HY_OAS.values}]:[],
+    {unit:'bp',h:180});
+  lineChart('ch-ccc',
+    sp.CCC_OAS?[{name:'CCC OAS',dates:sp.CCC_OAS.dates,values:sp.CCC_OAS.values}]:[],
     {unit:'bp',h:180});
   const neo=DATA.leverage.neocloud_indexed||{};
   lineChart('ch-neo',Object.keys(neo).map(k=>({name:k,dates:neo[k].dates,values:neo[k].values})));
@@ -1342,6 +1447,12 @@ function renderAll(){
   } else {
     document.getElementById('ch-cds').innerHTML=
       '<div class="empty">manual_data.json 의 bigtech_cds_5y_bp 입력 대기</div>';
+  }
+  const rpo=DATA.leverage.orcl_rpo||{};
+  if(rpo.labels&&rpo.labels.length){
+    lineChart('ch-rpo',[{name:'ORCL RPO',dates:rpo.labels,values:rpo.values}],{labels:rpo.labels,unit:'B',h:180});
+  } else {
+    document.getElementById('ch-rpo').innerHTML='<div class="empty">SEC 수집 대기</div>';
   }
 
   // 경계 신호 표
