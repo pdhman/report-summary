@@ -50,9 +50,20 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "서식 자동 복구를 건너뜁니다(구조 인식 실패) - 원본 그대로 게시. 페이지가 이상하면 알려주세요." -ForegroundColor Yellow
 }
 
-# 4) 커밋 & 푸시 (푸시하면 GitHub Actions가 페이지 생성 후 배포)
+# 3.7) 페이지 생성 (md -> docs/brief_*.html + 허브 + 홈 카드)
+# 2026-08-22 브랜치 서빙 전환으로 Actions 의 push 트리거가 없어져, HTML 은
+# 여기(로컬)서 만든다. push = 배포라 러너를 기다릴 필요도 없다.
+# (2026-08-24 실사고: md 만 push 되고 HTML 미생성 → '오늘의 뉴스' 미갱신)
+$env:PYTHONUTF8 = '1'
+& $py -u (Join-Path $proj 'make_brief.py')
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "페이지 생성 실패 - 클로드에게 알려주세요. (md 는 게시 계속)" -ForegroundColor Red
+}
+& $py -u -c "import make_summary; make_summary.build()"
+
+# 4) 커밋 & 푸시 (브랜치 서빙: push 가 곧 배포)
 $ymd = $date -replace '-', ''
-git add ("briefs/{0}.md" -f $date)
+git add ("briefs/{0}.md" -f $date) docs/
 git diff --staged --quiet
 if ($LASTEXITCODE -eq 0) {
     Write-Host "변경 내용이 없습니다 (같은 날짜에 동일한 글)." -ForegroundColor Yellow
