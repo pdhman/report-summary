@@ -14,67 +14,116 @@ Colab 전용 코드(google.colab, apt-get 등)는 제거하고 서비스 계정�
 
 import io
 import os
+import re
 import json
+import time
 import datetime
 from collections import OrderedDict
 
 import pytz
 import pandas as pd
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+import requests as _rq
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 
-URL = "https://comp.wisereport.co.kr/wiseReport/summary/ReportSummary.aspx"
+# 2026-08-25 부터 네이버 금융 리서치가 수집원이다. 원래 소스였던 WiseReport
+# 리포트서머리(comp.wisereport.co.kr)는 이날 서비스가 종료됐다("해당 리포트
+# 서비스는 제공이 종료되었습니다"). 본사이트(wisereport.co.kr)는 로그인이
+# 필요해 무인 수집에 부적합하고, 네이버 리서치는 공개 페이지에 종목·제목·
+# 증권사·목표가·투자의견·본문이 모두 있어 기존 스키마를 그대로 채운다.
+LIST_URL = "https://finance.naver.com/research/company_list.naver?&page={page}"
+READ_URL = "https://finance.naver.com/research/company_read.naver?nid={nid}&page=1"
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"}
+MAX_PAGES = 12          # 하루 발행량(수십 건)을 넉넉히 덮는다
 
 
 # ----------------------------------------------------------------------------
-# 1. 크롤링 (노트북 cell-3 의 Selenium 로직)
+# 1. 크롤링 (네이버 금융 리서치: 오늘 발행된 종목 리포트 전부)
 # ----------------------------------------------------------------------------
-def scrape_wisereport_selenium():
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
-    )
+_ROW_RE = re.compile(
+    r'<a href="/item/main\.naver\?code=(\d{6})"[^>]*>([^<]+)</a>\s*</td>\s*'
+    r'<td><a href="company_read\.naver\?nid=(\d+)&(?:amp;)?page=\d+">([^<]+)</a>[^<]*(?:<img[^>]*>)?</td>\s*'
+    r'<td>([^<]*)</td>\s*'                      # 증권사
+    r'<td class="file">.*?</td>\s*'
+    r'<td class="date"[^>]*>([\d.]+)</td>', re.S)
 
-    driver = webdriver.Chrome(options=options)
+
+def _read_detail(nid):
+    """상세 페이지에서 (목표가, 투자의견, 요약) 추출. 실패 필드는 None/''."""
+    r = _rq.get(READ_URL.format(nid=nid), headers=UA, timeout=15)
+    r.encoding = "euc-kr"
+    h = r.text
+    m = re.search(r'목표가\s*<em class="money"><strong>([\d,]+)', h)
+    target = m.group(1).replace(",", "") if m else None
+    m = re.search(r'투자의견\s*<em class="coment">([^<]+)</em>', h)
+    opinion = m.group(1).strip() if m else ""
+    m = re.search(r'class="view_cnt">(.*?)</td>', h, re.S)
+    summary = ""
+    if m:
+        summary = re.sub(r"<[^>]+>", " ", m.group(1))
+        summary = re.sub(r"\s+", " ", summary).strip()[:600]
+    return target, opinion, summary
+
+
+def _prev_close(code):
+    """전일수정주가 — 네이버 종목 API 종가."""
     try:
-        driver.get(URL)
-        WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.TAG_NAME, "table"))
-        )
-        html = driver.page_source
-    finally:
-        driver.quit()
+        r = _rq.get(f"https://m.stock.naver.com/api/stock/{code}/basic",
+                    headers=UA, timeout=10)
+        return float(r.json()["closePrice"].replace(",", ""))
+    except Exception:
+        return None
 
-    tables = pd.read_html(io.StringIO(html))
-    if len(tables) <= 2:
-        raise RuntimeError("데이터 테이블을 찾을 수 없습니다.")
 
-    df = tables[2]
-    df = df.iloc[5:, [0, 2, 3, 4, 5, 6]].reset_index(drop=True)
-    df.columns = ["기업명", "투자의견", "목표주가", "전일수정주가", "제목", "요약"]
-
-    remove_keywords = ["변동없음", "Copyright", "FnGuide"]
-    pattern = "|".join(remove_keywords)
-    df = df[~df["기업명"].astype(str).str.contains(pattern, case=False, na=False)]
-    df = df.dropna(subset=["기업명", "제목"], how="all").reset_index(drop=True)
-
+def scrape_naver_research():
     kst = pytz.timezone("Asia/Seoul")
-    df["수집일자"] = datetime.datetime.now(kst).strftime("%Y-%m-%d")
+    today = datetime.datetime.now(kst)
+    today_short = today.strftime("%y.%m.%d")      # 목록의 작성일 형식 (26.08.25)
+
+    rows, stop = [], False
+    for page in range(1, MAX_PAGES + 1):
+        r = _rq.get(LIST_URL.format(page=page), headers=UA, timeout=15)
+        r.encoding = "euc-kr"
+        found = _ROW_RE.findall(r.text)
+        if not found:
+            break
+        for code, name, nid, title, broker, date in found:
+            if date != today_short:               # 목록은 최신순 — 과거가 나오면 끝
+                stop = True
+                break
+            rows.append((code, name.strip(), nid, title.strip(), broker.strip()))
+        if stop:
+            break
+        time.sleep(0.4)
+
+    if not rows:
+        # 휴장일이거나 아직 발행 전 — main() 의 '10행 미만' 가드가 처리한다
+        return pd.DataFrame(columns=["기업명", "투자의견", "목표주가",
+                                     "전일수정주가", "제목", "요약", "수집일자"])
+
+    out, close_cache = [], {}
+    for code, name, nid, title, broker in rows:
+        target, opinion, summary = _read_detail(nid)
+        if code not in close_cache:
+            close_cache[code] = _prev_close(code)
+            time.sleep(0.2)
+        out.append({
+            "기업명": f"{name} ({code})",
+            "투자의견": opinion,
+            "목표주가": float(target) if target else None,
+            "전일수정주가": close_cache[code],
+            "제목": title,
+            "요약": f"[{broker}] {summary}" if summary else f"[{broker}]",
+        })
+        time.sleep(0.3)
+
+    df = pd.DataFrame(out)
+    df["수집일자"] = today.strftime("%Y-%m-%d")
     return df
 
 
@@ -165,7 +214,7 @@ def main():
         print(f"⏭️ {today:%Y-%m-%d}({'토일'[today.weekday() - 5]}) — 주말 휴장일, 실행 건너뜀")
         return
 
-    final_df = scrape_wisereport_selenium()
+    final_df = scrape_naver_research()
     if final_df is None or final_df.empty:
         raise RuntimeError("크롤링 결과가 비어있습니다.")
     print(f"수집 완료: {len(final_df)} 행")
