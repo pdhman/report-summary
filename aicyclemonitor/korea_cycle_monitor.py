@@ -81,7 +81,7 @@ REGIMES = [  # (하한, 라벨, 권장 주식비중, 색 클래스)
     (0, "Bear", "현금·헤지 확대", "critical"),
 ]
 YF_TICKERS = {"^GSPC": "spx", "^SOX": "sox", "^VIX": "vix", "DX-Y.NYB": "dxy",
-              "005930.KS": "ss_px", "000660.KS": "hx_px"}
+              "^MOVE": "move", "005930.KS": "ss_px", "000660.KS": "hx_px"}
 CHART_ROWS = 370            # 대시보드에 싣는 최근 거래일 수 (market_history 전 구간)
 PRICE_LOOKBACK = "3y"
 
@@ -417,6 +417,12 @@ def build_model(mh, glob_df, lev, rev, phase_sc, phase_latest, revb):
         sub["liq.hyoas"] = 100 - pd.concat(
             [pct_rank(hy), pct_rank(hy.diff(63))], axis=1).mean(axis=1)
         raw["hyoas"] = hy
+    if glob_df is not None and "move" in glob_df.columns and glob_df["move"].notna().any():
+        # 美 국채 변동성(MOVE) — 담보·자금시장 스트레스, HY OAS 보다 선행하는 경향
+        mv = align(glob_df["move"].dropna())
+        sub["liq.move"] = 100 - pd.concat(
+            [pct_rank(mv), pct_rank(mv.diff(63))], axis=1).mean(axis=1)
+        raw["move"] = mv
     factors["liq"] = pd.concat(
         [sub[k] for k in sub if k.startswith("liq.")], axis=1).mean(axis=1) \
         if any(k.startswith("liq.") for k in sub) else np.nan
@@ -477,6 +483,7 @@ CHECKLIST_SPEC = [
     ("④ 유동성", "반대매매 비중 (높을수록 경계)", "liq.liqratio", [["", "liq_ratio", 1, "%"]]),
     ("④ 유동성", "신용융자/예탁금 (높을수록 취약)", "liq.cdratio", [["", "cd_ratio", 1, "%"]]),
     ("④ 유동성", "美 하이일드 OAS", "liq.hyoas", [["", "hyoas", 0, "bp"]]),
+    ("④ 유동성", "美 MOVE (국채 변동성, 낮을수록 우호)", "liq.move", [["", "move", 1, ""]]),
     ("⑤ Euphoria", "과열 종합 (저가주·상한가·회전율·신용증가)", "euphoria.heat",
      [["열기", "euphoria_heat", 0, "/100"]]),
 ]
@@ -548,7 +555,7 @@ def assemble(mh, factors, sub, raw, rev, phase_latest, phase_labels, revb, lev):
         "liq": {
             "credit": ser(raw.get("credit"), 2), "deposit": ser(raw.get("deposit"), 2),
             "liq_ratio": ser(raw.get("liq_ratio"), 2), "cd_ratio": ser(raw.get("cd_ratio"), 2),
-            "hyoas": ser(raw.get("hyoas"), 0),
+            "hyoas": ser(raw.get("hyoas"), 0), "move": ser(raw.get("move"), 1),
         },
         "euphoria": {
             "penny_share": ser(mhr["penny_share"], 2),

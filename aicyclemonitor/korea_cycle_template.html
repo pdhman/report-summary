@@ -230,6 +230,10 @@
       <div class="card"><h3>美 하이일드 OAS (bp)</h3>
         <p class="note">FRED — 급등 = 글로벌 신용경색, 한국 위험자산에 직결</p>
         <div id="ch-hy"></div></div>
+      <div class="card"><h3>美 MOVE 지수 (국채 내재변동성, bp)</h3>
+        <p class="note">"채권시장의 VIX" — 담보·자금시장 스트레스, HY 스프레드보다 선행 경향.
+          50~80 안정 · 120↑ 스트레스</p>
+        <div id="ch-move"></div></div>
     </div>
   </section>
 
@@ -568,6 +572,7 @@ function renderAll(){
   lineChart('ch-liqr',[{name:'반대매매',dates:dts,values:L.liq_ratio},
                        {name:'신용/예탁금',dates:dts,values:L.cd_ratio}],{unit:'%',...mark});
   lineChart('ch-hy',[{name:'HY OAS',dates:dts,values:L.hyoas}],{unit:'bp',h:180,...mark});
+  lineChart('ch-move',[{name:'MOVE',dates:dts,values:L.move}],{hlines:[{y:120,label:'스트레스'}],h:180,...mark});
 
   // ⑤ Euphoria
   const E=DATA.euphoria;

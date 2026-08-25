@@ -1,9 +1,8 @@
 @echo off
 REM Korea Market Cycle Model - run, alert, then commit+push outputs
-REM Push 1: kc_cache with [skip ci]  (aicyclemonitor/** path would trigger the
-REM         heavy weekly-aicycle workflow otherwise)
-REM Push 2: reports copy WITHOUT skip ci (reports/** path triggers the
-REM         daily-insights workflow = GitHub Pages deploy)
+REM 2026-08-22+: site is branch-served from main /docs (push = deploy).
+REM [skip ci] keeps the aicyclemonitor/** push from triggering weekly-aicycle;
+REM it does not affect branch-serving deployment.
 cd /d "%~dp0"
 echo ==== %date% %time% ==== >> korea_cycle_log.txt
 where py >nul 2>&1
@@ -21,12 +20,8 @@ if not "%BR%"=="main" (
   echo [git] skip commit: current branch %BR% >> aicyclemonitor\korea_cycle_log.txt
   goto :done
 )
-git add aicyclemonitor/kc_cache >> aicyclemonitor\korea_cycle_log.txt 2>&1
-git commit -m "korea-cycle: cache update [skip ci]" >> aicyclemonitor\korea_cycle_log.txt 2>&1
-git pull --rebase --autostash origin main >> aicyclemonitor\korea_cycle_log.txt 2>&1
-git push origin main >> aicyclemonitor\korea_cycle_log.txt 2>&1
-git add reports/korea_cycle.html >> aicyclemonitor\korea_cycle_log.txt 2>&1
-git commit -m "korea-cycle: daily dashboard update" >> aicyclemonitor\korea_cycle_log.txt 2>&1
+git add aicyclemonitor/kc_cache docs/korea_cycle.html >> aicyclemonitor\korea_cycle_log.txt 2>&1
+git commit -m "korea-cycle: daily update [skip ci]" >> aicyclemonitor\korea_cycle_log.txt 2>&1
 git pull --rebase --autostash origin main >> aicyclemonitor\korea_cycle_log.txt 2>&1
 git push origin main >> aicyclemonitor\korea_cycle_log.txt 2>&1
 :done
