@@ -519,13 +519,10 @@ def build():
         cards.append(_card("flow.html", "💰", "수급 동향",
                            f'{c["date"]} · 코스피', body))
 
-    import pytz
-    today = datetime.datetime.now(pytz.timezone("Asia/Seoul"))   # 러너(UTC)에서도 KST 표기
     body_html = f"""<div class="wrap">
   <header>
     <div class="eyebrow">데일리 대시보드</div>
     <h1>알파노트</h1>
-    <div class="date">{today:%Y-%m-%d} <span class="gen">(갱신 {today:%H:%M})</span></div>
   </header>
   <div class="cards">{''.join(cards) if cards else '<p class="muted">표시할 데이터가 없습니다.</p>'}</div>
   <footer><p class="muted">본 페이지의 모든 정보는 자동 수집·생성된 참고 자료입니다. 투자 판단과 그 결과에 대한 책임은 이용자 본인에게 있습니다.</p></footer>
