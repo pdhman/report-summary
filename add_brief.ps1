@@ -85,6 +85,20 @@ if ($LASTEXITCODE -eq 0) {
     $pushed = $false
     for ($try = 1; $try -le 3; $try++) {
         git pull --rebase --autostash origin main | Out-Null
+        # docs/ 생성물이 원격 봇 커밋과 충돌하면 리베이스가 멈춘다
+        # (2026-08-25 실사고: index/leverage.html 충돌로 게시 실패).
+        # 생성물은 재생성이 진리이므로 원격 본을 채택하고 계속 진행한다.
+        if (Test-Path (Join-Path $proj '.git/rebase-merge')) {
+            $conf = (git diff --name-only --diff-filter=U) -split "`n" | Where-Object { $_ }
+            $gen = @($conf | Where-Object { $_ -like 'docs/*' })
+            if ($conf.Count -gt 0 -and $gen.Count -eq $conf.Count) {
+                git checkout --ours -- docs/ 2>$null
+                git add docs/ 2>$null
+                $env:GIT_EDITOR = 'true'; git rebase --continue | Out-Null
+            } else {
+                git rebase --abort 2>$null   # 소스 파일 충돌은 자동 해소 금지
+            }
+        }
         git push origin main 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) { $pushed = $true; break }
         Write-Host ("push 재시도 {0}/3..." -f $try) -ForegroundColor Yellow
