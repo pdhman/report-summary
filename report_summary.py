@@ -128,6 +128,102 @@ def scrape_naver_research():
 
 
 # ----------------------------------------------------------------------------
+# 1b. 한경 컨센서스 병합 (2026-08-25 추가)
+# ----------------------------------------------------------------------------
+# 네이버 리서치는 네이버에 리포트를 제공하는 증권사만 실려 하루 20~35건에
+# 그친다(WiseReport 시절 평균 94건). 한경 컨센서스(공개)를 병합해 커버리지를
+# 복구한다 — 목록에 종목·제목·적정가격·투자의견·제공출처·핵심 불릿이 모두 있다.
+HK_URL = ("https://consensus.hankyung.com/analysis/list?skinType=business"
+          "&sdate={d}&edate={d}&now_page={page}")
+HK_MAX_PAGES = 8
+
+_HK_ROW_RE = re.compile(
+    r'<td class="first txt_number">(\d{4}-\d{2}-\d{2})</td>\s*'
+    r'<td class="text_l">\s*<a href="/analysis/downpdf\?report_idx=\d+"[^>]*>'
+    r'([^<(]+)\((\d{6})\)\s*([^<]*)</a>.*?'
+    r'(?:<ul>(.*?)</ul>.*?)?'
+    r'<td class="text_r txt_number">([\d,]+)</td>\s*'
+    r'<td>\s*([^<]*?)\s*</td>\s*'                 # 투자의견
+    r'<td>[^<]*</td>\s*'                          # 작성자
+    r'<td>\s*([^<]*?)\s*</td>', re.S)
+
+
+def scrape_hankyung(today_iso):
+    rows = []
+    for page in range(1, HK_MAX_PAGES + 1):
+        r = _rq.get(HK_URL.format(d=today_iso, page=page), headers=UA, timeout=15)
+        found = _HK_ROW_RE.findall(r.text)
+        if not found:
+            break
+        for date, name, code, title, bullets, target, opinion, src in found:
+            if date != today_iso:
+                continue
+            summary = ""
+            if bullets:
+                items = re.findall(r"<li>(.*?)</li>", bullets, re.S)
+                summary = " ▶ ".join(re.sub(r"<[^>]+>", "", b).strip()
+                                     for b in items if b.strip())[:600]
+            opinion = opinion.strip()
+            if opinion in ("투자의견없음", "없음", "-"):
+                opinion = ""
+            tnum = target.replace(",", "")
+            rows.append({
+                "기업명": f"{name.strip()} ({code})",
+                "투자의견": opinion,
+                "목표주가": float(tnum) if tnum.isdigit() and int(tnum) > 0 else None,
+                "제목": title.strip(),
+                "요약": (f"[{src.strip()}] {summary}" if summary
+                         else f"[{src.strip()}]"),
+                "_code": code,
+                "_src": src.strip(),
+            })
+        if len(found) < 20:      # 마지막 페이지
+            break
+        time.sleep(0.4)
+    return rows
+
+
+def merge_hankyung(df, today):
+    """네이버 결과(df)에 한경 컨센서스의 미포함 리포트를 더한다.
+
+    중복 판정은 (종목코드, 증권사) — 같은 증권사의 같은 날 같은 종목 리포트는
+    같은 건으로 본다. 네이버 쪽이 요약이 길어 우선한다. 한경 수집이 실패해도
+    네이버 단독으로 계속한다.
+    """
+    try:
+        hk = scrape_hankyung(today.strftime("%Y-%m-%d"))
+    except Exception as e:
+        print(f"한경 컨센서스 수집 실패(네이버 단독 진행): {e}")
+        return df
+    if not hk:
+        return df
+
+    seen = set()
+    for _, r in df.iterrows():
+        m = re.search(r"\((\d{6})\)", str(r["기업명"]))
+        b = re.match(r"\[([^\]]+)\]", str(r["요약"]))
+        if m:
+            seen.add((m.group(1), b.group(1) if b else ""))
+    added, close_cache = [], {}
+    for row in hk:
+        key = (row["_code"], row["_src"])
+        if key in seen:
+            continue
+        seen.add(key)
+        code = row.pop("_code"); row.pop("_src")
+        if code not in close_cache:
+            close_cache[code] = _prev_close(code)
+            time.sleep(0.2)
+        row["전일수정주가"] = close_cache[code]
+        row["수집일자"] = today.strftime("%Y-%m-%d")
+        added.append(row)
+    print(f"한경 컨센서스 병합: 수집 {len(hk)}건 중 신규 {len(added)}건 추가")
+    if not added:
+        return df
+    return pd.concat([df, pd.DataFrame(added)], ignore_index=True)[df.columns]
+
+
+# ----------------------------------------------------------------------------
 # 2. 상승여력 Top 5 (노트북 cell-4) - 로그 출력용
 # ----------------------------------------------------------------------------
 def print_top5(final_df):
@@ -215,6 +311,7 @@ def main():
         return
 
     final_df = scrape_naver_research()
+    final_df = merge_hankyung(final_df, today)
     if final_df is None or final_df.empty:
         raise RuntimeError("크롤링 결과가 비어있습니다.")
     print(f"수집 완료: {len(final_df)} 행")
