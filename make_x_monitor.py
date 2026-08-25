@@ -216,6 +216,11 @@ _FEED_CSS = """
   .xtext a { color:var(--accent); word-break:break-all; }
   .xticker { font-weight:700; color:var(--accent); }
   .xlink { font-size:12px; color:var(--accent); text-decoration:none; margin-left:auto; font-weight:600; }
+  .xtr { font-size:11.5px; color:var(--muted); cursor:pointer; user-select:none;
+    border:1px solid var(--line); border-radius:6px; padding:1px 7px; background:none; }
+  .xtr:hover { color:var(--ink); border-color:var(--accent); }
+  .xtext.ko::after { content:"번역"; font-size:10.5px; color:var(--muted); margin-left:6px;
+    border:1px solid var(--line); border-radius:4px; padding:0 4px; vertical-align:2px; }
   .xempty { text-align:center; color:var(--muted); padding:30px 0; font-size:13.5px; }
   .xsection { margin:26px 0 10px; font-size:17px; font-weight:700;
     padding-bottom:8px; border-bottom:1px solid var(--line); }
@@ -251,6 +256,86 @@ _FEED_JS = """
     return '' + n;
   }
   // esc() 이후 적용: URL 링크화 + $티커 강조
+  // ---------------- 한글 번역 -------------------------------------------
+  // 수집 원문은 계정에 따라 영어 그대로인 경우가 많다. 화면에 보이는 카드만
+  // 구글 무료 엔드포인트로 번역하고 결과는 localStorage에 캐시한다(재방문 즉시).
+  var TR_ON = true;
+  try { TR_ON = localStorage.getItem('xmon_tr') !== 'off'; } catch (e) {}
+  var orig = {};          // url -> 원문
+  var inflight = 0;
+  var io = null;
+
+  function needsTr(s) {
+    if (!s) return false;
+    var han = (s.match(/[가-힣]/g) || []).length;
+    return han / s.length < 0.05;          // 한글 5% 미만이면 원문으로 본다
+  }
+  function cacheGet(k) { try { return localStorage.getItem('xtr:' + k); } catch (e) { return null; } }
+  function cacheSet(k, v) { try { localStorage.setItem('xtr:' + k, v); } catch (e) {} }
+
+  function chunks(s, n) {                  // GET 길이 제한 때문에 줄 단위로 자른다
+    var out = [], cur = '';
+    s.split('\\n').forEach(function (line) {
+      if (cur && (cur + '\\n' + line).length > n) { out.push(cur); cur = line; }
+      else { cur = cur ? cur + '\\n' + line : line; }
+    });
+    if (cur) out.push(cur);
+    return out;
+  }
+  function translate(text) {
+    var parts = chunks(text, 900);
+    return parts.reduce(function (chain, part) {
+      return chain.then(function (acc) {
+        var u = 'https://translate.googleapis.com/translate_a/single'
+              + '?client=gtx&sl=auto&tl=ko&dt=t&q=' + encodeURIComponent(part);
+        return fetch(u).then(function (r) {
+          if (!r.ok) throw new Error('http ' + r.status);
+          return r.json();
+        }).then(function (j) {
+          return acc.concat(j[0].map(function (x) { return x[0]; }).join(''));
+        });
+      });
+    }, Promise.resolve([])).then(function (arr) { return arr.join('\\n'); });
+  }
+
+  function showKo(el, ko) {
+    el.innerHTML = rich(esc(ko));
+    el.classList.add('ko');
+    el.dataset.showing = 'ko';
+    var card = el.closest('.xcard'), btn = card && card.querySelector('.xtr');
+    if (btn) { btn.style.display = ''; btn.textContent = '영문'; }
+  }
+
+  function want(el) {
+    if (!TR_ON || el.dataset.done === '1') return;
+    var k = el.dataset.k, src = orig[k];
+    if (!src || !needsTr(src)) return;
+    var hit = cacheGet(k);
+    if (hit) { el.dataset.done = '1'; showKo(el, hit); return; }
+    if (inflight >= 4) { setTimeout(function () { want(el); }, 150); return; }
+    el.dataset.done = '1';
+    inflight++;
+    translate(src).then(function (ko) {
+      cacheSet(k, ko);
+      showKo(el, ko);
+    }).catch(function () {
+      el.dataset.done = '';               // 실패하면 원문 유지 후 다음 기회에 재시도
+    }).then(function () { inflight--; });
+  }
+
+  function observe() {
+    if (io) io.disconnect();
+    if (!('IntersectionObserver' in window)) return;
+    io = new IntersectionObserver(function (es) {
+      es.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        io.unobserve(en.target);
+        want(en.target);
+      });
+    }, { root: document.getElementById('xfeed'), rootMargin: '300px' });
+    document.querySelectorAll('#xfeed .xtext[data-k]').forEach(function (el) { io.observe(el); });
+  }
+
   function rich(s) {
     return s
       .replace(/https?:\/\/[^\s<]+/g, function (u) {
@@ -339,16 +424,19 @@ _FEED_JS = """
           '<div class="xh">@' + esc(p.handle) + '</div></div>' +
         '<span class="xtime">' + kstTime(p.time) + '</span></div>' +
         (p.repost_by ? '<div class="xrepost">\\u21bb ' + esc(p.repost_by) + '</div>' : '') +
-        '<div class="xtext">' + rich(esc(p.text)) + '</div>' +
+        '<div class="xtext" data-k="' + esc(p.url) + '">' + rich(esc(p.text)) + '</div>' +
         '<div class="xcats">' +
           (a.categories || []).map(function (c) { return '<span class="xcat">' + esc(c) + '</span>'; }).join('') +
           (p.views != null ? '<span class="xmet">👁 ' + fmtN(p.views) + '</span>' : '') +
           (p.likes != null ? '<span class="xmet">♥ ' + fmtN(p.likes) + '</span>' : '') +
+          '<button class="xtr" style="display:none">영문</button>' +
           (p.url ? '<a class="xlink" href="' + esc(p.url) + '" target="_blank" rel="noopener">원문 ↗</a>' : '') +
         '</div></div>';
     });
+    posts.forEach(function (p) { orig[p.url] = p.text; });
     document.getElementById('xfeed').innerHTML =
       html || '<div class="xempty">조건에 맞는 글이 없습니다.</div>';
+    observe();
   }
 
   document.querySelectorAll('.xgrade[data-g]').forEach(function (b) {
@@ -362,6 +450,35 @@ _FEED_JS = """
   document.getElementById('xfCat').addEventListener('change', function (e) { state.cat = e.target.value; render(); });
   document.getElementById('xfAcc').addEventListener('change', function (e) { state.acc = e.target.value; render(); });
   document.getElementById('xfSearch').addEventListener('input', function (e) { state.q = e.target.value.trim(); render(); });
+
+  var trBtn = document.getElementById('xfTr');
+  trBtn.classList.toggle('on', TR_ON);
+  trBtn.addEventListener('click', function () {
+    TR_ON = !TR_ON;
+    this.classList.toggle('on', TR_ON);
+    try { localStorage.setItem('xmon_tr', TR_ON ? 'on' : 'off'); } catch (e) {}
+    render();                       // 다시 그리면 원문으로 돌아가고, 켠 상태면 관찰자가 재번역
+  });
+
+  // 카드별 번역/영문 토글
+  document.getElementById('xfeed').addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.xtr');
+    if (!b) return;
+    var card = b.closest('.xcard'), el = card && card.querySelector('.xtext');
+    if (!el) return;
+    var k = el.dataset.k;
+    if (el.dataset.showing === 'ko') {
+      el.innerHTML = rich(esc(orig[k] || ''));
+      el.classList.remove('ko');
+      el.dataset.showing = 'orig';
+      b.textContent = '한글';
+    } else {
+      el.innerHTML = rich(esc(cacheGet(k) || orig[k] || ''));
+      el.classList.add('ko');
+      el.dataset.showing = 'ko';
+      b.textContent = '영문';
+    }
+  });
   render();
 })();
 </script>
@@ -378,6 +495,7 @@ def _feed_section(data):
     <button class="xgrade" data-g="1">★ 참고</button>
     <button class="xgrade" id="xfRepost">리포스트 제외</button>
     <button class="xgrade" id="xfSort">🔥 화제순</button>
+    <button class="xgrade on" id="xfTr">🌐 번역</button>
     <select id="xfCat"><option value="">분야 전체</option></select>
     <select id="xfAcc"><option value="">계정 전체</option></select>
     <input id="xfSearch" type="search" placeholder="검색어...">
