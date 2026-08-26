@@ -198,6 +198,10 @@
       <div class="card"><h3>삼성전자 · SK하이닉스 200일선 이격도 (%)</h3>
         <p class="note">주가 추세 확인 — 메모리 사이클 국면은 상단 타일 참고</p>
         <div id="ch-semid"></div></div>
+      <div class="card"><h3>반도체 리더십 사다리 — 상대강도 10주EMA 이격 (%)</h3>
+        <p class="note">"가격이 오르는가"가 아니라 "시장을 이기고 있는가" — 0 아래 = 리더십 약화.
+          경고는 SMH/RSPT(기술주 내부) → SOX/SPX(시장 전체) → 삼전·하이닉스/KOSPI(한국) 순서로 번진다</p>
+        <div id="ch-rsladder"></div></div>
     </div>
   </section>
 
@@ -555,6 +559,11 @@ function renderAll(){
   }
   lineChart('ch-semid',[{name:'삼성전자',dates:dts,values:SM.ss_d200},
                         {name:'SK하이닉스',dates:dts,values:SM.hx_d200}],{unit:'%',...mark});
+  lineChart('ch-rsladder',[{name:'SMH/RSPT',dates:dts,values:SM.rs_smh},
+                           {name:'SOX/SPX',dates:dts,values:SM.rs_sox},
+                           {name:'삼성/KOSPI',dates:dts,values:SM.rs_ss},
+                           {name:'SK/KOSPI',dates:dts,values:SM.rs_hx}],
+    {unit:'%',hlines:[{y:0}],...mark});
 
   // ③ Breadth
   const B=DATA.breadth;

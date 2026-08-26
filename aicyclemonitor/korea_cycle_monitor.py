@@ -81,7 +81,9 @@ REGIMES = [  # (하한, 라벨, 권장 주식비중, 색 클래스)
     (0, "Bear", "현금·헤지 확대", "critical"),
 ]
 YF_TICKERS = {"^GSPC": "spx", "^SOX": "sox", "^VIX": "vix", "DX-Y.NYB": "dxy",
-              "^MOVE": "move", "005930.KS": "ss_px", "000660.KS": "hx_px"}
+              "^MOVE": "move", "SMH": "smh", "RSPT": "rspt",
+              "005930.KS": "ss_px", "000660.KS": "hx_px"}
+RS_EMA = 50                 # 리더십 상대강도의 기준선: 10주(50거래일) EMA
 CHART_ROWS = 370            # 대시보드에 싣는 최근 거래일 수 (market_history 전 구간)
 PRICE_LOOKBACK = "3y"
 
@@ -341,6 +343,14 @@ def dist200(s: pd.Series) -> pd.Series:
     return (s / ma - 1) * 100
 
 
+def rs_dist(num: pd.Series, den: pd.Series) -> pd.Series:
+    """상대강도(리더십) 이격도: ratio 가 자기 10주 EMA 대비 몇 % 위/아래인가.
+    양수 = 분자가 리더십 유지, 음수 = 리더십 약화 (Mark Newton 식 SMH/RSPT 프레임)."""
+    ratio = (num / den).dropna()
+    ema = ratio.ewm(span=RS_EMA, adjust=False).mean()
+    return (ratio / ema - 1) * 100
+
+
 def build_model(mh, glob_df, lev, rev, phase_sc, phase_latest, revb):
     idx = mh.index                                        # KRX 거래일 = 마스터 축
     sub = {}                                              # 하위지표 점수(방향 통일 후)
@@ -373,6 +383,29 @@ def build_model(mh, glob_df, lev, rev, phase_sc, phase_latest, revb):
         sub["semi.px"] = align(semi_px)
         raw["ss_d200"] = align(dist200(glob_df["ss_px"]))
         raw["hx_d200"] = align(dist200(glob_df["hx_px"]))
+
+    # ── 반도체 리더십 상대강도 (절대 추세와 별개로 '시장을 이기고 있는가')
+    if glob_df is not None:
+        g = glob_df
+        rs_parts_g = []
+        if {"smh", "rspt"} <= set(g.columns) and g["smh"].notna().any():
+            d = rs_dist(g["smh"], g["rspt"])
+            raw["rs_smh"] = align(d)
+            rs_parts_g.append(align(pct_rank(d)))
+        if {"sox", "spx"} <= set(g.columns):
+            d = rs_dist(g["sox"], g["spx"])
+            raw["rs_sox"] = align(d)
+            rs_parts_g.append(align(pct_rank(d)))
+        if rs_parts_g:
+            sub["semi.rs_global"] = pd.concat(rs_parts_g, axis=1).mean(axis=1)
+        if {"ss_px", "hx_px"} <= set(g.columns) and "kospi_close" in mh.columns:
+            kospi = mh["kospi_close"]
+            rs_parts_k = []
+            for col, key in (("ss_px", "rs_ss"), ("hx_px", "rs_hx")):
+                d = rs_dist(align(g[col]), kospi)
+                raw[key] = d
+                rs_parts_k.append(pct_rank(d))
+            sub["semi.rs_kr"] = pd.concat(rs_parts_k, axis=1).mean(axis=1)
     slopes = []
     for code, r in rev.items():
         if r is None:
@@ -474,6 +507,10 @@ CHECKLIST_SPEC = [
     ("② 반도체", "전종목 영업이익(E) 상향 비율", "semi.revbreadth", [["", "rev_breadth", 0, "%"]]),
     ("② 반도체", "삼전·하이닉스 200일선 이격도", "semi.px",
      [["삼성", "ss_d200", 1, "%"], ["SK", "hx_d200", 1, "%"]]),
+    ("② 반도체", "글로벌 반도체 리더십 (10주EMA 이격)", "semi.rs_global",
+     [["SMH/RSPT", "rs_smh", 1, "%"], ["SOX/SPX", "rs_sox", 1, "%"]]),
+    ("② 반도체", "한국 반도체 리더십 (vs KOSPI)", "semi.rs_kr",
+     [["삼성", "rs_ss", 1, "%"], ["SK", "rs_hx", 1, "%"]]),
     ("③ Breadth", "MA200 위 종목 비율", "breadth.ma200", [["", "all_ma200", 1, "%"]]),
     ("③ Breadth", "MA50 위 종목 비율", "breadth.ma50", [["", "all_ma50", 1, "%"]]),
     ("③ Breadth", "ADR20 (20일 등락비)", "breadth.adr20", [["", "adr20", 0, ""]]),
@@ -545,6 +582,8 @@ def assemble(mh, factors, sub, raw, rev, phase_latest, phase_labels, revb, lev):
                              "values": _round(revb["up_ratio"], 0)}
                             if revb is not None and not revb.empty else None),
             "ss_d200": ser(raw.get("ss_d200")), "hx_d200": ser(raw.get("hx_d200")),
+            "rs_smh": ser(raw.get("rs_smh")), "rs_sox": ser(raw.get("rs_sox")),
+            "rs_ss": ser(raw.get("rs_ss")), "rs_hx": ser(raw.get("rs_hx")),
         },
         "breadth": {
             "ma20": ser(mhr["all_ma20"]), "ma50": ser(mhr["all_ma50"]),
