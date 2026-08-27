@@ -79,7 +79,8 @@ TH = {
     "vacancy_pct": 5.0,            # 데이터센터 공실률(%) 이 값 이상 → 경계
     "hs_yoy_consec_slowdown": 2,   # 합산 매출 YoY 연속 둔화 분기 수 → 경계
     "cloud_yoy_floor": 20.0,       # 클라우드 부문 YoY(%) 이 값 미만 → 경계
-    "nvda_dc_yoy_floor": 20.0,     # NVIDIA DC 매출 YoY(%) 이 값 미만 → 경계 (공급자 프록시)
+    "nvda_dc_yoy_floor": 20.0,     # NVIDIA DC 매출 YoY(%) 이 값 미만 → 경계 (국면 악화 확정)
+    "nvda_dc_qoq": 0.0,            # NVIDIA DC 매출 QoQ(%) 이 값 이하 → 경계 (성장 정지 조기 경보)
     "capex_runrate_vs_ttm": 0.0,   # 5사 capex 런레이트(최근2Q×2)가 직전 4분기 합 이하(가속 멈춤) → 경계
     "bbb_oas_level": 200.0,        # BBB OAS(bp) 이 값 이상 → 경계
     "bbb_oas_chg_90d": 50.0,       # BBB OAS 90일 상승폭(bp) 이 값 이상 → 경계
@@ -503,13 +504,19 @@ def collect_live():
 
     # ── 수요(공급자 프록시): NVIDIA DC 부문 매출 — 세그먼트라 XBRL에 없어 수동 입력 ──
     nv = manual.get("nvda_dc_revenue_bil", {}) or {}
-    nvda_dc = {"labels": [], "yoy": [], "values": []}
+
+    def _prev_q(k):  # 회계분기 말월(1·4·7·10) 기준 직전 분기 키
+        y, mth = int(k[:4]), int(k[5:7])
+        return f"{y - 1}-10" if mth == 1 else f"{y}-{mth - 3:02d}"
+
+    nvda_dc = {"labels": [], "yoy": [], "qoq": [], "values": []}
     for k in sorted(nv.keys()):
         y, mth = k.split("-")
         prev = f"{int(y) - 1}-{mth}"
         if nv.get(prev):
             nvda_dc["labels"].append(k)
             nvda_dc["yoy"].append(pct(nv[k], nv[prev]))
+            nvda_dc["qoq"].append(pct(nv[k], nv[_prev_q(k)]) if nv.get(_prev_q(k)) else None)
             nvda_dc["values"].append(nv[k])
     for kk in nvda_dc:  # 초기 하이퍼성장(+400%대)이 축을 짓누르지 않게 최근 8개 분기만
         nvda_dc[kk] = nvda_dc[kk][-8:]
@@ -579,6 +586,7 @@ def collect_live():
             metrics[f"{key}_chg_90d_bp"] = (round(float(s.iloc[-1]) - float(past.iloc[-1]), 0)
                                             if not past.empty else None)
     metrics["nvda_dc_yoy_last"] = nvda_dc["yoy"][-1] if nvda_dc["yoy"] else None
+    metrics["nvda_dc_qoq_last"] = nvda_dc["qoq"][-1] if nvda_dc["qoq"] else None
     metrics["nvda_dc_last_bil"] = nvda_dc["values"][-1] if nvda_dc["values"] else None
     metrics["capex_runrate_bil"] = runrate
     # 같은 SEC 기준끼리 비교: 런레이트 vs 직전 4분기 합 — 가속이 멈추면(≤0%) 경계.
@@ -738,6 +746,7 @@ def collect_sample():
             "cloud_yoy": cloud_yoy,
             "nvda_dc": {"labels": ["2024-10", "2025-01", "2025-04", "2025-07", "2025-10", "2026-01", "2026-04"],
                         "yoy": [112.0, 93.4, 73.1, 56.5, 66.5, 75.1, 92.3],
+                        "qoq": [None, 15.6, 9.8, 5.1, 24.6, 21.7, 20.7],
                         "values": [30.8, 35.6, 39.1, 41.1, 51.2, 62.3, 75.2]},
             "capex_total": {"labels": ["2025", "2026E", "2027E", "2028E"],
                             "values": [446.4, 813.1, 1119.6, 1267.1],
@@ -773,6 +782,7 @@ def collect_sample():
             "neocloud_dd_avg": round(statistics.mean([dd[t] for t in neo]), 1),
             "orcl_dd": dd["ORCL"],
             "nvda_dc_yoy_last": 92.3,
+            "nvda_dc_qoq_last": 20.7,
             "nvda_dc_last_bil": 75.2,
             "crwv_capex_yoy": 449.3,
             "crwv_capex_last_bil": 7.7,
@@ -859,6 +869,9 @@ def judge(data):
     v = m.get("nvda_dc_yoy_last")
     add("수요", "NVIDIA DC 매출 YoY (공급자 프록시, 수동)", v, "%",
         f"{TH['nvda_dc_yoy_floor']}% 미만", v is not None and v < TH["nvda_dc_yoy_floor"])
+    v = m.get("nvda_dc_qoq_last")
+    add("수요", "NVIDIA DC 매출 QoQ (성장 정지 조기 경보)", v, "%",
+        f"{TH['nvda_dc_qoq']:.0f}% 이하", v is not None and v <= TH["nvda_dc_qoq"])
     v = m.get("capex_runrate_vs_ttm")
     add("수요", "5사 capex 런레이트 vs 직전 4분기 (SEC 자동)", v, "%",
         f"{TH['capex_runrate_vs_ttm']:.0f}% 이하 (가속 멈춤)", v is not None and v <= TH["capex_runrate_vs_ttm"])
@@ -1073,9 +1086,9 @@ TEMPLATE = r"""<!DOCTYPE html>
         <p class="note">manual_data.json 수동 입력 — AWS=순수 부문 · Google Cloud=GCP+Workspace ·
           Azure='Azure 및 기타 클라우드' 성장률(달러 미공시) · OCI=오라클 IaaS 부문(회계분기 1개월 시차) · Meta=클라우드 사업 없음</p>
         <div id="ch-cloud"></div></div>
-      <div class="card"><h3>NVIDIA 데이터센터 매출 YoY (%)</h3>
-        <p class="note">공급자 측 총 AI 인프라 투자 프록시 — 하이퍼스케일러·중국·비상장 누가 사든 여기로 흐름
-          (실적 발표 후 manual_data.json 수동 입력, 라벨=회계분기 말월)</p>
+      <div class="card"><h3>NVIDIA 데이터센터 매출 성장률 (%)</h3>
+        <p class="note">공급자 측 총 AI 인프라 투자 프록시 — YoY=국면(후행), QoQ=모멘텀(조기 경보,
+          0% 이하=성장 정지). 실적 발표 후 manual_data.json 수동 입력, 라벨=회계분기 말월</p>
         <div id="ch-nvda"></div></div>
       <div class="card"><h3>5대 Hyperscaler 연간 capex ($B)</h3>
         <p class="note">GOOGL+MSFT+AMZN+META+ORCL — 컨센서스(Bloomberg, 수동·E)와
@@ -1389,7 +1402,9 @@ function renderAll(){
   }
   const nv=DATA.demand.nvda_dc||{};
   if(nv.labels&&nv.labels.length){
-    lineChart('ch-nvda',[{name:'NVDA DC',dates:nv.labels,values:nv.yoy}],{labels:nv.labels,unit:'%'});
+    const nvSeries=[{name:'YoY',dates:nv.labels,values:nv.yoy}];
+    if(nv.qoq&&nv.qoq.some(v=>v!=null)) nvSeries.push({name:'QoQ',dates:nv.labels,values:nv.qoq});
+    lineChart('ch-nvda',nvSeries,{labels:nv.labels,unit:'%'});
   } else {
     document.getElementById('ch-nvda').innerHTML=
       '<div class="empty">manual_data.json 의 nvda_dc_revenue_bil 에 분기 매출($B)을 입력하세요</div>';
