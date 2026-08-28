@@ -284,6 +284,36 @@ def send(cfg, targets, msg):
         print(f"발송 완료 → {chat_id}")
 
 
+# ---------------------------------------------------------------- 발송 이력
+# 같은 날 두 번 보내지 않기 위한 대상별 이력(2026-08-28 추가).
+# 수동 실행과 16:50 스케줄이 겹치면 구독자에게 같은 요약이 두 번 갔다.
+# X 요약(send_x_summary.py)의 sent.json 과 같은 형식이되 파일은 분리한다.
+SENT_LOG = Path(__file__).resolve().parent / "sent_summary.json"
+
+
+def load_sent():
+    if SENT_LOG.exists():
+        try:
+            return json.loads(SENT_LOG.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            pass          # 손상됐으면 빈 이력으로 시작한다 (최악이라도 재발송일 뿐)
+    return {}
+
+
+def mark_sent(date, targets):
+    log = load_sent()
+    log[date] = sorted(set(log.get(date, [])) | {str(t) for t in targets})
+    for old in sorted(log)[:-90]:      # 90일치만 남긴다
+        del log[old]
+    SENT_LOG.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def unsent_targets(date, targets):
+    """오늘 아직 안 보낸 대상만 추린다."""
+    done = set(load_sent().get(date, []))
+    return [t for t in targets if str(t) not in done]
+
+
 def add_target_arg(ap):
     ap.add_argument("--to", default="dm",
                     help="보낼 곳 (기본 dm). dm/channel/both/별칭/@채널이름 을 "
@@ -293,6 +323,8 @@ def add_target_arg(ap):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true", help="발송하지 않고 메시지만 출력")
+    ap.add_argument("--force", action="store_true",
+                    help="오늘 이미 보냈어도 다시 발송(내용을 고쳐 재발송할 때만)")
     add_target_arg(ap)
     args = ap.parse_args()
 
@@ -308,7 +340,21 @@ def main():
     if not CONFIG_PATH.exists():
         raise SystemExit(f"설정 파일이 없습니다: {CONFIG_PATH}")
     cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    send(cfg, resolve_targets(cfg, args.to), msg)
+    targets = resolve_targets(cfg, args.to)
+
+    today = f"{datetime.now():%Y-%m-%d}"
+    if not args.force:
+        pending = unsent_targets(today, targets)
+        if not pending:
+            print(f"건너뜀: {today} 이미 발송됨 → {', '.join(map(str, targets))}")
+            return
+        if len(pending) != len(targets):
+            done = [t for t in targets if t not in pending]
+            print(f"일부 건너뜀: {today} 이미 발송 → {', '.join(map(str, done))}")
+        targets = pending
+
+    send(cfg, targets, msg)
+    mark_sent(today, targets)
     print(f"({datetime.now():%Y-%m-%d %H:%M})")
 
 
