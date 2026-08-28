@@ -34,8 +34,11 @@ from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 # 서비스는 제공이 종료되었습니다"). 본사이트(wisereport.co.kr)는 로그인이
 # 필요해 무인 수집에 부적합하고, 네이버 리서치는 공개 페이지에 종목·제목·
 # 증권사·목표가·투자의견·본문이 모두 있어 기존 스키마를 그대로 채운다.
-LIST_URL = "https://finance.naver.com/research/company_list.naver?&page={page}"
-READ_URL = "https://finance.naver.com/research/company_read.naver?nid={nid}&page=1"
+# 2026-08-28: finance.naver.com 이 9/10 종료 예고되어 신형 공식 API 로 전환.
+# 목록·상세 모두 JSON 이라 HTML 파싱이 사라졌고, 상세의 priceAtWriteDate 가
+# 전일수정주가를 대신해 종가 API 호출도 필요 없다.
+LIST_API = "https://m.stock.naver.com/api/research/company?pageSize=60&page={page}"
+DETAIL_API = "https://m.stock.naver.com/api/research/company/{rid}"
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"}
@@ -45,30 +48,24 @@ MAX_PAGES = 12          # 하루 발행량(수십 건)을 넉넉히 덮는다
 # ----------------------------------------------------------------------------
 # 1. 크롤링 (네이버 금융 리서치: 오늘 발행된 종목 리포트 전부)
 # ----------------------------------------------------------------------------
-_ROW_RE = re.compile(
-    r'<a href="/item/main\.naver\?code=(\d{6})"[^>]*>([^<]+)</a>\s*</td>\s*'
-    r'<td><a href="company_read\.naver\?nid=(\d+)&(?:amp;)?page=\d+">([^<]+)</a>[^<]*(?:<img[^>]*>)?</td>\s*'
-    r'<td>([^<]*)</td>\s*'                      # 증권사
-    r'<td class="file">.*?</td>\s*'
-    r'<td class="date"[^>]*>([\d.]+)</td>', re.S)
+def _num_or_none(v):
+    try:
+        f = float(str(v).replace(",", ""))
+        return f if f > 0 else None
+    except (TypeError, ValueError):
+        return None
 
 
-def _read_detail(nid):
-    """상세 페이지에서 (목표가, 투자의견, 요약) 추출. 실패 필드는 None/''."""
-    r = _rq.get(READ_URL.format(nid=nid), headers=UA, timeout=15)
-    if "charset" not in (r.headers.get("Content-Type") or "").lower():
-        r.encoding = "euc-kr"   # 서버가 charset 미제공 시만 (네이버가 UTF-8 전환 중, 2026-08-26)
-    h = r.text
-    m = re.search(r'목표가\s*<em class="money"><strong>([\d,]+)', h)
-    target = m.group(1).replace(",", "") if m else None
-    m = re.search(r'투자의견\s*<em class="coment">([^<]+)</em>', h)
-    opinion = m.group(1).strip() if m else ""
-    m = re.search(r'class="view_cnt">(.*?)</td>', h, re.S)
-    summary = ""
-    if m:
-        summary = re.sub(r"<[^>]+>", " ", m.group(1))
-        summary = re.sub(r"\s+", " ", summary).strip()[:600]
-    return target, opinion, summary
+def _read_detail(rid):
+    """리서치 상세 API → (목표가, 투자의견, 요약, 작성일주가). 실패 필드는 None/''."""
+    r = _rq.get(DETAIL_API.format(rid=rid), headers=UA, timeout=15)
+    rc = r.json().get("researchContent") or {}
+    summary = re.sub(r"<[^>]+>", " ", str(rc.get("content") or ""))
+    summary = re.sub(r"\s+", " ", summary).strip()[:600]
+    return (_num_or_none(rc.get("goalPrice")),
+            str(rc.get("opinion") or "").strip(),
+            summary,
+            _num_or_none(rc.get("priceAtWriteDate")))
 
 
 def _prev_close(code):
@@ -84,21 +81,25 @@ def _prev_close(code):
 def scrape_naver_research():
     kst = pytz.timezone("Asia/Seoul")
     today = datetime.datetime.now(kst)
-    today_short = today.strftime("%y.%m.%d")      # 목록의 작성일 형식 (26.08.25)
+    today_iso = today.strftime("%Y-%m-%d")        # 목록의 writeDate 형식
 
     rows, stop = [], False
     for page in range(1, MAX_PAGES + 1):
-        r = _rq.get(LIST_URL.format(page=page), headers=UA, timeout=15)
-        if "charset" not in (r.headers.get("Content-Type") or "").lower():
-            r.encoding = "euc-kr"   # 서버가 charset 미제공 시만 (네이버가 UTF-8 전환 중, 2026-08-26)
-        found = _ROW_RE.findall(r.text)
-        if not found:
+        r = _rq.get(LIST_API.format(page=page), headers=UA, timeout=15)
+        found = r.json()
+        if not isinstance(found, list) or not found:
             break
-        for code, name, nid, title, broker, date in found:
-            if date != today_short:               # 목록은 최신순 — 과거가 나오면 끝
+        for it in found:
+            if str(it.get("writeDate")) != today_iso:   # 목록은 최신순 — 과거면 끝
                 stop = True
                 break
-            rows.append((code, name.strip(), nid, title.strip(), broker.strip()))
+            code = str(it.get("itemCode") or "").zfill(6)
+            if not code.strip("0"):
+                continue
+            rows.append((code, str(it.get("itemName") or "").strip(),
+                         it.get("researchId"),
+                         str(it.get("title") or "").strip(),
+                         str(it.get("brokerName") or "").strip()))
         if stop:
             break
         time.sleep(0.4)
@@ -109,16 +110,19 @@ def scrape_naver_research():
                                      "전일수정주가", "제목", "요약", "수집일자"])
 
     out, close_cache = [], {}
-    for code, name, nid, title, broker in rows:
-        target, opinion, summary = _read_detail(nid)
-        if code not in close_cache:
-            close_cache[code] = _prev_close(code)
-            time.sleep(0.2)
+    for code, name, rid, title, broker in rows:
+        target, opinion, summary, at_write = _read_detail(rid)
+        prev = at_write                            # 상세의 작성일 주가를 우선 사용
+        if prev is None:
+            if code not in close_cache:
+                close_cache[code] = _prev_close(code)
+                time.sleep(0.2)
+            prev = close_cache[code]
         out.append({
             "기업명": f"{name} ({code})",
             "투자의견": opinion,
-            "목표주가": float(target) if target else None,
-            "전일수정주가": close_cache[code],
+            "목표주가": target,
+            "전일수정주가": prev,
             "제목": title,
             "요약": f"[{broker}] {summary}" if summary else f"[{broker}]",
         })

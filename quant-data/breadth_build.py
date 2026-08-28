@@ -172,15 +172,16 @@ def compute_breadth(ohlcv: pd.DataFrame, uni: pd.DataFrame) -> pd.DataFrame:
 
 # ------------------------------------------------------------------ 지수(네이버)
 def fetch_index(symbol: str, start: dt.date) -> pd.Series:
-    url = ("https://api.finance.naver.com/siseJson.naver"
-           f"?symbol={symbol}&requestType=1&startTime={start:%Y%m%d}"
-           f"&endTime={dt.date.today():%Y%m%d}&timeframe=day")
+    """지수 일봉 종가. 신형 공식 차트 API (finance.naver 9/10 종료 대비, 2026-08-28 전환)."""
+    url = (f"https://api.stock.naver.com/chart/domestic/index/{symbol}/day"
+           f"?startDateTime={start:%Y%m%d}00&endDateTime={dt.date.today():%Y%m%d}23")
     r = requests.get(url, headers=UA, timeout=15)
     r.raise_for_status()
-    rows = re.findall(r'\["(\d{8})",\s*([\d.]+),\s*[\d.]+,\s*[\d.]+,\s*([\d.]+)', r.text)
+    rows = r.json()
     if not rows:
-        raise RuntimeError(f"{symbol} 지수 파싱 실패")
-    s = pd.Series({pd.Timestamp(d): float(c) for d, _, c in rows}, name=symbol)
+        raise RuntimeError(f"{symbol} 지수 응답이 비어 있음")
+    s = pd.Series({pd.Timestamp(str(x["localDate"])): float(x["closePrice"])
+                   for x in rows}, name=symbol)
     return s.sort_index()
 
 

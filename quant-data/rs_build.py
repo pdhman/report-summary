@@ -28,6 +28,7 @@ import math
 import os
 import re
 import sys
+import time
 
 import pandas as pd
 
@@ -134,24 +135,73 @@ def group_stats(sub: pd.DataFrame) -> dict | None:
 
 
 # ------------------------------------------------------------------ ETF
+# 유형(etfTabCode)은 구형 API 에만 있었다. 종료(9/10) 직전인 2026-08-28 에
+# 코드→유형 스냅샷(cache/etf_tab_map.json, 1,163종목)을 떠 뒀고, 이후 신규
+# 상장 ETF 는 이름 규칙으로 근사 분류한다(월 수 종목 수준이라 오차 미미).
+_TAB_SNAPSHOT = os.path.join(BASE, "cache", "etf_tab_map.json")
+
+
+def _guess_tab(name: str) -> int:
+    n = name.upper()
+    if any(k in n for k in ("미국", "S&P", "나스닥", "NASDAQ", "차이나", "일본",
+                            "인도", "글로벌", "선진국", "신흥국", "베트남", "유로")):
+        return 4
+    if any(k in n for k in ("채권", "국고채", "회사채", "단기채", "금리", "머니마켓", "KOFR")):
+        return 6
+    if any(k in n for k in ("골드", "금현물", "은현물", "원유", "구리", "원자재", "팔라듐")):
+        return 5
+    if any(k in n for k in ("레버리지", "인버스", "선물", "커버드콜", "buffer", "BUFFER")):
+        return 3
+    if any(k in n for k in ("200", "코스피", "코스닥150", "KRX", "TOP10", "TOP 10", "배당")):
+        return 1
+    return 2                                     # 기본: 국내 업종·테마
+
+
 def fetch_etf_list() -> pd.DataFrame:
-    """네이버 ETF 목록 (전 종목 1회 호출). 코드·이름·유형·시총(억)·거래대금(억)."""
+    """국내 ETF 목록 — 신형 front-api(finance.naver 9/10 종료 대비, 2026-08-28 전환).
+
+    front-api/domestic/etf/list 를 aum(시총) 정렬로 전 페이지 순회한다
+    (pageSize 상한 50 · sortTypeCode 는 changeRate|tradingValue|aum 만 허용).
+    aum·accumulatedTradingValue 는 원 단위 → 억원 환산해 기존 스키마 유지.
+    """
     import requests
-    r = requests.get("https://finance.naver.com/api/sise/etfItemList.nhn?etfType=0",
-                     headers=ETF_UA, timeout=15)
-    r.raise_for_status()
-    items = (r.json().get("result") or {}).get("etfItemList") or []
-    if not items:
-        raise RuntimeError("네이버 ETF 목록이 비어 있음")
-    df = pd.DataFrame([{
-        "코드": str(x["itemcode"]).zfill(6),
-        "이름": str(x["itemname"]).strip(),
-        "유형": ETF_TABS.get(x.get("etfTabCode"), "기타/혼합"),
-        "시가총액(억)": pd.to_numeric(x.get("marketSum"), errors="coerce"),
-        # amonut(sic)는 백만원 단위 거래대금
-        "거래대금(억)": pd.to_numeric(x.get("amonut"), errors="coerce") / 100.0,
-    } for x in items]).drop_duplicates(subset="코드")
-    _log(f"ETF 목록: {len(df)}종목")
+    try:
+        tab_map = {k: int(v) for k, v in json.load(
+            open(_TAB_SNAPSHOT, encoding="utf-8")).items()}
+    except Exception:
+        tab_map = {}
+    rows, page = [], 1
+    while page <= 60:
+        r = requests.get("https://m.stock.naver.com/front-api/domestic/etf/list"
+                         f"?sortTypeCode=aum&pageSize=50&page={page}",
+                         headers={**ETF_UA, "Referer": "https://m.stock.naver.com/"},
+                         timeout=15)
+        r.raise_for_status()
+        res = (r.json().get("result") or {})
+        items = res.get("result") or []
+        if not items:
+            break
+        for x in items:
+            code = str(x.get("itemCode") or "").zfill(6)
+            name = str(x.get("name") or "").strip()
+            if not code.strip("0") or not name:
+                continue
+            tab = tab_map.get(code) or _guess_tab(name)
+            rows.append({
+                "코드": code, "이름": name,
+                "유형": ETF_TABS.get(tab, "기타/혼합"),
+                "시가총액(억)": pd.to_numeric(x.get("aum"), errors="coerce") / 1e8,
+                "거래대금(억)": pd.to_numeric(x.get("accumulatedTradingValue"),
+                                          errors="coerce") / 1e8,
+            })
+        if not res.get("hasNext"):
+            break
+        page += 1
+        time.sleep(0.15)
+    df = pd.DataFrame(rows).drop_duplicates(subset="코드")
+    if df.empty:
+        raise RuntimeError("신형 ETF 목록이 비어 있음")
+    _log(f"ETF 목록: {len(df)}종목 (신형 front-api)")
     return df
 
 
