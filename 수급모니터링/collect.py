@@ -117,7 +117,8 @@ def fetch_flows(sosok, start_date, label):
             f"?bizdate={bizdate}&sosok={sosok}&page={page}"
         )
         r = fetch(url)
-        r.encoding = "euc-kr"
+        if "charset" not in (r.headers.get("Content-Type") or "").lower():
+            r.encoding = "euc-kr"   # 서버가 charset 미제공 시만 (네이버가 UTF-8 전환 중, 2026-08-26)
         rows = parse_trend_page(r.text)
         if not rows:
             break

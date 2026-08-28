@@ -56,7 +56,8 @@ _ROW_RE = re.compile(
 def _read_detail(nid):
     """상세 페이지에서 (목표가, 투자의견, 요약) 추출. 실패 필드는 None/''."""
     r = _rq.get(READ_URL.format(nid=nid), headers=UA, timeout=15)
-    r.encoding = "euc-kr"
+    if "charset" not in (r.headers.get("Content-Type") or "").lower():
+        r.encoding = "euc-kr"   # 서버가 charset 미제공 시만 (네이버가 UTF-8 전환 중, 2026-08-26)
     h = r.text
     m = re.search(r'목표가\s*<em class="money"><strong>([\d,]+)', h)
     target = m.group(1).replace(",", "") if m else None
@@ -88,7 +89,8 @@ def scrape_naver_research():
     rows, stop = [], False
     for page in range(1, MAX_PAGES + 1):
         r = _rq.get(LIST_URL.format(page=page), headers=UA, timeout=15)
-        r.encoding = "euc-kr"
+        if "charset" not in (r.headers.get("Content-Type") or "").lower():
+            r.encoding = "euc-kr"   # 서버가 charset 미제공 시만 (네이버가 UTF-8 전환 중, 2026-08-26)
         found = _ROW_RE.findall(r.text)
         if not found:
             break

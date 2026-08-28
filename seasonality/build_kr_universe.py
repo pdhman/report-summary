@@ -27,7 +27,8 @@ def kospi200() -> list:
         url = ("https://finance.naver.com/sise/entryJongmok.naver"
                f"?&page={page}&type=KPI200")
         r = requests.get(url, headers=HEADERS, timeout=20)
-        r.encoding = "euc-kr"
+        if "charset" not in (r.headers.get("Content-Type") or "").lower():
+            r.encoding = "euc-kr"   # 서버가 charset 미제공 시만 (네이버가 UTF-8 전환 중, 2026-08-26)
         found = re.findall(r'code=(\d{6})"[^>]*>([^<]+)</a>', r.text)
         rows.extend((c, n.strip()) for c, n in found)
         time.sleep(0.2)
