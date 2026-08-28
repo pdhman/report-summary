@@ -89,8 +89,6 @@ try {
         }
         if (-not $pushed) { Write-Log 'ERROR: git push failed after retries'; exit 1 }
         Write-Log 'OK: pushed flow data'
-        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $proj 'trigger_deploy.ps1')
-        Write-Log ("deploy trigger exit: {0}" -f $LASTEXITCODE)
     }
     else {
         Write-Log 'OK: no data change, nothing to push'

@@ -73,9 +73,6 @@ try {
         }
         if (-not $pushed) { Write-Log 'ERROR: git push failed after 3 attempts'; exit 1 }
         Write-Log 'OK: pushed new blog content'
-        # push 이벤트가 배포를 못 거는 경우가 있어 명시적으로 배포 트리거
-        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $proj 'trigger_deploy.ps1')
-        Write-Log ("deploy trigger exit: {0}" -f $LASTEXITCODE)
     }
     else {
         Write-Log 'OK: no new posts, nothing to push'

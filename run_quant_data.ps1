@@ -86,8 +86,6 @@ try {
         git push origin main 2>&1 | Add-Content -Path $log -Encoding UTF8
         if ($LASTEXITCODE -ne 0) { Write-Log 'ERROR: git push failed'; exit 1 }
         Write-Log 'OK: pushed rs data'
-        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $proj 'trigger_deploy.ps1')
-        Write-Log ("deploy trigger exit: {0}" -f $LASTEXITCODE)
     }
     else {
         Write-Log 'OK: no data change, nothing to push'
