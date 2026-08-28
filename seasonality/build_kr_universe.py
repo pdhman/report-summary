@@ -21,16 +21,19 @@ WATCH = {"192820": "코스맥스", "161890": "한국콜마", "278470": "에이�
 
 
 def kospi200() -> list:
-    """네이버 KPI200 구성종목 (10종목 × 20페이지)."""
+    """KPI200 구성종목 — 신형 front-api(finance.naver 9/10 종료 대비, 2026-08-28 전환)."""
     rows = []
-    for page in range(1, 21):
-        url = ("https://finance.naver.com/sise/entryJongmok.naver"
-               f"?&page={page}&type=KPI200")
-        r = requests.get(url, headers=HEADERS, timeout=20)
-        if "charset" not in (r.headers.get("Content-Type") or "").lower():
-            r.encoding = "euc-kr"   # 서버가 charset 미제공 시만 (네이버가 UTF-8 전환 중, 2026-08-26)
-        found = re.findall(r'code=(\d{6})"[^>]*>([^<]+)</a>', r.text)
-        rows.extend((c, n.strip()) for c, n in found)
+    for page in range(1, 15):
+        url = ("https://m.stock.naver.com/front-api/stock/domestic/index/"
+               f"enrollStock/list?code=KPI200&page={page}&pageSize=20")
+        r = requests.get(url, headers={**HEADERS,
+                                       "Referer": "https://m.stock.naver.com/"},
+                         timeout=20)
+        stocks = ((r.json().get("result") or {}).get("stocks")) or []
+        if not stocks:
+            break
+        rows.extend((str(s.get("itemCode", "")).zfill(6),
+                     str(s.get("name", "")).strip()) for s in stocks)
         time.sleep(0.2)
     # 중복 제거(순서 유지)
     seen, out = set(), []

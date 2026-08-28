@@ -107,8 +107,104 @@ def parse_trend_page(html):
     return rows
 
 
+# ---------------------------------------------------------------- 한투 수급
+# finance.naver 종료(2026-09-10) 대비: 코스피·코스닥 세부 수급은 한국투자증권
+# 공식 API(시장별 투자자매매동향 일별, FHPTJ04040000)로 전환(2026-08-28).
+# 네이버 값과 4거래일 전수 대조로 일치 확인(단위: 백만원 → /100 = 억원).
+# 선물(sosok=03)은 이 TR 미지원이라 당분간 구형 페이지를 유지한다 — 종료 후
+# 대체 소스(한투 선물옵션 TR 또는 KRX) 확정 필요.
+_HANTU_ISCD = {"01": ("0001", "KSP"), "02": ("1001", "KSQ")}
+# FLOW_COLS → 한투 응답 필드(*_ntby_tr_pbmn, 백만원). 튜플이면 합산 —
+# 네이버 분류 기준: 투신 = 투신+사모, 기타금융 = 기타금융+종금
+# (2026-08-18 코스피 값으로 잔차 0.2억 이내 정합 확인).
+_HANTU_COLMAP = {
+    "individual": ("prsn_ntby_tr_pbmn",), "foreign": ("frgn_ntby_tr_pbmn",),
+    "inst_total": ("orgn_ntby_tr_pbmn",), "fin_invest": ("scrt_ntby_tr_pbmn",),
+    "insurance": ("insu_ntby_tr_pbmn",),
+    "invest_trust": ("ivtr_ntby_tr_pbmn", "pe_fund_ntby_tr_pbmn"),
+    "bank": ("bank_ntby_tr_pbmn",),
+    "other_fin": ("etc_orgt_ntby_tr_pbmn", "mrbn_ntby_tr_pbmn"),
+    "pension": ("fund_ntby_tr_pbmn",), "other_corp": ("etc_corp_ntby_tr_pbmn",),
+}
+_hantu_token_cache = {}
+
+
+def _hantu_cfg():
+    import yaml
+    root = os.path.dirname(BASE)
+    cfg = yaml.safe_load(open(os.path.join(root, "config.yaml"), encoding="utf-8"))
+    return cfg["hantu"]
+
+
+def _hantu_token(cfg):
+    """접근토큰 — 파일 캐시(23시간). 한투는 1분당 발급 횟수 제한이 있다."""
+    import requests as rq
+    cache = os.path.join(BASE, "data", ".hantu_token.json")
+    try:
+        c = json.load(open(cache, encoding="utf-8"))
+        if time.time() - c["ts"] < 23 * 3600:
+            return c["token"]
+    except Exception:
+        pass
+    res = rq.post("https://openapi.koreainvestment.com:9443/oauth2/tokenP",
+                  json={"grant_type": "client_credentials",
+                        "appkey": cfg["api_key"], "appsecret": cfg["secret_key"]},
+                  timeout=15).json()
+    tok = res["access_token"]
+    os.makedirs(os.path.dirname(cache), exist_ok=True)
+    json.dump({"token": tok, "ts": time.time()}, open(cache, "w", encoding="utf-8"))
+    return tok
+
+
+def fetch_flows_hantu(sosok, start_date, label):
+    """한투 TR 로 start_date~오늘 구간 수급 수집. 실패 시 예외(호출부 폴백)."""
+    import requests as rq
+    cfg = _hantu_cfg()
+    tok = _hantu_token(cfg)
+    iscd, tag = _HANTU_ISCD[sosok]
+    h = {"authorization": f"Bearer {tok}", "appkey": cfg["api_key"],
+         "appsecret": cfg["secret_key"], "tr_id": "FHPTJ04040000", "custtype": "P"}
+    # DATE_1 이 '기준일'이고 응답은 그날(포함)부터 과거로 최대 300행 —
+    # 기간 파라미터처럼 보이지만 시작일을 넣으면 옛 데이터만 온다(실측).
+    today_str = datetime.now().strftime("%Y%m%d")
+    params = {"FID_COND_MRKT_DIV_CODE": "U", "FID_INPUT_ISCD": iscd,
+              "FID_INPUT_DATE_1": today_str, "FID_INPUT_DATE_2": today_str,
+              "FID_INPUT_ISCD_1": tag, "FID_INPUT_ISCD_2": iscd,
+              "FID_COND_SCR_DIV_CODE": "16449"}
+    r = rq.get("https://openapi.koreainvestment.com:9443"
+               "/uapi/domestic-stock/v1/quotations/inquire-investor-daily-by-market",
+               headers=h, params=params, timeout=20)
+    d = r.json()
+    if d.get("rt_cd") != "0":
+        raise RuntimeError(f"한투 수급 조회 실패: {d.get('msg1')}")
+    out = {}
+    for row in d.get("output") or []:
+        try:
+            dt_ = datetime.strptime(row["stck_bsop_date"], "%Y%m%d").date()
+        except (KeyError, ValueError):
+            continue
+        if dt_ < start_date:
+            continue
+        vals, ok = {}, True
+        for col, fields in _HANTU_COLMAP.items():
+            try:
+                vals[col] = int(round(sum(float(row[f]) for f in fields) / 100.0))  # 백만원 → 억원
+            except (KeyError, TypeError, ValueError):
+                ok = False
+                break
+        if ok:
+            out[dt_] = vals
+    logging.info("%s 수급 %d일 수집 — 한투 API (%s ~)", label, len(out), start_date)
+    return out
+
+
 def fetch_flows(sosok, start_date, label):
-    """start_date까지 페이지를 거슬러 올라가며 수급 데이터 수집."""
+    """start_date까지 수급 수집 — 코스피/코스닥은 한투 API, 실패·선물은 구형 페이지."""
+    if sosok in _HANTU_ISCD:
+        try:
+            return fetch_flows_hantu(sosok, start_date, label)
+        except Exception as e:
+            logging.warning("%s 한투 수급 실패(%s) — 구형 페이지 폴백", label, e)
     bizdate = datetime.now().strftime("%Y%m%d")
     out = {}
     for page in range(1, MAX_PAGES + 1):
