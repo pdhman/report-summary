@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>크립토 모니터 — BTC 핵심 지표</title>
+<style>
+  .viz-root{
+    color-scheme: light;
+    --page:#f9f9f7; --surface-1:#fcfcfb;
+    --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#898781;
+    --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,0.10);
+    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+    --pos:#2a78d6; --neg:#e34948;
+    --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+    --good-text:#006300;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])) .viz-root{
+      color-scheme: dark;
+      --page:#0d0d0d; --surface-1:#1a1a19;
+      --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#898781;
+      --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+      --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+      --pos:#3987e5; --neg:#e66767;
+      --good-text:#0ca30c;
+    }
+  }
+  :root[data-theme="dark"] .viz-root{
+    color-scheme: dark;
+    --page:#0d0d0d; --surface-1:#1a1a19;
+    --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#898781;
+    --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --pos:#3987e5; --neg:#e66767;
+    --good-text:#0ca30c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;
+       background:#f9f9f7;color:#0b0b0b;}
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])) body{background:#0d0d0d;color:#ffffff;}
+  }
+  :root[data-theme="dark"] body{background:#0d0d0d;color:#ffffff;}
+  .viz-root{max-width:1080px;margin:0 auto;padding:28px 20px 60px;}
+  header h1{font-size:22px;margin:0 0 4px;}
+  header .sub{color:var(--text-secondary);font-size:13px;}
+  .rangebar{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0;align-items:center;}
+  .rangebar .cap{font-size:12.5px;color:var(--text-muted);margin-right:2px;}
+  .rangebar button{padding:6px 14px;border:1px solid var(--border);border-radius:8px;
+    background:var(--surface-1);color:var(--text-secondary);cursor:pointer;
+    font-size:12.5px;font-weight:600;font-family:inherit;}
+  .rangebar button:hover{border-color:var(--baseline);color:var(--text-primary);}
+  .rangebar button.active{background:var(--s1);border-color:var(--s1);color:#fff;cursor:default;}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:20px 0 8px;}
+  .tile{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+  .tile .label{font-size:13px;color:var(--text-secondary);}
+  .tile .value{font-size:28px;font-weight:600;margin:2px 0;}
+  .tile .delta{font-size:12px;color:var(--text-muted);}
+  .up{color:var(--good-text);} .down{color:var(--critical);}
+  .status{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;
+          padding:2px 8px;border-radius:999px;border:1px solid var(--border);}
+  .status .ic{font-size:11px;}
+  .status.good{color:var(--good-text);} .status.warning{color:var(--text-primary);}
+  .status.serious{color:var(--critical);}
+  section{margin-top:34px;}
+  section>h2{font-size:16px;margin:0 0 2px;}
+  section>.desc{font-size:13px;color:var(--text-secondary);margin:0 0 12px;}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;}
+  @media(max-width:920px){.cards{grid-template-columns:1fr;}}
+  .card{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px 10px;}
+  .card h3{font-size:13.5px;margin:0 0 2px;font-weight:600;}
+  .card .note{font-size:11.5px;color:var(--text-muted);margin:0 0 6px;}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0 4px;font-size:12px;color:var(--text-secondary);}
+  .legend .key{display:inline-flex;align-items:center;gap:5px;}
+  .legend .sw{width:10px;height:10px;border-radius:3px;display:inline-block;}
+  .chart{position:relative;}
+  .chart svg{display:block;width:100%;}
+  .tooltip{position:absolute;pointer-events:none;background:var(--surface-1);border:1px solid var(--border);
+           border-radius:8px;padding:7px 10px;font-size:12px;box-shadow:0 3px 12px rgba(0,0,0,.12);
+           display:none;z-index:5;min-width:130px;}
+  .tooltip .tx{color:var(--text-muted);margin-bottom:3px;}
+  .tooltip .row{display:flex;align-items:center;gap:6px;justify-content:space-between;color:var(--text-secondary);}
+  .tooltip .row b{color:var(--text-primary);font-weight:600;font-variant-numeric:tabular-nums;}
+  details.tbl{margin:4px 0 6px;}
+  details.tbl summary{font-size:12px;color:var(--text-muted);cursor:pointer;}
+  table{border-collapse:collapse;width:100%;font-size:12px;margin-top:6px;}
+  th,td{text-align:right;padding:4px 8px;border-bottom:1px solid var(--grid);
+        font-variant-numeric:tabular-nums;color:var(--text-secondary);}
+  th{color:var(--text-muted);font-weight:600;} th:first-child,td:first-child{text-align:left;}
+  .signals td:nth-child(3),.signals th:nth-child(3){text-align:left;}
+  .signals td:nth-child(4),.signals th:nth-child(4){text-align:left;}
+  .empty{padding:26px 10px;text-align:center;color:var(--text-muted);font-size:13px;
+         border:1px dashed var(--grid);border-radius:8px;margin:8px 0;}
+  footer{margin-top:40px;font-size:12px;color:var(--text-muted);line-height:1.7;}
+  footer a{color:var(--text-secondary);}
+  #theme-toggle{position:fixed;top:14px;right:14px;z-index:60;width:38px;height:38px;
+    border-radius:50%;border:1px solid var(--border);background:var(--surface-1);font-size:16px;
+    line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);transition:border-color .15s;padding:0;}
+  #theme-toggle:hover{border-color:var(--s1);}
+</style>
+</head>
+<body>
+<div class="viz-root">
+  <button id="theme-toggle" aria-label="테마 전환" onclick="_tgTheme()">🌓</button>
+  <script>
+  /* 알파노트와 같은 localStorage 'theme' 키 — 페이지 간 테마 설정 공유 */
+  function _tgCur(){var t=document.documentElement.dataset.theme;
+    if(t)return t;
+    return (window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}
+  function _tgSync(){var b=document.getElementById('theme-toggle');
+    if(b)b.textContent=_tgCur()==='dark'?'☀️':'🌙';}
+  function _tgTheme(){var next=_tgCur()==='dark'?'light':'dark';
+    document.documentElement.dataset.theme=next;
+    try{localStorage.setItem('theme',next);}catch(e){}
+    _tgSync();
+    if(typeof renderAll==='function')renderAll();}
+  (function(){try{var t=localStorage.getItem('theme');
+    if(t){document.documentElement.dataset.theme=t;}}catch(e){}_tgSync();})();
+  </script>
+  <header>
+    <h1>₿ 크립토 모니터</h1>
+    <div class="sub">비트코인 핵심 지표 — <b>가격·모멘텀</b> · <b>MVRV</b> · <b>ETF 자금흐름</b> · <b>파생상품</b> · 생성: <span id="genAt"></span> · 날짜는 UTC 기준</div>
+    <div class="rangebar" id="rangebar">
+      <span class="cap">기간</span>
+      <button data-d="30">30일</button>
+      <button data-d="90">90일</button>
+      <button data-d="180" class="active">180일</button>
+      <button data-d="365">1년</button>
+      <button data-d="0">전체</button>
+    </div>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section>
+    <h2>신호 요약</h2>
+    <p class="desc">임계값은 crypto_monitor.py 의 build_signals 에서 조정</p>
+    <div class="card"><div class="signals" id="signalTable"></div></div>
+  </section>
+
+  <section>
+    <h2>① 가격 · 모멘텀</h2>
+    <p class="desc">추세와 과열/과매도 — 바이낸스 일봉(USDT 마켓)</p>
+    <div class="cards">
+      <div class="card"><h3>BTC 가격 ($)</h3>
+        <p class="note">50일·200일 이동평균 — 200일선 하회는 추세 훼손 신호</p>
+        <div id="ch-price"></div></div>
+      <div class="card"><h3>RSI (14일)</h3>
+        <p class="note">70 이상 과매수 · 30 이하 과매도</p>
+        <div id="ch-rsi"></div></div>
+      <div class="card"><h3>ETH/BTC 비율</h3>
+        <p class="note">상승 = 이더리움 상대 강세(위험선호) · 하락 = 비트코인 우위</p>
+        <div id="ch-ethbtc"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>② 밸류에이션 — MVRV</h2>
+    <p class="desc">시가총액 ÷ 실현시가총액 — 보유자 평균 원가 대비 프리미엄. 3.0 이상 과열 · 1.0 이하 역사적 저평가</p>
+    <div class="cards">
+      <div class="card"><h3>MVRV 비율</h3>
+        <p class="note">CoinMetrics 커뮤니티 데이터 — CryptoQuant의 MVRV와 동일 지표</p>
+        <div id="ch-mvrv"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>③ ETF 자금 흐름</h2>
+    <p class="desc">미국 현물 비트코인 ETF 11종 합산 순유입 — 기관·리테일 수급의 핵심 창구 (Farside, 거래일만)</p>
+    <div class="cards">
+      <div class="card"><h3>일별 순유입 ($M)</h3>
+        <p class="note">파랑 = 유입 · 빨강 = 유출</p>
+        <div id="ch-etf"></div></div>
+      <div class="card"><h3>누적 순유입 ($B)</h3>
+        <p class="note">2024-01 상장 이후 누적</p>
+        <div id="ch-etfcum"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>④ 파생상품</h2>
+    <p class="desc">레버리지 포지션의 쏠림 — 바이낸스 무기한 선물(BTCUSDT)</p>
+    <div class="cards">
+      <div class="card"><h3>펀딩비 (일평균, %)</h3>
+        <p class="note">양수 = 롱이 숏에 지급(롱 우위) · 0.01% = 중립 · 지속적 고펀딩 = 과열</p>
+        <div id="ch-funding"></div></div>
+      <div class="card"><h3>미결제약정 OI ($B)</h3>
+        <p class="note">바이낸스는 최근 30일만 제공 — 실행할수록 히스토리 누적</p>
+        <div id="ch-oi"></div></div>
+    </div>
+  </section>
+
+  <footer>
+    데이터: Binance 현물·선물 API(가격·RSI·펀딩비·OI) · CoinMetrics 커뮤니티 API(MVRV) ·
+    Farside Investors(미국 현물 ETF 순유입, $M) — 모두 무료 소스, UTC 일봉 기준<br>
+    청산량(liquidation)·거래소 보유량 등은 무료 공개 API가 없어 미포함(Coinglass·CryptoQuant 유료 영역).
+    펀딩비는 8시간 펀딩의 일평균이며 연환산 ≈ 일평균×3×365.
+  </footer>
+</div>
+
+<script>
+const DATA = __DATA_JSON__;
+
+/* ── 팔레트 슬롯(고정 순서: 순환 금지) ── */
+const css = s => getComputedStyle(document.querySelector('.viz-root')).getPropertyValue(s).trim();
+let SLOT = [], INK = {};
+function refreshColors(){
+  SLOT = ['--s1','--s2','--s3','--s4'].map(css);
+  INK = {primary:css('--text-primary'), secondary:css('--text-secondary'), muted:css('--text-muted'),
+         grid:css('--grid'), baseline:css('--baseline'), surface:css('--surface-1'),
+         good:css('--good-text'), critical:css('--critical'),
+         pos:css('--pos'), neg:css('--neg')};
+}
+
+/* ── 기간 필터 (한 줄, 아래 모든 차트·타일에 공통 적용) ── */
+let RANGE = 180;
+document.getElementById('rangebar').addEventListener('click', ev=>{
+  const b = ev.target.closest('button'); if(!b) return;
+  RANGE = +b.dataset.d;
+  document.querySelectorAll('#rangebar button').forEach(x=>x.classList.toggle('active', x===b));
+  renderAll();
+});
+function cutoffISO(){
+  if(!RANGE) return null;
+  const d = new Date(); d.setUTCDate(d.getUTCDate()-RANGE);
+  return d.toISOString().slice(0,10);
+}
+function slice2(dates, values){
+  const c = cutoffISO();
+  if(!c) return [dates, values];
+  let i = dates.findIndex(d=>d>=c);
+  if(i<0) i = dates.length;
+  return [dates.slice(i), values.slice(i)];
+}
+
+/* ── 유틸 ── */
+const fmt = (v,d=1) => v==null ? '—' : Number(v).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:0});
+function niceTicks(min,max,n=5){
+  if(min===max){min-=1;max+=1;}
+  const span=max-min, step0=span/n, mag=Math.pow(10,Math.floor(Math.log10(step0)));
+  const step=[1,2,2.5,5,10].map(m=>m*mag).find(s=>span/s<=n+1)||mag*10;
+  const lo=Math.floor(min/step)*step, hi=Math.ceil(max/step)*step, out=[];
+  for(let v=lo;v<=hi+1e-9;v+=step) out.push(+v.toFixed(10));
+  return out;
+}
+const svgEl=(t,a)=>{const e=document.createElementNS('http://www.w3.org/2000/svg',t);
+  for(const k in a) e.setAttribute(k,a[k]); return e;};
+const xLabel=(d,n)=> n<=130 ? String(d).slice(5) : String(d).slice(0,7);
+
+/* ── 라인 차트: 2px 라인, r4 엔드도트+서피스 링, 크로스헤어 툴팁, 가이드선, 표 보기 ── */
+function lineChart(elId, series, opts={}){
+  const host=document.getElementById(elId); if(!host) return;
+  host.innerHTML='';
+  series=series.filter(s=>s&&s.values&&s.values.some(v=>v!=null));
+  if(!series.length){host.innerHTML='<div class="empty">데이터 없음 — crypto_monitor.py 실행 필요</div>';return;}
+  // 시리즈별 기간이 다르면 날짜 합집합 축으로 재정렬
+  if(series.length>1){
+    const d0=series[0].dates;
+    if(series.some(s=>s.dates.length!==d0.length||s.dates[0]!==d0[0]||s.dates[s.dates.length-1]!==d0[d0.length-1])){
+      const all=[...new Set([].concat(...series.map(s=>s.dates)))].sort();
+      series=series.map(s=>{const idx={};s.dates.forEach((d,i)=>idx[d]=s.values[i]);
+        return {name:s.name,dates:all,values:all.map(d=>idx[d]??null)};});
+    }
+  }
+  const labels=series[0].dates;
+  const unit=opts.unit||'', dec=opts.dec??1, tdec=opts.tdec??dec;
+  const slots=opts.slots||series.map((_,i)=>i);
+  if(series.length>1){
+    const lg=document.createElement('div');lg.className='legend';
+    series.forEach((s,i)=>{lg.insertAdjacentHTML('beforeend',
+      `<span class="key"><span class="sw" style="background:${SLOT[slots[i]]}"></span>${s.name}</span>`);});
+    host.appendChild(lg);
+  }
+  const wrap=document.createElement('div');wrap.className='chart';host.appendChild(wrap);
+  const W=Math.max(320,host.clientWidth||430), H=opts.h||210;
+
+  const n=labels.length;
+  const allV=series.flatMap(s=>s.values).filter(v=>v!=null);
+  let ticks=niceTicks(Math.min(...allV),Math.max(...allV),4);
+  const ymin=ticks[0], ymax=ticks[ticks.length-1];
+  // y축 라벨 폭에 맞춰 왼쪽 여백 동적 조정
+  const lw=Math.max(...ticks.map(t=>fmt(t,dec).length))*6.4+12;
+  const M={t:14,r:56,b:26,l:Math.max(40,Math.ceil(lw))};
+  const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
+  wrap.appendChild(svg);
+  const tip=document.createElement('div');tip.className='tooltip';wrap.appendChild(tip);
+  const X=i=>M.l+(n<=1?0:(W-M.l-M.r)*i/(n-1));
+  const Y=v=>M.t+(H-M.t-M.b)*(1-(v-ymin)/(ymax-ymin));
+  // 그리드 + y축 눈금 (헤어라인, 점선 금지)
+  ticks.forEach(t=>{
+    svg.appendChild(svgEl('line',{x1:M.l,x2:W-M.r,y1:Y(t),y2:Y(t),stroke:INK.grid,'stroke-width':1}));
+    const tx=svgEl('text',{x:M.l-6,y:Y(t)+4,'text-anchor':'end','font-size':10.5,fill:INK.muted,
+      style:'font-variant-numeric:tabular-nums'});
+    tx.textContent=fmt(t,dec); svg.appendChild(tx);
+  });
+  svg.appendChild(svgEl('line',{x1:M.l,x2:W-M.r,y1:Y(ymin),y2:Y(ymin),stroke:INK.baseline,'stroke-width':1}));
+  // 가이드선(임계값) — 데이터 범위 안에 있을 때만 (축 왜곡 방지)
+  (opts.guides||[]).forEach(g=>{
+    if(g.v<ymin||g.v>ymax) return;
+    svg.appendChild(svgEl('line',{x1:M.l,x2:W-M.r,y1:Y(g.v),y2:Y(g.v),stroke:INK.baseline,'stroke-width':1}));
+    const t=svgEl('text',{x:W-M.r+4,y:Y(g.v)+4,'font-size':10,fill:INK.muted});
+    t.textContent=g.label; svg.appendChild(t);
+  });
+  // x축 눈금 ~6개
+  const xtick=Math.max(1,Math.round(n/6));
+  for(let i=0;i<n;i+=xtick){
+    const t=svgEl('text',{x:X(i),y:H-8,'text-anchor':'middle','font-size':10.5,fill:INK.muted});
+    t.textContent=xLabel(labels[i],n); svg.appendChild(t);
+  }
+  // 시리즈 (끝 레이블: 겹치면 생략 / 넘치면 생략 — 범례·툴팁이 대신함)
+  const usedLabelY=[];
+  series.forEach((s,si)=>{
+    const col=SLOT[slots[si]];
+    const pts=s.values.map((v,i)=>v==null?null:[X(i),Y(v)]);
+    const d=pts.map((p,i)=>p?(i&&pts[i-1]?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1):'').join('');
+    svg.appendChild(svgEl('path',{d,fill:'none',stroke:col,'stroke-width':2,
+      'stroke-linejoin':'round','stroke-linecap':'round'}));
+    const last=pts.filter(Boolean).pop();
+    if(last){
+      svg.appendChild(svgEl('circle',{cx:last[0],cy:last[1],r:4,fill:col,stroke:INK.surface,'stroke-width':2}));
+      const lv=s.values.filter(v=>v!=null).pop();
+      const txt=(series.length<=2?fmt(lv,tdec):s.name);
+      const estW=String(txt).length*6.6;
+      const collide=usedLabelY.some(y=>Math.abs(y-last[1])<12);
+      if(!collide && last[0]+8+estW<=W-2){
+        const t=svgEl('text',{x:last[0]+8,y:last[1]+4,'font-size':11,fill:INK.secondary,
+          style:'font-variant-numeric:tabular-nums'});
+        t.textContent=txt; svg.appendChild(t);
+        usedLabelY.push(last[1]);
+      }
+    }
+  });
+  // 크로스헤어 + 툴팁
+  const cross=svgEl('line',{y1:M.t,y2:H-M.b,stroke:INK.baseline,'stroke-width':1,visibility:'hidden'});
+  svg.appendChild(cross);
+  svg.addEventListener('mousemove',ev=>{
+    const r=svg.getBoundingClientRect();
+    const x=(ev.clientX-r.left)*W/r.width;
+    const i=Math.max(0,Math.min(n-1,Math.round((x-M.l)/((W-M.l-M.r)/Math.max(1,n-1)))));
+    cross.setAttribute('x1',X(i));cross.setAttribute('x2',X(i));cross.setAttribute('visibility','visible');
+    tip.style.display='block';
+    tip.innerHTML=`<div class="tx">${labels[i]}</div>`+series.map((s,si)=>
+      `<div class="row"><span class="key"><span class="sw" style="background:${SLOT[slots[si]]};width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px"></span>${s.name}</span><b>${fmt(s.values[i],tdec)}${unit}</b></div>`).join('');
+    const px=X(i)*r.width/W;
+    tip.style.left=(px>r.width*0.6?px-tip.offsetWidth-12:px+12)+'px';
+    tip.style.top='14px';
+  });
+  svg.addEventListener('mouseleave',()=>{tip.style.display='none';cross.setAttribute('visibility','hidden');});
+  // 표 보기 (접근성 릴리프)
+  const det=document.createElement('details');det.className='tbl';
+  det.innerHTML='<summary>표 보기</summary>';
+  const tb=document.createElement('table');
+  tb.innerHTML='<tr><th>날짜</th>'+series.map(s=>`<th>${s.name}</th>`).join('')+'</tr>';
+  const step=Math.max(1,Math.round(n/12));
+  for(let i=0;i<n;i+=step){
+    tb.insertAdjacentHTML('beforeend',`<tr><td>${labels[i]}</td>`+
+      series.map(s=>`<td>${fmt(s.values[i],tdec)}${unit}</td>`).join('')+'</tr>');
+  }
+  det.appendChild(tb);host.appendChild(det);
+}
+
+/* ── 다이버징 시계열 막대: 0 기준 위=유입(파랑)/아래=유출(빨강), 크로스헤어 툴팁, 표 보기 ── */
+function barChart(elId, dates, values, opts={}){
+  const host=document.getElementById(elId); if(!host) return;
+  host.innerHTML='';
+  if(!dates||!dates.length){host.innerHTML='<div class="empty">데이터 없음 — crypto_monitor.py 실행 필요</div>';return;}
+  const unit=opts.unit||'', dec=opts.dec??1, tdec=opts.tdec??dec;
+  const posName=opts.posLabel||'유입(+)', negName=opts.negLabel||'유출(−)';
+  const lg=document.createElement('div');lg.className='legend';
+  lg.innerHTML=`<span class="key"><span class="sw" style="background:${INK.pos}"></span>${posName}</span>
+    <span class="key"><span class="sw" style="background:${INK.neg}"></span>${negName}</span>`;
+  host.appendChild(lg);
+  const wrap=document.createElement('div');wrap.className='chart';host.appendChild(wrap);
+  const W=Math.max(320,host.clientWidth||430), H=opts.h||210;
+  const n=dates.length;
+  const vs=values.filter(v=>v!=null);
+  let ticks=niceTicks(Math.min(0,...vs),Math.max(0,...vs),4);
+  const ymin=ticks[0], ymax=ticks[ticks.length-1];
+  const lw=Math.max(...ticks.map(t=>fmt(t,dec).length))*6.4+12;
+  const M={t:14,r:20,b:26,l:Math.max(40,Math.ceil(lw))};
+  const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
+  wrap.appendChild(svg);
+  const tip=document.createElement('div');tip.className='tooltip';wrap.appendChild(tip);
+  const plotW=W-M.l-M.r;
+  const Xc=i=>M.l+plotW*(i+0.5)/n;
+  const Y=v=>M.t+(H-M.t-M.b)*(1-(v-ymin)/(ymax-ymin));
+  ticks.forEach(t=>{
+    svg.appendChild(svgEl('line',{x1:M.l,x2:W-M.r,y1:Y(t),y2:Y(t),stroke:INK.grid,'stroke-width':1}));
+    const tx=svgEl('text',{x:M.l-6,y:Y(t)+4,'text-anchor':'end','font-size':10.5,fill:INK.muted,
+      style:'font-variant-numeric:tabular-nums'});
+    tx.textContent=fmt(t,dec); svg.appendChild(tx);
+  });
+  const xtick=Math.max(1,Math.round(n/6));
+  for(let i=0;i<n;i+=xtick){
+    const t=svgEl('text',{x:Xc(i),y:H-8,'text-anchor':'middle','font-size':10.5,fill:INK.muted});
+    t.textContent=xLabel(dates[i],n); svg.appendChild(t);
+  }
+  // 막대: ≤24px 폭, 인접 막대 사이 2px 서피스 갭(밀도 높으면 갭 축소), 데이터 끝 4px 라운드
+  const slotW=plotW/n;
+  const barW=Math.min(24,Math.max(0.8,slotW-(slotW>=5?2:slotW*0.2)));
+  const y0=Y(0);
+  values.forEach((v,i)=>{
+    if(v==null||v===0) return;
+    const col=v>0?INK.pos:INK.neg;
+    const x=Xc(i)-barW/2, yv=Y(v);
+    const hgt=Math.abs(yv-y0);
+    if(barW>=6&&hgt>=5){
+      const r=Math.min(4,barW/2.5);
+      const d=v>0
+        ?`M ${x} ${y0} L ${x} ${yv+r} Q ${x} ${yv} ${x+r} ${yv} L ${x+barW-r} ${yv} Q ${x+barW} ${yv} ${x+barW} ${yv+r} L ${x+barW} ${y0} Z`
+        :`M ${x} ${y0} L ${x} ${yv-r} Q ${x} ${yv} ${x+r} ${yv} L ${x+barW-r} ${yv} Q ${x+barW} ${yv} ${x+barW} ${yv-r} L ${x+barW} ${y0} Z`;
+      svg.appendChild(svgEl('path',{d,fill:col}));
+    }else{
+      svg.appendChild(svgEl('rect',{x,y:Math.min(y0,yv),width:barW,height:Math.max(1,hgt),fill:col}));
+    }
+  });
+  // 0 기준선 (막대 위에 그려 시각적 기준 유지)
+  svg.appendChild(svgEl('line',{x1:M.l,x2:W-M.r,y1:y0,y2:y0,stroke:INK.baseline,'stroke-width':1}));
+  // 크로스헤어 + 툴팁 (막대가 얇아도 X 스냅으로 값 읽기 가능)
+  const cross=svgEl('line',{y1:M.t,y2:H-M.b,stroke:INK.baseline,'stroke-width':1,visibility:'hidden'});
+  svg.appendChild(cross);
+  svg.addEventListener('mousemove',ev=>{
+    const r=svg.getBoundingClientRect();
+    const x=(ev.clientX-r.left)*W/r.width;
+    const i=Math.max(0,Math.min(n-1,Math.floor((x-M.l)/slotW)));
+    cross.setAttribute('x1',Xc(i));cross.setAttribute('x2',Xc(i));cross.setAttribute('visibility','visible');
+    const v=values[i];
+    tip.style.display='block';
+    tip.innerHTML=`<div class="tx">${dates[i]}</div>
+      <div class="row"><span class="key"><span class="sw" style="background:${v>=0?INK.pos:INK.neg};width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px"></span>${v>=0?posName:negName}</span><b>${v==null?'—':(v>0?'+':'')+fmt(v,tdec)}${unit}</b></div>`;
+    const px=Xc(i)*r.width/W;
+    tip.style.left=(px>r.width*0.6?px-tip.offsetWidth-12:px+12)+'px';
+    tip.style.top='14px';
+  });
+  svg.addEventListener('mouseleave',()=>{tip.style.display='none';cross.setAttribute('visibility','hidden');});
+  // 표 보기
+  const det=document.createElement('details');det.className='tbl';
+  det.innerHTML='<summary>표 보기</summary>';
+  const tb=document.createElement('table');
+  tb.innerHTML=`<tr><th>날짜</th><th>${opts.tblHead||'값'}</th></tr>`;
+  const step=Math.max(1,Math.round(n/12));
+  for(let i=0;i<n;i+=step){
+    tb.insertAdjacentHTML('beforeend',
+      `<tr><td>${dates[i]}</td><td>${values[i]==null?'—':(values[i]>0?'+':'')+fmt(values[i],tdec)}${unit}</td></tr>`);
+  }
+  det.appendChild(tb);host.appendChild(det);
+}
+
+/* ── 상태 배지 ── */
+const STATUS_IC={good:'●',warning:'▲',serious:'■'};
+function badge(st,txt){
+  return `<span class="status ${st}"><span class="ic">${STATUS_IC[st]||'●'}</span>${txt}</span>`;}
+
+/* ── 렌더 ── */
+function renderAll(){
+  refreshColors();
+  document.getElementById('genAt').textContent=DATA.generated_at;
+  const m=DATA.metrics||{};
+
+  /* 타일 */
+  const dcls=v=>v>0?'up':v<0?'down':'';
+  const sign=v=>v>0?'+':'';
+  const tiles=[
+    {label:'BTC 가격', value:m.btc_price!=null?'$'+fmt(m.btc_price,0):'—',
+     delta:m.btc_chg_24h!=null?`<span class="${dcls(m.btc_chg_24h)}">${sign(m.btc_chg_24h)}${fmt(m.btc_chg_24h,2)}%</span> · 24시간`:''},
+    {label:'RSI (14일)', value:m.rsi14!=null?fmt(m.rsi14,1):'—',
+     delta:m.rsi14==null?'':m.rsi14>=70?'과매수 구간':m.rsi14<=30?'과매도 구간':'중립 구간 (30–70)'},
+    {label:'MVRV 비율', value:m.mvrv!=null?fmt(m.mvrv,2):'—',
+     delta:m.mvrv_chg_30d!=null?`<span class="${dcls(m.mvrv_chg_30d)}">${sign(m.mvrv_chg_30d)}${fmt(m.mvrv_chg_30d,2)}</span> · 30일`:''},
+    {label:'ETF 순유입 (최근 거래일)', value:m.etf_last_flow!=null?`${sign(m.etf_last_flow)}${fmt(m.etf_last_flow,0)}M$`:'—',
+     delta:m.etf_5d_sum!=null?`5일 합 <span class="${dcls(m.etf_5d_sum)}">${sign(m.etf_5d_sum)}${fmt(m.etf_5d_sum,0)}M$</span> · 누적 ${fmt(m.etf_cum_total,1)}B$`:''},
+    {label:'펀딩비 (일평균)', value:m.funding_last!=null?fmt(m.funding_last,4)+'%':'—',
+     delta:m.funding_apr!=null?`연환산 ≈ ${fmt(m.funding_apr,1)}% · 7일 평균 ${fmt(m.funding_avg7,4)}%`:''},
+    {label:'미결제약정 OI', value:m.oi_usd_b!=null?'$'+fmt(m.oi_usd_b,1)+'B':'—',
+     delta:m.oi_chg_7d!=null?`7일 ${sign(m.oi_chg_7d)}${fmt(m.oi_chg_7d,1)}% · 바이낸스 BTCUSDT`:''},
+  ];
+  document.getElementById('tiles').innerHTML=tiles.map(t=>
+    `<div class="tile"><div class="label">${t.label}</div>
+     <div class="value">${t.value}</div><div class="delta">${t.delta}</div></div>`).join('');
+
+  /* 신호 요약 표 */
+  const rows=(DATA.signals||[]).map(s=>
+    `<tr><td>${s.name}</td><td>${s.value}</td><td>${s.criteria}</td><td>${badge(s.status,s.label)}</td></tr>`).join('');
+  document.getElementById('signalTable').innerHTML=rows
+    ?`<table><tr><th>지표</th><th>현재</th><th>기준</th><th>상태</th></tr>${rows}</table>`
+    :'<div class="empty">데이터 없음</div>';
+
+  /* ① 가격·모멘텀 */
+  const p=DATA.price;
+  if(p){
+    const [pd,pv]=slice2(p.dates,p.btc);
+    const [,ma50]=slice2(p.dates,p.ma50);
+    const [,ma200]=slice2(p.dates,p.ma200);
+    lineChart('ch-price',[
+      {name:'BTC',dates:pd,values:pv},
+      {name:'MA50',dates:pd,values:ma50},
+      {name:'MA200',dates:pd,values:ma200},
+    ],{unit:'',dec:0,h:230});
+  } else lineChart('ch-price',[]);
+  const r=DATA.rsi;
+  if(r){
+    const [rd,rv]=slice2(r.dates,r.values);
+    lineChart('ch-rsi',[{name:'RSI',dates:rd,values:rv}],
+      {dec:0,h:190,guides:[{v:70,label:'70 과매수'},{v:30,label:'30 과매도'}]});
+  } else lineChart('ch-rsi',[]);
+  const eb=DATA.ethbtc;
+  if(eb){
+    const [ed,ev]=slice2(eb.dates,eb.values);
+    lineChart('ch-ethbtc',[{name:'ETH/BTC',dates:ed,values:ev}],{dec:3,tdec:4,h:190});
+  } else lineChart('ch-ethbtc',[]);
+
+  /* ② MVRV */
+  const mv=DATA.mvrv;
+  if(mv){
+    const [md,mvv]=slice2(mv.dates,mv.values);
+    lineChart('ch-mvrv',[{name:'MVRV',dates:md,values:mvv}],
+      {dec:2,h:230,guides:[{v:1,label:'1.0 저평가'},{v:2,label:'2.0 주의'},{v:3,label:'3.0 과열'}]});
+  } else lineChart('ch-mvrv',[]);
+
+  /* ③ ETF */
+  const et=DATA.etf;
+  if(et){
+    const [fd,fv]=slice2(et.dates,et.flow);
+    barChart('ch-etf',fd,fv,{unit:'M$',dec:0,tblHead:'순유입(M$)'});
+    const [cd,cv]=slice2(et.dates,et.cum);
+    lineChart('ch-etfcum',[{name:'누적',dates:cd,values:cv}],{unit:'B$',dec:0,tdec:1,h:190});
+  } else {barChart('ch-etf');lineChart('ch-etfcum',[]);}
+
+  /* ④ 파생 */
+  const fu=DATA.funding;
+  if(fu){
+    const [ud,uv]=slice2(fu.dates,fu.values);
+    barChart('ch-funding',ud,uv,{unit:'%',dec:2,tdec:4,
+      posLabel:'롱 우위(+)',negLabel:'숏 우위(−)',tblHead:'일평균 펀딩비(%)'});
+  } else barChart('ch-funding');
+  const oi=DATA.oi;
+  if(oi){
+    const [od,ov]=slice2(oi.dates,oi.usd_b);
+    lineChart('ch-oi',[{name:'OI',dates:od,values:ov}],{unit:'B$',dec:1,h:190});
+  } else lineChart('ch-oi',[]);
+}
+renderAll();
+let rsz;window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(renderAll,200);});
+if(window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',renderAll);
+/* 테마가 바뀌면 다시 그린다. SVG 색은 렌더 시점에 getComputedStyle 로 읽으므로
+   CSS 만 바뀌어서는 반영되지 않는다. data-theme 속성을 직접 감시하는 이유는
+   알파노트에 얹힐 때 사이트 공용 내비의 테마 스크립트가 이 페이지의 _tgTheme
+   (renderAll 호출)을 덮어쓰기 때문 — 어느 쪽이 이기든 차트는 갱신된다. */
+new MutationObserver(renderAll).observe(document.documentElement,
+  {attributes:true,attributeFilter:['data-theme']});
+</script>
+</body>
+</html>

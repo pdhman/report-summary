@@ -60,3 +60,11 @@ price-alert/holdings.json
 # worktrees/ 는 저장소 전체 복사본이라 `git add .claude` 시 수백 개 파일이 딸려 들어간다.
 .claude/worktrees/
 .claude/launch.json
+
+# 크립토 모니터: 소스만 추적하고 수집 캐시·생성물은 제외(2026-08-31 사용자 요청).
+# 배포본은 docs/crypto.html 이라 로컬 crypto.html 은 저장소에 둘 이유가 없다.
+# 주의: oi_history.csv 는 바이낸스가 최근 30일만 제공해 한 번 잃으면 복구 불가다
+# (etf_flow_history.csv 는 Farside 가 전체 이력을 주므로 언제든 재생성된다).
+crypto-monitor/crypto.html
+crypto-monitor/*.csv
+crypto-monitor/crypto_run.log
