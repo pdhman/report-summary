@@ -307,6 +307,39 @@ def card_market():
         return json.load(f)
 
 
+def card_crypto():
+    """크립토: crypto_monitor.py(매일 11:00)가 만든 요약 JSON 읽기.
+
+    대시보드 자체는 crypto-monitor/crypto.html 로 만들어지므로 여기서는
+    사이트 경로로 복사만 한다(수급 동향 flow.html 과 같은 방식).
+    """
+    import json
+    cdir = os.path.join(BASE, "crypto-monitor")
+    path = os.path.join(cdir, "crypto_summary.json")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        c = json.load(f)
+
+    src = os.path.join(cdir, "crypto.html")
+    if os.path.exists(src):
+        html = open(src, encoding="utf-8").read()
+        # 내비 CSS 가 쓰는 사이트 변수(--panel 등)가 이 대시보드에 없으므로 채워 넣는다.
+        # 값은 flow.html 과 동일 — 두 페이지가 같은 dataviz 팔레트를 쓴다.
+        nav_shim = (
+            "<style>\n"
+            "  :root { --panel:#ffffff; --line:#e6e8eb; --accent:#3b5bdb; --muted:#6b7280; }\n"
+            '  :root[data-theme="dark"] { --panel:#171b21; --line:#252b33; '
+            "--accent:#748ffc; --muted:#9aa2ad; }\n"
+            "</style>"
+        )
+        html = html.replace(
+            "</body>", site_nav.nav_html("crypto") + nav_shim + site_nav.NAV_CSS + "</body>")
+        with open(os.path.join(OUT_DIR, "crypto.html"), "w", encoding="utf-8") as f:
+            f.write(html)
+    return c
+
+
 def card_rs():
     """RS 스크리너: 1개월 RS 상위 테마 2개 + ETF 종합 RS 상위 2개.
 
@@ -471,6 +504,36 @@ def build():
         if upd != c["date"]:
             body += f'<div class="sc-note">수치는 {esc(c["date"])} 기준</div>'
         cards.append(_card("leverage.html", "📈", "시장 레버리지", upd, body))
+
+    c = None
+    try:
+        c = card_crypto()
+    except Exception as e:
+        print(f"[요약] 크립토 카드 실패: {e}")
+    if c and c.get("btc_price") is not None:
+        def _crow(name, val, diff=None, dec=2, unit=""):
+            v = f'{val:,.{dec}f}{unit}'
+            if diff is not None:
+                cls = "up" if diff > 0 else ("down" if diff < 0 else "")
+                sign = "+" if diff > 0 else ""
+                v += f' <span class="k-diff {cls}">{sign}{diff:,.2f}</span>'
+            return (f'<div class="krow"><span class="k-name">{name}</span>'
+                    f'<span class="k-val">{v}</span></div>')
+        body = _crow("BTC", c["btc_price"], c.get("btc_chg_24h"), 0, "$")
+        if c.get("rsi14") is not None:
+            body += _crow("RSI(14)", c["rsi14"], None, 1)
+        if c.get("mvrv") is not None:
+            body += _crow("MVRV", c["mvrv"], None, 2)
+        if c.get("etf_last_flow") is not None:
+            f_ = c["etf_last_flow"]
+            cls = "up" if f_ > 0 else ("down" if f_ < 0 else "")
+            body += (f'<div class="krow"><span class="k-name">ETF 순유입</span>'
+                     f'<span class="k-val {cls}">{"+" if f_ > 0 else ""}{f_:,.0f}M$</span></div>')
+            # 헤더 날짜는 갱신일(KST). ETF 는 미국 세션 기준이라 하루 이상 차이가
+            # 나므로 실제 기준일을 작게 덧붙인다(시장 레버리지 카드와 같은 이유).
+            if c.get("etf_last_date"):
+                body += f'<div class="sc-note">ETF는 {esc(c["etf_last_date"])} 기준</div>'
+        cards.append(_card("crypto.html", "₿", "크립토", c.get("date", ""), body))
 
     # 분석 도구(차트·계절성·RS)는 상시 제공되는 정적 도구라 항상 카드 노출
     cards.append(_card(
