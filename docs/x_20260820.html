@@ -107,7 +107,9 @@
       <a id="xm-new" href="#" target="_blank" rel="noopener">새 탭 ↗</a>
       <button id="xm-x" aria-label="닫기">✕</button>
     </div>
-    <div id="xm-body"><div id="xm-msg">불러오는 중…</div></div>
+    <div id="xm-body"><div id="xm-wrap"><div id="xm-msg">불러오는 중…</div>
+      <div id="xm-shield" hidden role="link" tabindex="0"
+           title="클릭하면 X에서 원문이 열립니다"></div></div></div>
   </div>
 </div><nav class="bottomnav"><a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a><a class="nav-cell" href="strategy.html"><span class="ni">📝</span><span class="nl">투자전략</span></a><a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a><a class="nav-cell" href="chart.html"><span class="ni">📈</span><span class="nl">분석</span></a><a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">뉴스</span></a></nav><script>
 function _tgCur(){
@@ -237,15 +239,38 @@ function _tgTheme(){
     cursor:pointer; line-height:1; padding:4px 2px; }
   #xm-x:hover { color:var(--ink); }
   #xm-body { overflow-y:auto; padding:10px 14px 14px; }
+  #xm-wrap { position:relative; }
   #xm-msg { color:var(--muted); font-size:13.5px; text-align:center; padding:26px 0; line-height:1.6; }
   #xm-body twitter-widget, #xm-body iframe { margin:0 auto !important; }
+  /* 임베드 위를 덮는 클릭 방패 — 위젯 내부 링크가 탭을 두 번 여는 것을 막고,
+     어디를 눌러도 새 탭 하나만 열리게 한다. 휠 스크롤은 그대로 통과한다. */
+  #xm-shield { position:absolute; inset:0; cursor:pointer; background:transparent; }
+  #xm-shield[hidden] { display:none; }
+  #xm-shield:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:12px; }
 </style>
 <script>
 (function () {
   var ov = document.getElementById('xm-ov'), box = document.getElementById('xm-box');
-  var body = document.getElementById('xm-body'), msg = document.getElementById('xm-msg');
+  var body = document.getElementById('xm-body'), wrap = document.getElementById('xm-wrap');
+  var msg = document.getElementById('xm-msg'), shield = document.getElementById('xm-shield');
   var newTab = document.getElementById('xm-new'), ttl = document.getElementById('xm-ttl');
-  var lastFocus = null, timer = null;
+  var lastFocus = null, timer = null, curUrl = null;
+
+  // X 위젯이 만드는 iframe에 src 가 붙기 전에 sandbox 를 심는다.
+  // allow-popups 를 빼면 iframe 안에서는 어떤 방법으로도 탭을 열 수 없다
+  // (내부 링크가 target=_blank 와 자체 핸들러로 두 번 여는 문제의 근본 차단).
+  new MutationObserver(function (muts) {
+    muts.forEach(function (m) {
+      [].forEach.call(m.addedNodes, function (n) {
+        if (n.nodeType !== 1) return;
+        var fs = n.tagName === 'IFRAME' ? [n]
+               : (n.querySelectorAll ? [].slice.call(n.querySelectorAll('iframe')) : []);
+        fs.forEach(function (f) {
+          if (!f.hasAttribute('sandbox')) f.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+        });
+      });
+    });
+  }).observe(wrap, { childList: true, subtree: true });
 
   function theme() {
     var t = document.documentElement.dataset.theme;
@@ -255,11 +280,21 @@ function _tgTheme(){
   function close() {
     ov.hidden = true;
     if (timer) { clearTimeout(timer); timer = null; }
-    body.innerHTML = '<div id="xm-msg">불러오는 중…</div>';
+    wrap.innerHTML = '<div id="xm-msg">불러오는 중…</div>';
+    wrap.appendChild(shield);
+    shield.hidden = true;
     msg = document.getElementById('xm-msg');
     if (lastFocus) { try { lastFocus.focus(); } catch (e) {} }
   }
+  function rendered() { return !!wrap.querySelector('iframe'); }
+  function done() {                       // 렌더 성공 → 안내문 제거 + 방패 활성화
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (msg && msg.parentNode) { msg.parentNode.removeChild(msg); msg = null; }
+    shield.hidden = false;
+  }
   function fail(why) {
+    // 이미 트윗이 그려졌으면 실패가 아니다 (위젯이 el 을 안 돌려주는 경우가 있다).
+    if (rendered()) { done(); return; }
     if (msg) msg.innerHTML = why + '<br>위의 <b>새 탭 ↗</b> 으로 X에서 확인해 주세요.';
   }
   function loadWidgets(cb, err) {
@@ -279,20 +314,19 @@ function _tgTheme(){
     var m = url.match(/status\/(\d+)/);
     if (!m) { window.open(url, '_blank', 'noopener'); return; }
     lastFocus = document.activeElement;
+    curUrl = url;
     newTab.href = url;
     ttl.textContent = handle ? '@' + handle : '원문';
     ov.hidden = false;
     document.getElementById('xm-x').focus();
     timer = setTimeout(function () { fail('불러오는 데 시간이 걸리고 있습니다.'); }, 7000);
     loadWidgets(function () {
-      window.twttr.widgets.createTweet(m[1], body, {
+      window.twttr.widgets.createTweet(m[1], wrap, {
         theme: theme(), lang: 'ko', dnt: true, align: 'center', conversation: 'none'
       }).then(function (el) {
-        if (timer) { clearTimeout(timer); timer = null; }
-        if (!el) fail('트윗을 불러올 수 없습니다 (삭제·비공개일 수 있습니다).');
-        else if (msg && msg.parentNode) msg.parentNode.removeChild(msg);
+        if (el || rendered()) done();
+        else fail('트윗을 불러올 수 없습니다 (삭제·비공개일 수 있습니다).');
       }).catch(function () {
-        if (timer) { clearTimeout(timer); timer = null; }
         fail('트윗을 불러오지 못했습니다.');
       });
     }, function () {
@@ -311,6 +345,12 @@ function _tgTheme(){
     var h = null, mm = a.href.match(/^https?:\/\/(?:x|twitter)\.com\/([A-Za-z0-9_]+)\//);
     if (mm) h = mm[1];
     open(a.href, h);
+  });
+  // 임베드 어디를 눌러도 새 탭은 정확히 하나만 열린다.
+  function goX() { if (curUrl) window.open(curUrl, '_blank', 'noopener'); }
+  shield.addEventListener('click', goX);
+  shield.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goX(); }
   });
   document.getElementById('xm-x').addEventListener('click', close);
   ov.addEventListener('click', function (e) { if (!box.contains(e.target)) close(); });
