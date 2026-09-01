@@ -315,7 +315,10 @@ def card_crypto():
     """
     import json
     cdir = os.path.join(BASE, "crypto-monitor")
-    path = os.path.join(cdir, "crypto_summary.json")
+    # 요약 JSON 은 docs/data/ 에 있다(저장소 추적 대상). crypto-monitor/ 안에 두면
+    # .gitignore 로 빠져서 CI·워크트리 등 다른 체크아웃에서 이 카드가 조용히
+    # 사라진다 — 2026-09-01 실제로 그렇게 원복됐다.
+    path = os.path.join(OUT_DIR, "data", "crypto_summary.json")
     if not os.path.exists(path):
         return None
     with open(path, encoding="utf-8") as f:

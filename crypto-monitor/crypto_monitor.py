@@ -41,7 +41,10 @@ except Exception:
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_HTML = os.path.join(BASE_DIR, "crypto_template.html")
 OUTPUT_HTML = os.path.join(BASE_DIR, "crypto.html")
-SUMMARY_JSON = os.path.join(BASE_DIR, "crypto_summary.json")  # 알파노트 홈 카드용
+# 알파노트 홈 카드용 요약. docs/data/ 에 두는 이유: 이 경로만 .gitignore 화이트리스트라
+# 저장소에 올라가고, GitHub Actions·워크트리처럼 다른 체크아웃에서 make_summary 가
+# 홈을 재생성해도 카드가 살아남는다(시장 건전성 market_summary.json 과 같은 자리).
+SUMMARY_JSON = os.path.join(os.path.dirname(BASE_DIR), "docs", "data", "crypto_summary.json")
 OI_CSV = os.path.join(BASE_DIR, "oi_history.csv")
 ETF_CSV = os.path.join(BASE_DIR, "etf_flow_history.csv")
 
@@ -396,6 +399,7 @@ def main():
         "etf_last_flow": m.get("etf_last_flow"),
         "etf_5d_sum": m.get("etf_5d_sum"),
     }
+    os.makedirs(os.path.dirname(SUMMARY_JSON), exist_ok=True)
     with open(SUMMARY_JSON, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=1)
     print(f"완료 → {OUTPUT_HTML}")
