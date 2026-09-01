@@ -41,7 +41,11 @@ python crypto_monitor.py     # 수집 → crypto.html 생성
 홈(index.html) 카드로 노출된다 — **시장 레버리지 바로 뒤, 8번째 카드**. 하단 내비의 6번째 탭이
 아니라 카드 한 장이다(내비는 5칸 고정).
 
-- `crypto_monitor.py` 가 대시보드와 함께 `crypto_summary.json`(카드용 요약)을 만든다.
+- `crypto_monitor.py` 가 대시보드와 함께 **`docs/data/crypto_summary.json`**(카드용 요약)을 만든다.
+  이 경로여야 한다 — `crypto-monitor/` 안에 두면 `.gitignore` 의 `*.json` 에 걸려 저장소에
+  올라가지 않고, GitHub Actions(daily-insights → sync_report_summary → make_summary.build)나
+  워크트리처럼 그 파일이 없는 체크아웃이 홈을 재생성하면 카드가 조용히 사라진다
+  (2026-09-01 실제 발생). `docs/data/*.json` 은 .gitignore 화이트리스트다.
 - `make_summary.py` 의 `card_crypto()` 가 그 JSON을 읽어 카드를 만들고,
   `crypto.html` 을 `docs/` 로 복사하면서 하단 내비를 주입한다(수급 동향 `flow.html` 과 같은 방식).
   내비 CSS가 쓰는 사이트 변수(`--panel` 등)는 이 대시보드에 없어 `nav_shim` 으로 채워 넣는다.
