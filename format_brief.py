@@ -25,6 +25,24 @@ ITEM_RE = re.compile(r"(?=(?<!\d)\d{1,2}\.\s*\[[^\]\n]{1,14}\])")
 LINK_RE = re.compile(r"\[([^\]]+)\]\((https?://[^)\s]+)\)")
 
 
+# 생성 모델이 본문 끝에 덧붙이는 '후속 질문' 블록(Q1/Q2/Q3 …?) 제거용.
+# 본문에도 'S&P 500 Q2 이익', '2026 Q1 실적' 처럼 Q1·Q2 표현이 자주 나오므로
+# (a) Q1 이 콜론/마침표 뒤 물음표로 끝나는 문장을 이끌고 (b) 그 뒤에 Q2 가
+# 이어질 때만 자른다. (2026-09-01 실사고: 제언 마지막 문단에 붙어 게시됨)
+_FOLLOWUP_Q1 = re.compile(r"(?:\n|\s)*(?:[-–—]{2,}|\*{2,})?\s*\*{0,2}Q1\*{0,2}\s*[.:]\s*[^\n]{5,}?\?")
+_FOLLOWUP_Q2 = re.compile(r"\*{0,2}Q2\*{0,2}\s*[.:]")
+
+
+def _strip_followups(text):
+    """말미의 후속 질문 블록을 잘라낸다. 없으면 원문 그대로."""
+    m = _FOLLOWUP_Q1.search(text)
+    if not m:
+        return text
+    if not _FOLLOWUP_Q2.search(text, m.end()):
+        return text                                # Q1 만 있으면 본문 표현으로 본다
+    return text[:m.start()].rstrip()
+
+
 def _clean_inline(s):
     """세그먼트 공통 정리: 불릿/굵게 표식·LaTeX 찌꺼기·중복 공백 제거."""
     s = re.sub(r"\$([^$]+)\$", r"\1", s)          # $Reaction\ Function$ → Reaction Function
@@ -92,7 +110,7 @@ def _parse_advice(text):
 
 def format_text(raw):
     """원문(서식 불문) → 표준 md. 실패 시 None."""
-    text = raw
+    text = _strip_followups(raw)
     for p in STRIP:
         text = text.replace(p, "")
 
