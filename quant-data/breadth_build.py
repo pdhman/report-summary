@@ -272,6 +272,9 @@ def apply_series(hist: pd.DataFrame, s: pd.Series, col: str) -> pd.DataFrame:
     hist = hist.copy()
     if col not in hist.columns:
         hist[col] = np.nan
+    # NaN 은 병합하지 않는다 — FDR 이 당일 행을 NaN 으로 주면 전날 저장한 값이
+    # 지워졌다(2026-09-02 원달러 09-01 소실). 값이 있는 날짜만 덮어쓴다.
+    s = s.dropna()
     aligned = s[s.index.isin(hist.index)]
     hist.loc[aligned.index, col] = aligned.values
     return hist
@@ -464,8 +467,12 @@ def fetch_macro(d: pd.DataFrame) -> dict:
     """요약 행에 표기할 매크로 수치 — NFCI·미국채 10년물·VIX(FRED)·원달러(수집분).
 
     FRED 는 이 네트워크에서 직접 접근이 막혀 aicyclemonitor 의 fetch_fred
-    (allorigins 폴백 내장)를 재사용한다. 각 항목은 실패해도 None 으로 두고
-    파이프라인은 계속 간다. 미국 지표는 전일(현지) 값이 최신이다.
+    (allorigins 폴백 내장)를 재사용한다. 각 항목은 실패해도 파이프라인은 계속 간다.
+    미국 지표는 전일(현지) 값이 최신이다.
+
+    실패한 항목은 마지막 성공값(data/macro_last.json)으로 채우고 stale=True 를 붙인다
+    (2026-09-02 allorigins 장애로 NFCI·10Y 가 화면에서 사라진 뒤 추가). 성공값은
+    None 으로 덮어쓰지 않으므로 며칠 장애가 이어져도 마지막 값이 유지된다.
     """
     macro = {}
     try:
@@ -507,6 +514,31 @@ def fetch_macro(d: pd.DataFrame) -> dict:
                            "date": f"{fx.index[-1]:%m-%d}"}
     else:
         macro["usdkrw"] = None
+    return _macro_with_fallback(macro)
+
+
+MACRO_LAST = os.path.join(BASE, "data", "macro_last.json")
+
+
+def _macro_with_fallback(macro: dict) -> dict:
+    """실패(None) 항목을 마지막 성공값으로 채우고, 성공값은 파일에 갱신한다."""
+    try:
+        with open(MACRO_LAST, encoding="utf-8") as f:
+            last = json.load(f)
+    except Exception:
+        last = {}
+    for key, val in list(macro.items()):
+        if val:
+            last[key] = {k: v for k, v in val.items() if k != "stale"}
+        elif last.get(key):
+            macro[key] = {**last[key], "stale": True}
+            log.info("%s 는 마지막 성공값 유지 (%s)", key, last[key].get("date"))
+    try:
+        os.makedirs(os.path.dirname(MACRO_LAST), exist_ok=True)
+        with open(MACRO_LAST, "w", encoding="utf-8") as f:
+            json.dump(last, f, ensure_ascii=False, indent=1)
+    except Exception as e:
+        log.warning("macro_last.json 저장 실패: %s", e)
     return macro
 
 

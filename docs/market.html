@@ -697,11 +697,13 @@ function renderKeyFigs(){
     var v = dp != null ? o.chg.toFixed(dp) : o.chg;
     return ' <span class="kf-raw">(' + (o.chg > 0 ? '+' : '') + v + (unit || '') + ')</span>';
   }
+  // stale: 당일 수집 실패로 마지막 성공값을 보여주는 항목 — 날짜를 붙여 오래된 값임을 드러낸다
+  function st(o){ return o.stale ? ' <span class="kf-raw">' + o.date + ' 값</span>' : ''; }
   if(m.nfci)   mp.push('NFCI <b>' + m.nfci.v.toFixed(2) + '</b>' + chg(m.nfci, '', 2) +
                        ' <span class="kf-raw">' + m.nfci.date + ' 주간</span>');
-  if(m.us10y)  mp.push('미국채10Y <b>' + m.us10y.v.toFixed(2) + '%</b>' + chg(m.us10y, '%p', 2));
-  if(m.vix)    mp.push('VIX <b>' + m.vix.v.toFixed(1) + '</b>' + chg(m.vix, '', 1));
-  if(m.usdkrw) mp.push('원달러 <b>' + fmt(m.usdkrw.v, 1) + '</b>' + chg(m.usdkrw, '원', 1));
+  if(m.us10y)  mp.push('미국채10Y <b>' + m.us10y.v.toFixed(2) + '%</b>' + chg(m.us10y, '%p', 2) + st(m.us10y));
+  if(m.vix)    mp.push('VIX <b>' + m.vix.v.toFixed(1) + '</b>' + chg(m.vix, '', 1) + st(m.vix));
+  if(m.usdkrw) mp.push('원달러 <b>' + fmt(m.usdkrw.v, 1) + '</b>' + chg(m.usdkrw, '원', 1) + st(m.usdkrw));
   if(mp.length)
     rows.push('매크로: ' + mp.join('<span class="kf-sep">·</span>') +
               ' <span class="kf-raw">· 미국 지표는 현지 전일 기준</span>');
