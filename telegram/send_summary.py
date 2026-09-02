@@ -128,24 +128,26 @@ def section_flows(lines):
 
 
 def section_rs(lines, top=5, min_n=5):
-    # min_n 은 rs.html 의 기본값(state.minN)과 맞춘다. 대시보드 '테마 랭킹'에
-    # 보이는 순위와 요약이 달라지면 어느 쪽이 맞는지 헷갈리므로 기준을 하나로 둔다.
+    # min_n 은 rs.html 의 기본값(state.minN)과 맞춘다.
+    # 정렬은 홈 카드('테마 1M')와 동일하게 1개월 RS 기준 — 종합 RS 로 정렬하면
+    # 홈과 순위가 달라져 어느 쪽이 맞는지 헷갈리는 문제가 있었다(2026-09).
     path = BASE / "docs" / "rs_data.js"
     if not path.exists():
         return
     rs = load_js(path)
-    themes = [t for t in rs.get("themes", []) if t.get("n", 0) >= min_n and t.get("rs") is not None]
+    themes = [t for t in rs.get("themes", [])
+              if t.get("n", 0) >= min_n and t.get("r1") is not None]
     if not themes:
         return
-    themes.sort(key=lambda t: t["rs"], reverse=True)
+    themes.sort(key=lambda t: t["r1"], reverse=True)
     lines.append("")
-    lines.append(f"🔥 <b>RS 상위 테마</b> ({rs.get('asof', '')} 기준)")
+    lines.append(f"🔥 <b>1M RS 상위 테마</b> ({rs.get('asof', '')} 기준)")
     for t in themes[:top]:
-        # 테마 RS 는 시총 가중이 아닌 단순 평균이라 소수 종목이 평균을 끌어올릴 수 있다.
-        # 종목 수와 90+ 비율을 같이 붙여 그 왜곡 여부를 한 줄에서 판단하게 한다.
-        bits = [f"{t['rs']:.0f}", f"{t['n']}종목"]
-        if t.get("p90") is not None:
-            bits.append(f"90+ {t['p90']:.0f}%")
+        # 테마 RS 는 단순 평균이라 소수 종목이 평균을 끌어올릴 수 있어 종목 수를
+        # 붙이고, 단기 반등인지 추세인지 가늠하도록 종합 RS 를 함께 표기한다.
+        bits = [f"{t['r1']:.0f}", f"{t['n']}종목"]
+        if t.get("rs") is not None:
+            bits.append(f"종합 {t['rs']:.0f}")
         lines.append(f"   {html.escape(t['name'])} {' · '.join(bits)}")
 
 
