@@ -42,6 +42,9 @@ SERVICES = {
     "krx": "idx/krx_dd_trd",
     "stock": "sto/stk_bydd_trd",
     "etf": "etp/etf_bydd_trd",
+    # ---- 미승인(2026-09-03 현재 401 'Unauthorized API Call'). 이용신청 후 자동 활성 ----
+    "kosdaq": "idx/kosdaq_dd_trd",      # KOSDAQ 시리즈 일별시세정보 → 코스닥 지수
+    "ksq": "sto/ksq_bydd_trd",          # 코스닥 일별매매정보 → 코스닥 전종목 시세
 }
 
 log = logging.getLogger("krx")
@@ -49,6 +52,13 @@ log = logging.getLogger("krx")
 
 class KrxKeyMissing(RuntimeError):
     pass
+
+
+class KrxNotApproved(RuntimeError):
+    """키는 유효하지만 해당 서비스 이용신청이 없음 (마이페이지 → 서비스 이용신청)."""
+
+
+_not_approved: set = set()      # 실행 중 한 번 401 난 서비스는 다시 두드리지 않는다
 
 
 def _key() -> str:
@@ -89,6 +99,8 @@ def fetch(service: str, bas_dd, use_cache: bool = True, retries: int = 3) -> lis
         with open(path, encoding="utf-8") as f:
             return json.load(f)
 
+    if service in _not_approved:
+        raise KrxNotApproved(f"KRX {service} 미승인 서비스")
     key = _key()
     url = API + SERVICES[service]
     last = None
@@ -96,11 +108,14 @@ def fetch(service: str, bas_dd, use_cache: bool = True, retries: int = 3) -> lis
         try:
             r = requests.get(url, params={"basDd": ymd}, headers={"AUTH_KEY": key}, timeout=20)
             if r.status_code == 401:
-                raise KrxKeyMissing(f"KRX 인증 실패: {r.text[:80]}")
+                if "Key" in r.text:
+                    raise KrxKeyMissing(f"KRX 인증 실패: {r.text[:80]}")
+                _not_approved.add(service)
+                raise KrxNotApproved(f"KRX {service} 미승인 서비스 ({SERVICES[service]})")
             r.raise_for_status()
             rows = r.json().get("OutBlock_1", [])
             break
-        except KrxKeyMissing:
+        except (KrxKeyMissing, KrxNotApproved):
             raise
         except Exception as e:                      # 네트워크·5xx → 재시도
             last = e
@@ -151,12 +166,81 @@ def putcall_ratio(bas_dd, by: str = "volume") -> float | None:
     return round(put / call, 3)
 
 
+def _norm(s) -> str:
+    return str(s or "").replace(" ", "").upper()
+
+
+def index_row(name: str, bas_dd) -> dict | None:
+    """지수 한 날짜 행 {'close','chg','pct'}. name: '코스피'·'코스피 200'·'코스닥'·'KRX 300' 등.
+
+    이름 앞머리로 서비스(kospi/kosdaq/krx)를 고르고 공백 무시 정확 일치로 찾는다.
+    코스닥 계열은 KOSDAQ 시리즈 서비스 승인 전까지 KrxNotApproved.
+    """
+    n = _norm(name)
+    svc = "kospi" if n.startswith("코스피") else "kosdaq" if n.startswith("코스닥") else "krx"
+    for row in fetch(svc, bas_dd):
+        if _norm(row.get("IDX_NM")) == n:
+            close = num(row.get("CLSPRC_IDX"))
+            if close is None:
+                return None
+            return {"close": close, "chg": num(row.get("CMPPREVDD_IDX")),
+                    "pct": num(row.get("FLUC_RT"))}
+    return None
+
+
 def kospi_close(bas_dd, name: str = "코스피") -> float | None:
     """KOSPI 시리즈 지수 종가 (기본 '코스피' = KOSPI 종합)."""
-    for row in fetch("kospi", bas_dd):
-        if str(row.get("IDX_NM", "")).strip() == name:
-            return num(row.get("CLSPRC_IDX"))
+    r = index_row(name, bas_dd)
+    return r["close"] if r else None
+
+
+def index_series(name: str, start, end=None) -> dict:
+    """{date: (close, pct)} — 네이버 지수 API 폴백용. 휴장일 제외."""
+    out = {}
+    for d, r in series(lambda d: index_row(name, d), start, end).items():
+        out[d] = (r["close"], r["pct"])
+    return out
+
+
+def last_trading_day(before=None, lookback: int = 10) -> dt.date | None:
+    """KRX 에 데이터가 있는 가장 최근 거래일 (당일은 장 마감 후 게시되므로 보통 전일)."""
+    d = pd_date(before) if before else dt.date.today()
+    for _ in range(lookback):
+        if d.weekday() < 5 and fetch("kospi", d):
+            return d
+        d -= dt.timedelta(days=1)
     return None
+
+
+def stock_daily(bas_dd, include_etf: bool = True):
+    """전종목 일봉 한 날짜 → DataFrame[date, code, open, high, low, close, volume].
+
+    유가증권(승인) + 코스닥(미승인 시 건너뜀·경고 1회) + ETF(승인). FinanceDataReader/
+    네이버 일봉이 죽었을 때 chart_build 가 빠진 날짜를 메우는 용도. 코퍼레이트액션
+    소급 조정은 없으나 '최근 며칠' 보충에는 원시가가 곧 현재 기준가다.
+    """
+    import pandas as pd
+    frames = []
+    for svc in (["stock", "ksq"] + (["etf"] if include_etf else [])):
+        try:
+            rows = fetch(svc, bas_dd)
+        except KrxNotApproved as e:
+            if svc not in _warned:
+                _warned.add(svc)
+                log.warning("%s — 코스닥 종목은 KRX 폴백에서 제외됩니다", e)
+            continue
+        for r in rows:
+            close = num(r.get("TDD_CLSPRC"))
+            if close is None:
+                continue
+            frames.append({"date": pd.Timestamp(pd_date(bas_dd)), "code": str(r.get("ISU_CD", "")).zfill(6),
+                           "open": num(r.get("TDD_OPNPRC")) or close, "high": num(r.get("TDD_HGPRC")) or close,
+                           "low": num(r.get("TDD_LWPRC")) or close, "close": close,
+                           "volume": num(r.get("ACC_TRDVOL")) or 0.0})
+    return pd.DataFrame(frames, columns=["date", "code", "open", "high", "low", "close", "volume"])
+
+
+_warned: set = set()
 
 
 def series(fn, start, end=None, **kw) -> dict:
@@ -168,7 +252,7 @@ def series(fn, start, end=None, **kw) -> dict:
         if d.weekday() < 5:
             try:
                 v = fn(d, **kw)
-            except KrxKeyMissing:
+            except (KrxKeyMissing, KrxNotApproved):
                 raise
             except Exception as e:
                 log.warning("KRX %s %s: %s", getattr(fn, "__name__", fn), d, e)

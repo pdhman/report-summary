@@ -114,6 +114,53 @@ def _fetch_ohlcv(code: str, start: str) -> pd.DataFrame | None:
             time.sleep(1.5 * (attempt + 1))
 
 
+def _krx_fill(failed: list[str], cached: pd.DataFrame | None,
+              latest: pd.Timestamp, max_days: int = 10) -> pd.DataFrame | None:
+    """FDR 수신에 실패한 종목의 '캐시 이후 ~ 기준일' 구간을 KRX 일별매매정보로 메운다.
+
+    실패 종목은 캐시본이 그대로 남으므로 빠진 건 최근 며칠뿐이다. 날짜마다 KRX
+    전종목 한 번(디스크 캐시)만 부르므로 종목 수와 무관하게 싸다. 코스닥은 서비스
+    승인 전까지 제외(경고 1회). KRX 는 당일 시세를 장 마감 뒤에 올리므로 16:20 실행
+    에서는 전일까지만 채워질 수 있다 — 다음 실행에서 마저 채워진다.
+    """
+    try:
+        import krx_api
+        failed_set = set(failed)
+        if cached is not None and not cached.empty:
+            last_cached = cached[cached["code"].isin(failed_set)].groupby("code")["date"].max()
+            since = last_cached.min() if not last_cached.empty else None
+        else:
+            since = None
+        if since is None or pd.isna(since):
+            since = latest - pd.Timedelta(days=max_days)
+        days = [d for d in pd.bdate_range(since + pd.Timedelta(days=1), latest)][-max_days:]
+        if not days:
+            log.info("KRX 보충: 빠진 날짜 없음 (실패 %d종목은 캐시 유지)", len(failed))
+            return None
+        parts = []
+        for d in days:
+            df = krx_api.stock_daily(d)
+            if df.empty:
+                continue
+            parts.append(df[df["code"].isin(failed_set)])
+        if not parts:
+            log.warning("KRX 보충: %s~%s 데이터 없음", days[0].date(), days[-1].date())
+            return None
+        fill = pd.concat(parts, ignore_index=True)
+        # 종목별로 캐시에 이미 있는 날짜는 제외 (drop_duplicates keep=last 가 KRX 값을
+        # 우선하므로 여기서 걸러 캐시값을 지킨다)
+        if cached is not None and not cached.empty:
+            key = cached[["code", "date"]].drop_duplicates()
+            fill = fill.merge(key, on=["code", "date"], how="left", indicator=True)
+            fill = fill[fill["_merge"] == "left_only"].drop(columns="_merge")
+        log.info("KRX 보충: 실패 %d종목 중 %d종목 %d행 (%s~%s)", len(failed),
+                 fill["code"].nunique(), len(fill), days[0].date(), days[-1].date())
+        return fill
+    except Exception as e:
+        log.warning("KRX 보충 실패(실패 종목은 캐시 유지): %s", e)
+        return None
+
+
 def update_cache(codes: list[str]) -> tuple[pd.DataFrame, int]:
     """OHLCV 캐시 갱신. (전체 데이터, 신규 수신 행 수) 반환.
 
@@ -122,8 +169,15 @@ def update_cache(codes: list[str]) -> tuple[pd.DataFrame, int]:
     기준으로 남아 차트에 가짜 갭이 생긴다. 종목당 요청 수는 1건으로 같다.
     """
     full_start = (dt.date.today() - dt.timedelta(days=LOOKBACK_DAYS)).isoformat()
-    ref = fdr.DataReader("005930", (dt.date.today() - dt.timedelta(days=14)).isoformat())
-    latest = pd.Timestamp(ref.index[-1])
+    try:
+        ref = fdr.DataReader("005930", (dt.date.today() - dt.timedelta(days=14)).isoformat())
+        latest = pd.Timestamp(ref.index[-1])
+    except Exception as e:
+        # FDR(네이버) 전체 장애 — 기준일을 KRX 에서 구하고 아래 종목 수신은 실패로 흘러
+        # KRX 보충으로 넘어간다
+        import krx_api
+        log.warning("기준일 조회 실패(FDR) → KRX: %s", e)
+        latest = pd.Timestamp(krx_api.last_trading_day())
 
     cached = None
     if os.path.exists(OHLCV_PATH):
@@ -134,7 +188,7 @@ def update_cache(codes: list[str]) -> tuple[pd.DataFrame, int]:
     plan: dict[str, str] = {c: full_start for c in codes}
 
     log.info("일봉 수신 %d종목 (기준일 %s) ...", len(plan), latest.date())
-    frames, done, fail = [], 0, 0
+    frames, done, failed = [], 0, []
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
         futs = {pool.submit(_fetch_ohlcv, c, s): c for c, s in plan.items()}
         for fut in as_completed(futs):
@@ -142,18 +196,25 @@ def update_cache(codes: list[str]) -> tuple[pd.DataFrame, int]:
             if df is not None:
                 frames.append(df)
             else:
-                fail += 1
+                failed.append(futs[fut])
             done += 1
             if done % 300 == 0:
                 log.info("  진행 %d/%d", done, len(plan))
+    fail = len(failed)
 
     new = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    ok_codes = set(new["code"]) if not new.empty else set()     # 전 구간 재수신 성공 종목
+    if failed:
+        fill = _krx_fill(failed, cached, latest)
+        if fill is not None and not fill.empty:
+            new = pd.concat([new, fill], ignore_index=True) if not new.empty else fill
     n_new = len(new)
     if not new.empty:
         new["date"] = pd.to_datetime(new["date"])
-        # 수신 성공한 종목은 캐시본을 통째로 버린다 (조정 전 기준 잔존 방지)
+        # 수신 성공한 종목은 캐시본을 통째로 버린다 (조정 전 기준 잔존 방지).
+        # KRX 로 최근 며칠만 보충한 실패 종목은 캐시본 위에 덧붙여야 하므로 제외.
         if cached is not None:
-            cached = cached[~cached["code"].isin(set(new["code"]))]
+            cached = cached[~cached["code"].isin(ok_codes)]
     merged = pd.concat([cached, new], ignore_index=True) if cached is not None else new
     merged = merged.drop_duplicates(subset=["code", "date"], keep="last")
     merged = merged[merged["date"] >= pd.Timestamp(full_start)]

@@ -228,8 +228,30 @@ def fetch_flows(sosok, start_date, label):
     return out
 
 
+_KRX_INDEX_NAME = {"KOSPI": "코스피", "KOSDAQ": "코스닥", "KPI200": "코스피 200"}
+
+
 def fetch_index(code, start_date):
-    """지수 일별 종가/등락률 수집 -> {date: (close, change_pct)}"""
+    """지수 일별 종가/등락률 수집 -> {date: (close, change_pct)}
+
+    네이버 모바일 API 가 실패하면 KRX Open API(quant-data/krx_api.py)로 최근 30일을
+    보충한다. 코스닥은 KOSDAQ 시리즈 서비스 승인 전까지 폴백 불가(기존값 유지).
+    """
+    try:
+        return _fetch_index_naver(code, start_date)
+    except Exception as e:  # noqa: BLE001
+        logging.warning("%s 네이버 지수 실패 → KRX 폴백: %s", code, e)
+        sys.path.insert(0, os.path.join(os.path.dirname(BASE), "quant-data"))
+        import krx_api
+        since = max(start_date, date.today() - timedelta(days=30))
+        out = krx_api.index_series(_KRX_INDEX_NAME[code], since)
+        if not out:
+            raise RuntimeError(f"{code} KRX 폴백도 값 없음") from e
+        logging.info("%s KRX 폴백 %d일 수집 (최근 %s)", code, len(out), max(out))
+        return out
+
+
+def _fetch_index_naver(code, start_date):
     out = {}
     for page in range(1, MAX_PAGES + 1):
         url = f"https://m.stock.naver.com/api/index/{code}/price?pageSize=60&page={page}"
@@ -247,6 +269,8 @@ def fetch_index(code, start_date):
         if oldest is not None and oldest < start_date:
             break
         time.sleep(REQ_DELAY)
+    if not out:
+        raise RuntimeError(f"{code} 네이버 지수 응답이 비어 있음")
     logging.info("%s 지수 %d일 수집", code, len(out))
     return out
 

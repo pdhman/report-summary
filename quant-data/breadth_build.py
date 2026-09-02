@@ -173,18 +173,36 @@ def compute_breadth(ohlcv: pd.DataFrame, uni: pd.DataFrame) -> pd.DataFrame:
 
 
 # ------------------------------------------------------------------ 지수(네이버)
+_KRX_INDEX_NAME = {"KOSPI": "코스피", "KOSDAQ": "코스닥"}
+
+
 def fetch_index(symbol: str, start: dt.date) -> pd.Series:
-    """지수 일봉 종가. 신형 공식 차트 API (finance.naver 9/10 종료 대비, 2026-08-28 전환)."""
-    url = (f"https://api.stock.naver.com/chart/domestic/index/{symbol}/day"
-           f"?startDateTime={start:%Y%m%d}00&endDateTime={dt.date.today():%Y%m%d}23")
-    r = requests.get(url, headers=UA, timeout=15)
-    r.raise_for_status()
-    rows = r.json()
-    if not rows:
-        raise RuntimeError(f"{symbol} 지수 응답이 비어 있음")
-    s = pd.Series({pd.Timestamp(str(x["localDate"])): float(x["closePrice"])
-                   for x in rows}, name=symbol)
-    return s.sort_index()
+    """지수 일봉 종가. 신형 공식 차트 API (finance.naver 9/10 종료 대비, 2026-08-28 전환).
+
+    네이버 실패 시 KRX Open API 로 최근 14일만 보충한다(과거값은 히스토리에 이미
+    있고, KRX 는 하루 단위 조회라 전 구간 재수신은 낭비). 코스닥은 KOSDAQ 시리즈
+    서비스 승인 전까지 KrxNotApproved 로 그대로 실패 → 기존값 유지.
+    """
+    try:
+        url = (f"https://api.stock.naver.com/chart/domestic/index/{symbol}/day"
+               f"?startDateTime={start:%Y%m%d}00&endDateTime={dt.date.today():%Y%m%d}23")
+        r = requests.get(url, headers=UA, timeout=15)
+        r.raise_for_status()
+        rows = r.json()
+        if not rows:
+            raise RuntimeError(f"{symbol} 지수 응답이 비어 있음")
+        s = pd.Series({pd.Timestamp(str(x["localDate"])): float(x["closePrice"])
+                       for x in rows}, name=symbol)
+        return s.sort_index()
+    except Exception as e:
+        log.warning("%s 네이버 지수 실패 → KRX 폴백: %s", symbol, e)
+        import krx_api
+        since = max(start, dt.date.today() - dt.timedelta(days=14))
+        rows = krx_api.index_series(_KRX_INDEX_NAME[symbol], since)
+        if not rows:
+            raise RuntimeError(f"{symbol} KRX 폴백도 값 없음") from e
+        log.info("%s KRX 폴백 %d일 (최근 %s)", symbol, len(rows), max(rows))
+        return pd.Series({pd.Timestamp(d): c for d, (c, _) in rows.items()}, name=symbol).sort_index()
 
 
 def fetch_usdkrw(start: dt.date) -> pd.Series:
