@@ -38,7 +38,7 @@
     <p class="fn">각 스코어는 수집된 전체 기간(현재 <span id="fn-days"></span>거래일) 대비 백분위.
       추세(폭)=이평선 위 비율·ADR·신고가율·McClellan / 투기 열기=저가주 비중·상한가·회전율(개인 투기) /
       쏠림=TOP10 거래대금 집중도(종합 체온 미반영) / 변동성=VKOSPI·실현변동성 / 레버리지=신용융자 증가율·예탁금 대비 신용·반대매매비중 /
-      공포탐욕=CNN 방식 한국판 6요소(지수/125일MA·신고-신저 폭·상승 거래대금 비중·변동성 역·원달러 역·신용잔고 증가) 평균, 종합 체온과 별도.
+      공포탐욕=CNN 방식 한국판 7요소(지수/125일MA·신고-신저 폭·상승 거래대금 비중·변동성 역·원달러 역·신용잔고 증가·풋콜비율 5일 역) 평균, 종합 체온과 별도.
       <br>단, <b>쏠림만 백분위가 아니라 TOP10 비중 원값(%)을 그대로 표시</b>하고 고정 기준으로 판정한다
       (30% 미만 분산 · 30~45 보통 · 45~55 쏠림 · 55% 이상 극단 쏠림).
       수집 기간이 짧아 백분위가 최근 국면에서 포화되기 때문이다.</p>
@@ -87,8 +87,9 @@
   <section class="panel">
     <div class="sec-head"><h2>변동성</h2></div>
     <div class="grid2">
-      <div class="chart-block"><div class="ct">VKOSPI <span class="cd">인베스팅닷컴 · 수집 시작일부터</span></div><div id="ch-vk"></div></div>
+      <div class="chart-block"><div class="ct">VKOSPI <span class="cd">KRX 코스피200 변동성지수</span></div><div id="ch-vk"></div></div>
       <div class="chart-block"><div class="ct">코스피 실현변동성 <span class="cd">20일 · 연율화 %</span></div><div id="ch-rv"></div></div>
+      <div class="chart-block"><div class="ct">풋콜비율 <span class="cd">KRX 코스피200옵션 거래량 · 풋÷콜</span></div><div id="ch-pc"></div></div>
     </div>
   </section>
 
@@ -189,6 +190,8 @@
   .grid2 .wide { grid-column:1 / -1; }
   @media (max-width:840px) { .grid2 { grid-template-columns:1fr; } }
   .chart-block { min-width:0; }
+  .chart-block .empty { height:170px; display:flex; align-items:center; justify-content:center;
+    color:var(--muted); font-size:12.5px; border:1px dashed var(--line); border-radius:8px; }
   .ct { font-size:13.5px; font-weight:700; margin:6px 0 2px; }
   .cd { color:var(--muted); font-weight:500; font-size:11.5px; margin-left:4px; }
   svg text { font-family:inherit; }
@@ -562,6 +565,13 @@ function renderVol(){
     { data:vk.slice(first), label:'VKOSPI', color:'var(--up)', nd:1, dots:vk.filter(function(v){return v!=null;}).length < 40 }] });
   drawChart(el('ch-rv'), { dates:dates, h:170, series:[
     { data:sl(D.index.rv20), label:'실현변동성', color:'var(--accent)', nd:1, fmt:function(v){ return fmt(v,1) + '%'; } }] });
+  // 풋콜비율: KRX 연동 전 데이터에는 키가 없으므로 방어
+  var pc = sl(D.putcall || []), pf = pc.findIndex(function(v){ return v != null; });
+  if(el('ch-pc')){
+    if(pf < 0){ el('ch-pc').innerHTML = '<div class="empty">데이터 준비 중</div>'; }
+    else drawChart(el('ch-pc'), { dates:dates.slice(pf), h:170, series:[
+      { data:pc.slice(pf), label:'풋콜비율', color:'var(--amber)', nd:2, fmt:function(v){ return fmt(v,2); } }] });
+  }
 }
 
 function renderScoreChart(){
@@ -659,6 +669,7 @@ function updateDaySum(){
     '</span> / 신저 <span style="color:var(--dn)">' + fmt(A.nl[i],0) + '</span>');
   if(A.ma200[i] != null) parts.push('200일선 위 ' + fmt(A.ma200[i],1) + '%');
   if(D.vkospi[i] != null) parts.push('VKOSPI ' + fmt(D.vkospi[i],2));
+  if(D.putcall && D.putcall[i] != null) parts.push('풋콜 ' + fmt(D.putcall[i],2));
   el('day-sum').innerHTML = '<b>' + state.date + '</b>' + (parts.length ? ' · ' + parts.join(' · ') : '');
 }
 /* 핵심 수치 행: 공포탐욕 구성요소 + 매크로(NFCI·美10Y·VIX·환율).

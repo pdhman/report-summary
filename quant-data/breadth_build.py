@@ -8,7 +8,9 @@
         저가주 비중·TOP10 집중도·상하한가 수·회전율
   - output/퀀트데이터_latest.csv                : 유니버스(시장 구분)·상장주식수 근사
   - 네이버 siseJson (KOSPI/KOSDAQ 지수)         : 지수 종가·실현변동성·상대강도
-  - 인베스팅닷컴 VKOSPI (Playwright 스크레이핑) : 변동성지수 — 실패해도 치명적 아님
+  - KRX Open API (krx_api.py)                    : VKOSPI·풋콜비율(코스피200옵션)
+      → 키 없음/실패 시 VKOSPI 는 인베스팅닷컴 Playwright 스크레이핑으로 폴백
+        (2026-09-02 KRX 전환. 인베스팅은 최근 1개월만, KRX 는 히스토리 전 구간 백필)
   - market_leverage_collector/data/*.csv        : 신용융자·예탁금·반대매매비중 요약
   - 수급모니터링/data/*.csv                     : 투자자별 수급 요약 타일
 
@@ -192,9 +194,35 @@ def fetch_usdkrw(start: dt.date) -> pd.Series:
     return df["Close"].rename("usdkrw")
 
 
-# ------------------------------------------------------------------ VKOSPI 스크레이핑
-def fetch_vkospi() -> pd.Series:
-    """인베스팅닷컴 히스토리 테이블(최근 1개월) — 놓친 날짜도 자동 보정된다."""
+# ------------------------------------------------------------------ KRX (VKOSPI·풋콜)
+def fetch_krx_series(hist: pd.DataFrame, col: str, fn, recent_n: int = 5) -> pd.Series:
+    """히스토리 날짜 중 col 이 비어 있는 날 + 최근 recent_n 거래일을 KRX 에서 받는다.
+
+    KRX 는 하루 단위 조회뿐이라 날짜마다 호출하지만 krx_api 가 확정일을 디스크
+    캐시하므로 첫 백필 뒤에는 하루 몇 건만 나간다. 값이 하나도 없으면 예외.
+    """
+    import krx_api
+    if col in hist.columns:
+        need = list(hist.index[hist[col].isna()])
+    else:
+        need = list(hist.index)
+    need = sorted(set(need) | set(hist.index[-recent_n:]))
+    vals, miss = {}, 0
+    for ts in need:
+        v = fn(ts.date())
+        if v is None:
+            miss += 1
+        else:
+            vals[ts] = v
+    if not vals:
+        raise RuntimeError(f"KRX {col}: {len(need)}일 조회했지만 값 없음")
+    if miss:
+        log.info("KRX %s: %d일 조회, %d일 값 없음(휴장·미게시)", col, len(need), miss)
+    return pd.Series(vals, name=col).sort_index()
+
+
+def fetch_vkospi_investing() -> pd.Series:
+    """인베스팅닷컴 히스토리 테이블(최근 1개월) — KRX 실패 시 폴백."""
     from playwright.sync_api import sync_playwright
     url = "https://kr.investing.com/indices/kospi-volatility-historical-data"
     vals = {}
@@ -375,10 +403,10 @@ def build_scores(d: pd.DataFrame, lev: dict | None) -> tuple[dict, pd.DataFrame]
 
     comp["overall"] = comp[["trend", "spec", "vol", "lev"]].mean(axis=1)   # conc 제외
 
-    # ---- 공포탐욕지수 (CNN Fear & Greed 한국판 6요소) ----
+    # ---- 공포탐욕지수 (CNN Fear & Greed 한국판 7요소) ----
     # 각 요소를 전 히스토리 백분위(0~100)로 정규화해 평균. 높음=탐욕, 낮음=공포.
-    # 팩터랩 월간판과 같은 설계 — 미국 신용스프레드는 일일 파이프라인에서 제외,
-    # 풋/콜은 KRX 데이터 접근 불가로 원조(CNN 7요소)에서 빠졌다.
+    # 팩터랩 월간판과 같은 설계 — 미국 신용스프레드는 일일 파이프라인에서 제외.
+    # 풋/콜은 2026-09-02 KRX Open API 연동으로 ⑦ 로 편입(원조 CNN 과 같은 5일 평균·역방향).
     # 각 요소를 (이름, 백분위 시리즈, 원시값 시리즈, 원시값 단위)로 들고 있으면
     # 요소별 최신값을 화면(핵심 수치 행)에 보여줄 수 있다.
     fg_items = []   # (name, pct_series, raw_series, unit)
@@ -407,6 +435,9 @@ def build_scores(d: pd.DataFrame, lev: dict | None) -> tuple[dict, pd.DataFrame]
             .reindex(d.index).ffill(limit=7)
         raw = cr.pct_change(20) * 100
         fg_items.append(("신용잔고", pct_rank(cr.pct_change(20)), raw, "%/20일"))  # ⑥ 신용잔고
+    if "putcall" in d.columns and d["putcall"].notna().sum() > 60:
+        raw = d["putcall"].ffill(limit=5).rolling(5).mean()
+        fg_items.append(("풋콜(역)", 100 - pct_rank(raw), raw, " 5일"))         # ⑦ 풋콜비율(역)
     fgdf = pd.concat([p for _, p, _, _ in fg_items], axis=1)
     comp["fg"] = fgdf.mean(axis=1).where(fgdf.notna().sum(axis=1) >= 3)
 
@@ -536,6 +567,7 @@ def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
             "rv20": _round(recent.get("kospi_rv20", pd.Series(index=recent.index)), 1),
         },
         "vkospi": _round(recent.get("vkospi", pd.Series(index=recent.index)), 2),
+        "putcall": _round(recent.get("putcall", pd.Series(index=recent.index)), 3),
         "leverage": lev,
         "flows": flows,
         "macro": macro or {},
@@ -569,6 +601,8 @@ def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
         "adv": int(last["all_adv"]), "dec": int(last["all_dec"]),
         "vkospi": (None if "vkospi" not in recent.columns or pd.isna(last.get("vkospi"))
                    else round(float(last["vkospi"]), 2)),
+        "putcall": (None if "putcall" not in recent.columns or pd.isna(last.get("putcall"))
+                    else round(float(last["putcall"]), 2)),
     }
     with open(SUMMARY_PATH, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=1)
@@ -605,13 +639,28 @@ def main():
         log.warning("원달러 환율 수집 실패(기존 값 유지): %s", e)
 
     if not args.no_vkospi:
+        import krx_api
         try:
-            vk = fetch_vkospi()
+            vk = fetch_krx_series(hist, "vkospi", krx_api.vkospi)
             hist = apply_series(hist, vk, "vkospi")
-            log.info("VKOSPI %d일 수집 (최근 %s = %.2f)",
+            log.info("VKOSPI(KRX) %d일 갱신 (최근 %s = %.2f)",
                      len(vk), vk.index[-1].date(), vk.iloc[-1])
         except Exception as e:
-            log.warning("VKOSPI 수집 실패(기존 값 유지): %s", e)
+            log.warning("VKOSPI KRX 실패 → 인베스팅 폴백: %s", e)
+            try:
+                vk = fetch_vkospi_investing()
+                hist = apply_series(hist, vk, "vkospi")
+                log.info("VKOSPI(인베스팅) %d일 수집 (최근 %s = %.2f)",
+                         len(vk), vk.index[-1].date(), vk.iloc[-1])
+            except Exception as e2:
+                log.warning("VKOSPI 수집 실패(기존 값 유지): %s", e2)
+        try:
+            pc = fetch_krx_series(hist, "putcall", krx_api.putcall_ratio)
+            hist = apply_series(hist, pc, "putcall")
+            log.info("풋콜비율(KRX) %d일 갱신 (최근 %s = %.3f)",
+                     len(pc), pc.index[-1].date(), pc.iloc[-1])
+        except Exception as e:
+            log.warning("풋콜비율 수집 실패(기존 값 유지): %s", e)
 
     # 마스터 저장 — 파생(누적선) 열은 저장하지 않는다
     os.makedirs(os.path.dirname(HIST_PATH), exist_ok=True)
