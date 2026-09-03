@@ -24,6 +24,7 @@ KRX 정보데이터시스템 Open API 공용 클라이언트 (openapi.krx.co.kr,
 from __future__ import annotations
 
 import datetime as dt
+import gzip
 import json
 import logging
 import os
@@ -97,9 +98,15 @@ def fetch(service: str, bas_dd, use_cache: bool = True, retries: int = 3) -> lis
     """서비스 한 날짜 조회. 휴장일은 []."""
     ymd = _ymd(bas_dd)
     path = os.path.join(CACHE_DIR, service, f"{ymd}.json")
-    if use_cache and os.path.exists(path):
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
+    gz = path + ".gz"
+    if use_cache:
+        # 일별 전종목 응답은 250KB 안팎이라 10년치면 GB 단위 → gzip 저장(구형 .json 도 읽음)
+        if os.path.exists(gz):
+            with gzip.open(gz, "rt", encoding="utf-8") as f:
+                return json.load(f)
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
 
     if service in _not_approved:
         raise KrxNotApproved(f"KRX {service} 미승인 서비스")
@@ -128,7 +135,7 @@ def fetch(service: str, bas_dd, use_cache: bool = True, retries: int = 3) -> lis
     # 오늘 날짜는 장중 미확정일 수 있어(빈 목록) 캐시하지 않는다
     if use_cache and ymd < _ymd(dt.date.today()):
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
+        with gzip.open(gz, "wt", encoding="utf-8") as f:
             json.dump(rows, f, ensure_ascii=False)
     return rows
 
