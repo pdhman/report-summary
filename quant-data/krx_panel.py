@@ -9,7 +9,7 @@
 출력 (quant-data/output/krx_panel/):
   panel_monthly.parquet   월말 패널. 열:
       date, code, name, market(KOSPI/KOSDAQ), sect(소속부), close, open, high, low,
-      volume, value(거래대금 원), mktcap(원), shares, is_pref(우선주), is_spac,
+      volume, value(거래대금 원), mktcap(원), shares, is_pref(우선주),
       ret_1m(당월 수익률, 전월말 대비), fwd_ret_1m(다음 달 수익률 — 백테스트용),
       last_month(이 달이 마지막 등장이면 True = 다음 달 전에 상폐/합병/이전)
   panel_monthly.csv       같은 내용 (UTF-8 BOM, 엑셀용)
@@ -17,6 +17,7 @@
   index_monthly.csv       코스피·코스닥·코스피200·코스닥150 월말 종가 (벤치마크)
 
 주의:
+  - 스팩(이름에 '스팩')은 수집 단계에서 제외한다. 우선주는 남기고 is_pref 로 표시만 한다.
   - 수정주가가 아니다. 월간 수익률(ret_1m)은 액면분할·병합 달에 튄다 → |ret|>±80% 인
     행은 split_flag=True 로 표시만 하고 값은 두었다(소비자가 판단).
   - 상폐 사유는 알 수 없다(합병·자진상폐·부도 구분 불가). last_month 행의 fwd_ret_1m 은
@@ -24,9 +25,8 @@
   - KRX 는 하루 단위 조회뿐. 월말 거래일은 말일부터 거꾸로 내려가며 첫 응답일을 쓴다.
     휴장일 응답(빈 목록)도 디스크 캐시되므로 재실행 비용은 신규 달만큼이다.
 
-실행:  python krx_panel.py            # 2010-01 ~ 최근 월말까지 증분 수집·재구성
+실행:  python krx_panel.py            # 2010-01 ~ 최근 월말까지 증분 수집·재구성 (캐시된 달은 즉시)
        python krx_panel.py --start 2015-01
-       python krx_panel.py --rebuild  # 캐시는 두고 패널만 다시 조립
 """
 from __future__ import annotations
 
@@ -103,6 +103,8 @@ def snapshot(d: dt.date) -> pd.DataFrame:
                 continue
             code = str(r.get("ISU_CD", "")).zfill(6)
             name = str(r.get("ISU_NM", "")).strip()
+            if "스팩" in name.replace(" ", ""):      # 스팩 제외 (2026-09-03 사용자 요청)
+                continue
             rows.append({
                 "date": pd.Timestamp(d), "code": code, "name": name,
                 "market": r.get("MKT_NM") or mkt, "sect": r.get("SECT_TP_NM") or "",
@@ -111,8 +113,8 @@ def snapshot(d: dt.date) -> pd.DataFrame:
                 "low": krx_api.num(r.get("TDD_LWPRC")),
                 "volume": krx_api.num(r.get("ACC_TRDVOL")), "value": krx_api.num(r.get("ACC_TRDVAL")),
                 "mktcap": krx_api.num(r.get("MKTCAP")), "shares": krx_api.num(r.get("LIST_SHRS")),
-                # 우선주: 표준코드 6번째 자리가 0 이 아니면 우선주(005935 삼성전자우). 스팩: 이름
-                "is_pref": code[-1] != "0", "is_spac": "스팩" in name.replace(" ", ""),
+                # 우선주: 표준코드 6번째 자리가 0 이 아니면 우선주(005935 삼성전자우)
+                "is_pref": code[-1] != "0",
             })
     return pd.DataFrame(rows)
 
@@ -164,7 +166,6 @@ def listing_events(p: pd.DataFrame, latest: pd.Timestamp) -> pd.DataFrame:
     })
     ev["status"] = np.where(ev["last_seen"] == latest, "listed", "gone")
     ev["is_pref"] = g["is_pref"].last()
-    ev["is_spac"] = g["is_spac"].last()
     return ev.sort_values(["status", "last_seen", "code"]).reset_index()
 
 
@@ -172,7 +173,6 @@ def listing_events(p: pd.DataFrame, latest: pd.Timestamp) -> pd.DataFrame:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--start", default=FIRST_MONTH, help="YYYY-MM (기본 2010-01)")
-    ap.add_argument("--rebuild", action="store_true", help="수집 없이 캐시로 패널만 재조립")
     args = ap.parse_args()
     _setup_logging()
     t0 = time.time()
