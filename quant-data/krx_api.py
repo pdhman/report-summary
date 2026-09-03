@@ -2,12 +2,14 @@
 """
 KRX 정보데이터시스템 Open API 공용 클라이언트 (openapi.krx.co.kr, 2026-09-02 승인).
 
-승인 서비스 → 엔드포인트 (전부 GET, 헤더 AUTH_KEY, 파라미터 basDd=YYYYMMDD):
+승인 서비스 8종 → 엔드포인트 (전부 GET, 헤더 AUTH_KEY, 파라미터 basDd=YYYYMMDD):
   파생상품지수 시세정보      idx/drvprod_dd_trd   → VKOSPI(코스피200 변동성지수)
   옵션 일별매매정보(주식옵션外) drv/opt_bydd_trd     → 풋콜비율(코스피200옵션 거래량)
-  KOSPI 시리즈 일별시세정보  idx/kospi_dd_trd     → 코스피 지수 종가 (네이버 폴백용)
+  KOSPI 시리즈 일별시세정보  idx/kospi_dd_trd     → 코스피·코스피200 지수 (네이버 폴백용)
+  KOSDAQ 시리즈 일별시세정보 idx/kosdaq_dd_trd    → 코스닥·코스닥150 지수 (네이버 폴백용)
   KRX 시리즈 일별시세정보    idx/krx_dd_trd
-  유가증권 일별매매정보      sto/stk_bydd_trd     → 전종목 종가·시총 (네이버 폴백용)
+  유가증권 일별매매정보      sto/stk_bydd_trd     → 코스피 전종목 시세·시총 (FDR 폴백용)
+  코스닥 일별매매정보        sto/ksq_bydd_trd     → 코스닥 전종목 시세·시총 (FDR 폴백용)
   ETF 일별매매정보           etp/etf_bydd_trd
 
 특징:
@@ -42,9 +44,9 @@ SERVICES = {
     "krx": "idx/krx_dd_trd",
     "stock": "sto/stk_bydd_trd",
     "etf": "etp/etf_bydd_trd",
-    # ---- 미승인(2026-09-03 현재 401 'Unauthorized API Call'). 이용신청 후 자동 활성 ----
-    "kosdaq": "idx/kosdaq_dd_trd",      # KOSDAQ 시리즈 일별시세정보 → 코스닥 지수
-    "ksq": "sto/ksq_bydd_trd",          # 코스닥 일별매매정보 → 코스닥 전종목 시세
+    "kosdaq": "idx/kosdaq_dd_trd",      # KOSDAQ 시리즈 일별시세정보 → 코스닥 지수 (2026-09-03 승인)
+    "ksq": "sto/ksq_bydd_trd",          # 코스닥 일별매매정보 → 코스닥 전종목 시세 (2026-09-03 승인)
+    # 승인 안 된 서비스를 부르면 401 'Unauthorized API Call' → KrxNotApproved 로 건너뛴다
 }
 
 log = logging.getLogger("krx")
