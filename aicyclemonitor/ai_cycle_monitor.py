@@ -82,7 +82,7 @@ TH = {
     "nvda_dc_yoy_floor": 20.0,     # NVIDIA DC 매출 YoY(%) 이 값 미만 → 경계 (국면 악화 확정)
     "nvda_dc_qoq": 0.0,            # NVIDIA DC 매출 QoQ(%) 이 값 이하 → 경계 (성장 정지 조기 경보)
     "capex_runrate_vs_ttm": 0.0,   # 5사 capex 런레이트(최근2Q×2)가 직전 4분기 합 이하(가속 멈춤) → 경계
-    "capex_consensus_rev": -5.0,   # 5사 capex 익년 컨센서스가 직전 빈티지 대비 이 % 이하(하향) → 경계
+    "capex_consensus_rev": -5.0,   # 5사 capex 내년 컨센서스가 직전 집계 대비 이 % 이하(하향 수정) → 경계
     "bbb_oas_level": 200.0,        # BBB OAS(bp) 이 값 이상 → 경계
     "bbb_oas_chg_90d": 50.0,       # BBB OAS 90일 상승폭(bp) 이 값 이상 → 경계
     "aa_oas_chg_90d": 30.0,        # AA OAS 90일 상승폭(bp) 이 값 이상 → 경계 (하이퍼스케일러급)
@@ -550,7 +550,7 @@ def collect_live():
                              for lb in capex_total["labels"]]
     if annual or runrate:
         log(f"5사 capex(SEC): 연간 실적 {annual}, 런레이트 ${runrate}B/yr")
-    # 컨센서스 빈티지: 최신 vs 직전 — 익년(E) 리비전이 하향이면 수요 조기 경보
+    # 컨센서스 집계 이력: 최신 vs 직전 집계 — 내년(E) 전망치가 하향 수정되면 수요 조기 경보
     vint = manual.get("hyperscaler_capex_consensus_vintages", {}) or {}
     vdates = sorted(vint)
     capex_total["vintage"] = vdates[-1] if vdates else None
@@ -895,8 +895,8 @@ def judge(data):
     add("수요", "5사 capex 런레이트 vs 직전 4분기 (SEC 자동)", v, "%",
         f"{TH['capex_runrate_vs_ttm']:.0f}% 이하 (가속 멈춤)", v is not None and v <= TH["capex_runrate_vs_ttm"])
     v = m.get("capex_consensus_rev")
-    add("수요", "5사 capex 익년 컨센서스 리비전 (vs 직전 빈티지, 수동)", v, "%",
-        f"{TH['capex_consensus_rev']:.0f}% 이하 (하향)", v is not None and v <= TH["capex_consensus_rev"])
+    add("수요", "5사 capex 내년 컨센서스 수정폭 (직전 집계 대비, 수동)", v, "%",
+        f"{TH['capex_consensus_rev']:.0f}% 이하 (하향 수정)", v is not None and v <= TH["capex_consensus_rev"])
     v = m.get("mu_slowdown_q")
     add("수요", "메모리(MU) 매출 YoY 연속 둔화 — HBM 주문 프록시", v, "개",
         f"{TH['mu_slowdown_q']}분기 이상", v is not None and v >= TH["mu_slowdown_q"])
@@ -1113,9 +1113,9 @@ TEMPLATE = r"""<!DOCTYPE html>
           0% 이하=성장 정지). 실적 발표 후 manual_data.json 수동 입력, 라벨=회계분기 말월</p>
         <div id="ch-nvda"></div></div>
       <div class="card"><h3>5대 Hyperscaler 연간 capex ($B)</h3>
-        <p class="note">GOOGL+MSFT+AMZN+META+ORCL — 컨센서스(Bloomberg, 수동·E) vs 직전 빈티지 vs
-          SEC 실적·최근2Q×2 런레이트(자동). 경계: 런레이트가 직전 4분기 합 아래로(가속 멈춤), 익년 컨센서스가
-          직전 빈티지 대비 -5% 이하(하향 리비전). SEC 현금 capex 기준이라 Bloomberg 합계와 정의가 소폭 다름</p>
+        <p class="note">GOOGL+MSFT+AMZN+META+ORCL — 컨센서스(Bloomberg, 수동·E) vs 직전 집계 vs
+          SEC 실적·최근2Q×2 런레이트(자동). 경계: 런레이트가 직전 4분기 합 아래로(가속 멈춤), 내년 컨센서스가
+          직전 집계보다 5% 이상 하향 수정. SEC 현금 capex 기준이라 Bloomberg 합계와 정의가 소폭 다름</p>
         <div id="ch-capex"></div></div>
       <div class="card"><h3>메모리(MU) 매출 YoY (%)</h3>
         <p class="note">HBM 주문의 카나리아 — 마이크론은 회계분기(2·5·8·11월 마감)가 빨라
