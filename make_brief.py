@@ -126,10 +126,10 @@ def build():
   <header>
     <div class="eyebrow">데일리 · 뉴스 브리핑</div>
     <h1>뉴스 브리핑</h1>
-    <div class="date">{pretty} <span class="gen">(Gemini 정리)</span></div>
+    <div class="date">{pretty}</div>
   </header>
   <article class="prose">{body_html}</article>
-  <footer><p class="muted">본 뉴스 브리핑은 외부 생성(Gemini) 정리글을 게시한 참고 자료이며 투자 권유가 아닙니다.</p></footer>
+  <footer><p class="muted">본 뉴스 브리핑은 AI로 생성한 참고 자료이며 투자 권유가 아닙니다.</p></footer>
 </div>"""
         os.makedirs(OUT_DIR, exist_ok=True)
         with open(os.path.join(OUT_DIR, f"brief_{ymd}.html"), "w", encoding="utf-8") as fh:
