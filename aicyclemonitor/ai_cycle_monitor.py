@@ -82,6 +82,7 @@ TH = {
     "nvda_dc_yoy_floor": 20.0,     # NVIDIA DC 매출 YoY(%) 이 값 미만 → 경계 (국면 악화 확정)
     "nvda_dc_qoq": 0.0,            # NVIDIA DC 매출 QoQ(%) 이 값 이하 → 경계 (성장 정지 조기 경보)
     "capex_runrate_vs_ttm": 0.0,   # 5사 capex 런레이트(최근2Q×2)가 직전 4분기 합 이하(가속 멈춤) → 경계
+    "capex_consensus_rev": -5.0,   # 5사 capex 익년 컨센서스가 직전 빈티지 대비 이 % 이하(하향) → 경계
     "bbb_oas_level": 200.0,        # BBB OAS(bp) 이 값 이상 → 경계
     "bbb_oas_chg_90d": 50.0,       # BBB OAS 90일 상승폭(bp) 이 값 이상 → 경계
     "aa_oas_chg_90d": 30.0,        # AA OAS 90일 상승폭(bp) 이 값 이상 → 경계 (하이퍼스케일러급)
@@ -200,10 +201,11 @@ def _fred_csv_text(series_id):
     import time
     q = urllib.parse.quote(url, safe="")
     last = None
-    for attempt, endpoint in enumerate(["raw", "get", "raw", "get"]):
+    # 시리즈당 최대 ~2.5분(45초×3회+백오프) — 실패해도 로컬 캐시로 폴백되므로 오래 붙들지 않음
+    for attempt, endpoint in enumerate(["raw", "get", "raw"]):
         try:
             r = requests.get(f"https://api.allorigins.win/{endpoint}?url={q}",
-                             timeout=60, headers={"User-Agent": "Mozilla/5.0"})
+                             timeout=45, headers={"User-Agent": "Mozilla/5.0"})
             r.raise_for_status()
             text = r.json().get("contents", "") if endpoint == "get" else r.text
             if text.startswith("data:"):  # /get은 base64 데이터 URI로 감싸서 반환
@@ -548,6 +550,19 @@ def collect_live():
                              for lb in capex_total["labels"]]
     if annual or runrate:
         log(f"5사 capex(SEC): 연간 실적 {annual}, 런레이트 ${runrate}B/yr")
+    # 컨센서스 빈티지: 최신 vs 직전 — 익년(E) 리비전이 하향이면 수요 조기 경보
+    vint = manual.get("hyperscaler_capex_consensus_vintages", {}) or {}
+    vdates = sorted(vint)
+    capex_total["vintage"] = vdates[-1] if vdates else None
+    capex_total["prev_vintage"] = vdates[-2] if len(vdates) >= 2 else None
+    prev_v = vint.get(capex_total["prev_vintage"], {}) if capex_total["prev_vintage"] else {}
+    capex_total["prev_consensus"] = [prev_v.get(lb) for lb in capex_total["labels"]]
+    consensus_rev = None
+    if len(vdates) >= 2:
+        key = f"{int(this_year) + 1}E"
+        cur_v = vint[vdates[-1]]
+        if cur_v.get(key) and prev_v.get(key):
+            consensus_rev = pct(cur_v[key], prev_v[key])
 
     # ── 레버리지: CoreWeave 분기 capex (GPU 담보부채로 조달하는 buildout) ──
     crwv_cx = sorted(fetch_crwv_capex().items())
@@ -589,6 +604,7 @@ def collect_live():
     metrics["nvda_dc_qoq_last"] = nvda_dc["qoq"][-1] if nvda_dc["qoq"] else None
     metrics["nvda_dc_last_bil"] = nvda_dc["values"][-1] if nvda_dc["values"] else None
     metrics["capex_runrate_bil"] = runrate
+    metrics["capex_consensus_rev"] = consensus_rev
     # 같은 SEC 기준끼리 비교: 런레이트 vs 직전 4분기 합 — 가속이 멈추면(≤0%) 경계.
     # (컨센서스와의 직접 비교는 집계 정의 차이·램프업 편향으로 가짜 신호가 남)
     ttm4 = [sorted(en for (tk, en) in hs_cx if tk == t)[-4:] for t in CAPEX_CIK]
@@ -749,8 +765,10 @@ def collect_sample():
                         "qoq": [None, 15.6, 9.8, 5.1, 24.6, 21.7, 20.7],
                         "values": [30.8, 35.6, 39.1, 41.1, 51.2, 62.3, 75.2]},
             "capex_total": {"labels": ["2025", "2026E", "2027E", "2028E"],
-                            "values": [446.4, 813.1, 1119.6, 1267.1],
-                            "actual": [446.4, 802.0, None, None]},
+                            "values": [446.4, 815.5, 1138.4, 1266.4],
+                            "actual": [446.4, 802.0, None, None],
+                            "prev_consensus": [None, 813.1, 1119.6, 1267.1],
+                            "vintage": "2026-08-31", "prev_vintage": "2026-07-31"},
             "mu_yoy": {"quarters": ["2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2"],
                        "yoy": [38.3, 36.6, 30.3, 46.1, 44.0, 40.2]},
         },
@@ -788,6 +806,7 @@ def collect_sample():
             "crwv_capex_last_bil": 7.7,
             "capex_runrate_bil": 802.0,
             "capex_runrate_vs_ttm": 16.0,
+            "capex_consensus_rev": 1.7,
             "bbb_last": bbb[-1],
             "bbb_chg_90d_bp": round(bbb[-1] - bbb[-90], 0),
             "aa_last": aa[-1],
@@ -875,6 +894,9 @@ def judge(data):
     v = m.get("capex_runrate_vs_ttm")
     add("수요", "5사 capex 런레이트 vs 직전 4분기 (SEC 자동)", v, "%",
         f"{TH['capex_runrate_vs_ttm']:.0f}% 이하 (가속 멈춤)", v is not None and v <= TH["capex_runrate_vs_ttm"])
+    v = m.get("capex_consensus_rev")
+    add("수요", "5사 capex 익년 컨센서스 리비전 (vs 직전 빈티지, 수동)", v, "%",
+        f"{TH['capex_consensus_rev']:.0f}% 이하 (하향)", v is not None and v <= TH["capex_consensus_rev"])
     v = m.get("mu_slowdown_q")
     add("수요", "메모리(MU) 매출 YoY 연속 둔화 — HBM 주문 프록시", v, "개",
         f"{TH['mu_slowdown_q']}분기 이상", v is not None and v >= TH["mu_slowdown_q"])
@@ -1091,9 +1113,9 @@ TEMPLATE = r"""<!DOCTYPE html>
           0% 이하=성장 정지). 실적 발표 후 manual_data.json 수동 입력, 라벨=회계분기 말월</p>
         <div id="ch-nvda"></div></div>
       <div class="card"><h3>5대 Hyperscaler 연간 capex ($B)</h3>
-        <p class="note">GOOGL+MSFT+AMZN+META+ORCL — 컨센서스(Bloomberg, 수동·E)와
-          SEC 실적·최근2Q×2 런레이트(자동). 경계 판정은 런레이트가 직전 4분기 합 아래로 꺾이는지(가속 멈춤).
-          SEC 현금 capex 기준이라 Bloomberg 합계와 정의가 소폭 다름</p>
+        <p class="note">GOOGL+MSFT+AMZN+META+ORCL — 컨센서스(Bloomberg, 수동·E) vs 직전 빈티지 vs
+          SEC 실적·최근2Q×2 런레이트(자동). 경계: 런레이트가 직전 4분기 합 아래로(가속 멈춤), 익년 컨센서스가
+          직전 빈티지 대비 -5% 이하(하향 리비전). SEC 현금 capex 기준이라 Bloomberg 합계와 정의가 소폭 다름</p>
         <div id="ch-capex"></div></div>
       <div class="card"><h3>메모리(MU) 매출 YoY (%)</h3>
         <p class="note">HBM 주문의 카나리아 — 마이크론은 회계분기(2·5·8·11월 마감)가 빨라
@@ -1417,7 +1439,9 @@ function renderAll(){
   }
   const cap=DATA.demand.capex_total||{};
   if(cap.labels&&cap.labels.length){
-    const capSeries=[{name:'컨센서스',dates:cap.labels,values:cap.values}];
+    const capSeries=[{name:'컨센서스'+(cap.vintage?` (${cap.vintage.slice(5)})`:''),dates:cap.labels,values:cap.values}];
+    if(cap.prev_consensus&&cap.prev_consensus.some(v=>v!=null))
+      capSeries.push({name:'직전 컨센서스'+(cap.prev_vintage?` (${cap.prev_vintage.slice(5)})`:''),dates:cap.labels,values:cap.prev_consensus});
     if(cap.actual&&cap.actual.some(v=>v!=null))
       capSeries.push({name:'실적·런레이트(SEC)',dates:cap.labels,values:cap.actual});
     lineChart('ch-capex',capSeries,{labels:cap.labels,unit:'B',h:190});
