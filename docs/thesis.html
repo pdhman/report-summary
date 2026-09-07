@@ -115,6 +115,10 @@
   .tpl .q { font-weight: 700; font-size: 13px; margin: 12px 0 4px; }
   .tpl .auto { font-size: 12.5px; color: var(--ink-2); background: var(--soft); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; line-height: 1.5; white-space: pre-wrap; }
   .hidden { display: none !important; }
+  details > summary { cursor: pointer; list-style: none; margin-top: 14px; }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::before { content: '▶'; font-size: 11px; color: var(--muted); margin-right: 6px; display: inline-block; transition: transform .15s; }
+  details[open] > summary::before { transform: rotate(90deg); }
   .deep { font-size: 13.5px; line-height: 1.65; background: var(--soft); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; max-height: 70vh; overflow: auto; }
   .deep h1 { font-size: 18px; margin: 6px 0 10px; } .deep h2 { font-size: 15px; margin: 18px 0 6px; color: var(--accent); } .deep h3 { font-size: 13.5px; margin: 12px 0 4px; color: var(--ink); }
   .deep p { margin: 6px 0; } .deep ul, .deep ol { margin: 4px 0 6px 22px; } .deep li { margin: 2px 0; }
@@ -240,13 +244,15 @@
       <h3>📝 심층 투자 논리 리포트 <span class="cnt" id="cDeepMeta"></span></h3>
       <div class="deep" id="cDeepBody"></div>
     </div>
-    <h3>한 장짜리 투자 논리 템플릿 <span class="cnt">— 자동 채움(회색) + 직접 작성(입력창). 입력은 브라우저에 자동 저장</span></h3>
-    <div class="row" style="margin-bottom:6px">
-      <button class="btn pri" onclick="copyMd()">📋 마크다운 복사</button>
-      <button class="btn" onclick="resetManual()">↺ 이 종목 입력 초기화</button>
-      <span class="meta" id="copyMsg" style="margin:0"></span>
-    </div>
-    <div class="tpl" id="cTpl"></div>
+    <details id="cTplWrap" open>
+      <summary><h3 style="display:inline">한 장짜리 투자 논리 템플릿 + 내 메모</h3> <span class="cnt" id="cTplHint">— 자동 채움(회색) + 내 메모(입력창, 브라우저에 자동 저장)</span></summary>
+      <div class="row" style="margin:8px 0 6px">
+        <button class="btn pri" onclick="copyMd()">📋 마크다운 복사</button>
+        <button class="btn" onclick="resetManual()">↺ 이 종목 메모 초기화</button>
+        <span class="meta" id="copyMsg" style="margin:0"></span>
+      </div>
+      <div class="tpl" id="cTpl"></div>
+    </details>
   </div>
 
   <div class="attrib">데이터: 퀀트데이터 주간 스냅샷(시세·RS·FY0 실적·FY1 컨센서스, 네이버/FnGuide) · 분기 실적·투자자별 순매수·뉴스(네이버 증권 API) · 증권사 리포트(리포트서머리.xlsx, 네이버 리서치+한경 컨센서스) · DART 거래소공시 60일(단일판매ㆍ공급계약체결 본문 파싱: 계약금액·최근 매출 대비·계약상대·기간) · X 모니터링·시황 브리핑·주도섹터 블로그 본문.
@@ -426,16 +432,16 @@ function autoText(c, g) {
   return {
     what: `종목 RS ${nz(c.rs,0)} (1M ${nz(c.r1,0)} / 3M ${nz(c.r3,0)}), 1개월 수익률 ${sg(c.ret1m,1,'%')}, 3개월 ${sg(c.ret3m,1,'%')}.\n업종 '${c.ind||'-'}' RS ${nz(grp.rs,0)} · 4주 ${sg(grp.rs_chg4w)} · RS≥70 비중 ${nz(grp.breadth70,0,'%')} → ${grp.breadth70 >= 50 ? '산업 전체 현상' : grp.breadth70 >= 30 ? '부분 확산' : '개별 종목 움직임에 가까움'}.\n재료 키워드: ${(grp.keywords||[]).slice(0,8).map(k=>k[0]).join(', ') || '-'}`,
     why: (ev.length ? ev.slice(0,3).map(e => `· ${e.d} [${e.br || '-'}] ${e.t}${e.tp ? ` (TP ${fmtInt(e.tp)})` : ''}`).join('\n') : '· 최근 60일 이 종목 리포트 없음') + (news ? '\n' + news : ''),
-    struct: `(직접 판단) 참고: 컨센서스 영업이익 YoY(E) ${sg(c.op_yoy_e,0,'%')} · 최근 분기 영업이익 YoY ${sg(c.op_yoy,0,'%')} · YoY 가속 ${sg(c.op_accel,0,'pp')}`,
-    bottleneck: `(직접 작성) 자동 힌트: 최근 분기 OPM ${nz(c.opm_now,1,'%')} (전년동기 ${sg(c.opm_yoy_pp,1,'pp')}, 전분기 ${sg(c.opm_qoq_pp,1,'pp')}) — 마진 확대는 가격 전가·병목의 간접 증거. 업종 내 OPM 확대 종목 비중 ${nz(grp.margin_up_share,0,'%')}.`,
+    struct: `(내 메모에 판단) 참고: 컨센서스 영업이익 YoY(E) ${sg(c.op_yoy_e,0,'%')} · 최근 분기 영업이익 YoY ${sg(c.op_yoy,0,'%')} · YoY 가속 ${sg(c.op_accel,0,'pp')}`,
+    bottleneck: `(내 메모에 작성) 자동 힌트: 최근 분기 OPM ${nz(c.opm_now,1,'%')} (전년동기 ${sg(c.opm_yoy_pp,1,'pp')}, 전분기 ${sg(c.opm_qoq_pp,1,'pp')}) — 마진 확대는 가격 전가·병목의 간접 증거. 업종 내 OPM 확대 종목 비중 ${nz(grp.margin_up_share,0,'%')}.`,
     evidence: ((c.dart||[]).filter(h=>h.kind==='공급계약').length ? 'L5 수주·공급계약 공시(60일):\n' + (c.dart||[]).filter(h=>h.kind==='공급계약').slice(0,4).map(h => `· ${h.d} ${h.content || '-'}${h.amount != null ? ` ${fmtInt(h.amount)}억` : ''}${h.ratio != null ? ` (매출 대비 ${h.ratio.toFixed(1)}%)` : ''}${h.cp ? ` — ${h.cp}` : ''}`).join('\n') + '\n' : '이 종목 60일 수주·공급계약 공시 없음\n') + `증거 계층 분포(업종 리포트 30일): ${Object.entries(grp.ev_levels||{}).sort((a,b)=>b[0]-a[0]).map(([l,n])=>`L${l} ${n}건`).join(' · ') || '-'}` + (grp.dart60 ? ` · 업종 공급계약 공시 ${grp.dart60}건/${grp.dart_codes60}종목` : '') + `\n` + (peersEv.length ? '피어 리포트:\n' + peersEv.map(e => `· L${e.lv} ${e.d} ${e.name} — ${e.t}`).join('\n') : '') + `\n업종 커버 종목 중 EPS(E) 상향 ${nz(grp.eps_up_share,0,'%')} · 이 종목 목표가 상향 ${c.rep_tp_up}건`,
     transmission: `최근 분기 매출 YoY ${sg(c.rev_yoy,0,'%')} → 영업이익 YoY ${sg(c.op_yoy,0,'%')} (증분마진 ${nz(c.incr_margin,0,'%')}, 영업레버리지 ${nz(c.op_leverage,1,'x')})\n컨센서스 FY1: 매출 ${sg(c.rev_yoy_e,0,'%')} · 영업이익 ${sg(c.op_yoy_e,0,'%')} · EPS(E) ${fmtInt(c.eps_e)}원 (FY0 ${fmtInt(c.eps0)}원)\n4주 추정치 변화: EPS ${revTxt(c.eps_rev4w)} · 영업이익 ${revTxt(c.op_rev4w)} · 매출 ${revTxt(c.rev_rev4w)}\n다음 분기 컨센서스 영업이익 ${fmtInt(c.next_q_op)}억 (YoY ${sg(c.next_q_op_yoy,0,'%')})`,
     whyco: `업종 내 매출 ${c.rev_rank ?? '-'}위 / ${grp.n_rev ?? '-'} · 분류 ${c.cls || '-'} (Core=가시성·규모, Beta=레버리지·변동성)\n변동성60일 ${nz(c.vol60,0,'%')} · ROE(E) ${nz(c.roe_e,1,'%')} · 부채비율 ${nz(c.debt,0,'%')}\n그룹 자동점수 상위: ${top || '-'}`,
     expect: `PER(E) ${nz(c.per_e,1,'x')} vs 업종 중앙값 ${nz(grp.per_e_med,1,'x')} · PEG(E) ${nz(c.peg_e,2)} · PBR ${nz(c.pbr,2,'x')} · 트레일링 PER ${nz(c.per,1,'x')}\n컨센서스가 가정하는 FY1 영업이익 ${fmtInt(c.op_e)}억 (${sg(c.op_yoy_e,0,'%')})`,
-    notpriced: `(직접 작성) 힌트: EPS(E)가 4주간 ${revTxt(c.eps_rev4w)} 움직였는데 주가는 1개월 ${sg(c.ret1m,1,'%')} — 추정치 변화와 주가 반응의 차이가 출발점.`,
+    notpriced: `(내 메모에 작성) 힌트: EPS(E)가 4주간 ${revTxt(c.eps_rev4w)} 움직였는데 주가는 1개월 ${sg(c.ret1m,1,'%')} — 추정치 변화와 주가 반응의 차이가 출발점.`,
     catalyst: `다음 실적: ${c.next_earn_label || '-'}${c.next_earn_days != null ? ` (D-${c.next_earn_days})` : ''} · 마지막 리포트 ${c.rep_days_since != null ? c.rep_days_since + '일 전' : '-'}`,
-    break: `자동 반증 조건: ① EPS(E) 하향 전환 ② 업종 RS 50 하회 ③ OPM 전년동기 대비 축소 전환 ④ 외국인+기관 순매도 지속 ⑤ MA200 하회\n(직접 추가) 산업 고유 반증: 가격 하락 / 고객 재고 증가 / 리드타임 단축 / 경쟁 CAPEX 급증 / 신규 공급 조기 가동 / 주문 둔화`,
-    rr: `(직접 작성) 현재가 ${fmtInt(c.price)}원 · 52주 고점 대비 ${sg(c.off_high,1,'%')} · 최근 리포트 목표가 ${(c.reports||[]).filter(r=>r.tp).slice(0,3).map(r=>`${fmtInt(r.tp)}(${r.br || '-'})`).join(', ') || '-'}`,
+    break: `자동 반증 조건: ① EPS(E) 하향 전환 ② 업종 RS 50 하회 ③ OPM 전년동기 대비 축소 전환 ④ 외국인+기관 순매도 지속 ⑤ MA200 하회\n(내 메모에 추가) 산업 고유 반증: 가격 하락 / 고객 재고 증가 / 리드타임 단축 / 경쟁 CAPEX 급증 / 신규 공급 조기 가동 / 주문 둔화`,
+    rr: `(내 메모에 작성) 현재가 ${fmtInt(c.price)}원 · 52주 고점 대비 ${sg(c.off_high,1,'%')} · 최근 리포트 목표가 ${(c.reports||[]).filter(r=>r.tp).slice(0,3).map(r=>`${fmtInt(r.tp)}(${r.br || '-'})`).join(', ') || '-'}`,
   };
 }
 function showCompany(code, scroll) {
@@ -488,7 +494,7 @@ function showCompany(code, scroll) {
   $('#cNews').innerHTML = nw.map(n => `<div class="ev"><a href="${esc(n.u)}" target="_blank" rel="noopener">${esc(n.t)}</a><div class="m">${fmtD(n.d)} · ${esc(n.src)}</div></div>`).join('');
   // template
   const at = autoText(c, g);
-  $('#cTpl').innerHTML = TPL.map(([k, q]) => `<div class="q">${esc(q)}</div><div class="auto">${esc(at[k])}</div><textarea data-k="${k}" placeholder="직접 작성…">${esc(man['t_' + k] || '')}</textarea>`).join('');
+  $('#cTpl').innerHTML = TPL.map(([k, q]) => `<div class="q">${esc(q)}</div><div class="auto">${esc(at[k])}</div><textarea data-k="${k}" placeholder="내 메모…">${esc(man['t_' + k] || '')}</textarea>`).join('');
   $('#cTpl').querySelectorAll('textarea').forEach(t => t.oninput = () => { const m = LS(code); m['t_' + t.dataset.k] = t.value; LSset(code, m); });
   showDeep(code);
   if (scroll) $('#secCo').scrollIntoView({behavior:'smooth', block:'start'});
@@ -535,7 +541,9 @@ function renderDeepList() {
 }
 function showDeep(code) {
   const meta = DEEP[code]; const box = $('#cDeep');
-  if (!meta) { box.classList.add('hidden'); return; }
+  const tw = $('#cTplWrap'), hint = $('#cTplHint');
+  if (!meta) { box.classList.add('hidden'); tw.open = true; hint.textContent = '— 심층 리포트 없음: 자동 채움(회색) + 내 메모. /thesis 로 심층 리포트를 만들 수 있습니다'; return; }
+  tw.open = false; hint.textContent = '— 심층 리포트가 있어 접어 둠. 펼치면 자동 채움 + 내 메모';
   box.classList.remove('hidden');
   $('#cDeepMeta').textContent = `${meta.date} · 심층 ${meta.score ?? '-'}/30 · ${meta.cls || ''}`;
   $('#cDeepBody').innerHTML = '<div class="meta">불러오는 중…</div>';
