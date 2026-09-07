@@ -53,6 +53,13 @@ python thesis_report.py --top 20                  # 자동점수 상위 20
 
 임계값은 `scoring.py` 한 곳에 있다. 채점 기준을 바꾸면 `python build_thesis.py --offline` 으로 즉시 재계산.
 
+## 심층 리포트 (`/thesis` 스킬)
+
+Claude Code 에서 `/thesis SK하이닉스` 처럼 부르면 ① `thesis_report.py --pack` 데이터 팩 →
+② 웹 검색으로 고객사·경쟁사·산업 데이터 증거 보강 → ③ 15단계 리포트 작성(30점 채점·Bull/Base/Bear) →
+④ `publish_thesis.py` 로 `docs/thesis/<code>.md` + `index.json` 게시 → 커밋. 페이지 상단 "심층 투자 논리 리포트"
+카드와 종목 상세에 본문이 렌더링된다(http 로 열 때만; file:// 은 fetch 불가). 날짜별 사본은 `docs/thesis/history/`.
+
 ## 산출물
 
 - `docs/thesis_data.js` — `window.THESIS_DATA` (그룹·종목·증거·뉴스·점수)

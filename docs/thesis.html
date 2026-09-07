@@ -115,6 +115,16 @@
   .tpl .q { font-weight: 700; font-size: 13px; margin: 12px 0 4px; }
   .tpl .auto { font-size: 12.5px; color: var(--ink-2); background: var(--soft); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; line-height: 1.5; white-space: pre-wrap; }
   .hidden { display: none !important; }
+  .deep { font-size: 13.5px; line-height: 1.65; background: var(--soft); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; max-height: 70vh; overflow: auto; }
+  .deep h1 { font-size: 18px; margin: 6px 0 10px; } .deep h2 { font-size: 15px; margin: 18px 0 6px; color: var(--accent); } .deep h3 { font-size: 13.5px; margin: 12px 0 4px; color: var(--ink); }
+  .deep p { margin: 6px 0; } .deep ul, .deep ol { margin: 4px 0 6px 22px; } .deep li { margin: 2px 0; }
+  .deep blockquote { border-left: 3px solid var(--accent); padding: 4px 12px; margin: 8px 0; color: var(--ink-2); background: var(--surface); border-radius: 0 8px 8px 0; }
+  .deep table { width: auto; min-width: 60%; font-size: 12.5px; margin: 8px 0; background: var(--surface); }
+  .deep th, .deep td { white-space: normal; text-align: left; padding: 5px 9px; }
+  .deep pre { background: var(--surface); border-radius: 8px; padding: 10px 12px; font-size: 12px; overflow-x: auto; margin: 8px 0; font-family: Consolas, monospace; }
+  .deep code { font-family: Consolas, monospace; font-size: 12px; background: var(--surface); padding: 1px 4px; border-radius: 4px; }
+  .deep a { color: var(--accent); } .deep hr { border: none; border-top: 1px solid var(--grid); margin: 12px 0; }
+  .deep .fm { display: none; }
   .qt { font-size: 12px; }
   .qt th, .qt td { padding: 5px 8px; }
   .spark { vertical-align: middle; }
@@ -153,6 +163,12 @@
       </span>
       <label class="meta" style="margin:0"><input type="checkbox" id="deepOnly" checked> 심화 분석 그룹만</label>
     </div>
+  </div>
+
+  <div class="card hidden" id="secDeepList">
+    <h2>📝 심층 투자 논리 리포트 <span class="cnt" id="deepListCnt"></span></h2>
+    <div class="meta">Claude Code 에서 <code>/thesis 종목명</code> 으로 생성한 15단계 리포트(웹 검색 증거 포함). 종목을 누르면 상세에서 본문을 보여줍니다.</div>
+    <div class="tblwrap"><table id="tblDeep"></table></div>
   </div>
 
   <!-- ① 관찰: 주도 그룹 -->
@@ -219,6 +235,10 @@
         <h3 id="cNewsH">뉴스 7일</h3>
         <div id="cNews"></div>
       </div>
+    </div>
+    <div id="cDeep" class="hidden">
+      <h3>📝 심층 투자 논리 리포트 <span class="cnt" id="cDeepMeta"></span></h3>
+      <div class="deep" id="cDeepBody"></div>
     </div>
     <h3>한 장짜리 투자 논리 템플릿 <span class="cnt">— 자동 채움(회색) + 직접 작성(입력창). 입력은 브라우저에 자동 저장</span></h3>
     <div class="row" style="margin-bottom:6px">
@@ -470,6 +490,7 @@ function showCompany(code, scroll) {
   const at = autoText(c, g);
   $('#cTpl').innerHTML = TPL.map(([k, q]) => `<div class="q">${esc(q)}</div><div class="auto">${esc(at[k])}</div><textarea data-k="${k}" placeholder="직접 작성…">${esc(man['t_' + k] || '')}</textarea>`).join('');
   $('#cTpl').querySelectorAll('textarea').forEach(t => t.oninput = () => { const m = LS(code); m['t_' + t.dataset.k] = t.value; LSset(code, m); });
+  showDeep(code);
   if (scroll) $('#secCo').scrollIntoView({behavior:'smooth', block:'start'});
 }
 function spark(vals, fixMin, fixMax, w = 70, hgt = 20) {
@@ -492,6 +513,57 @@ function copyMd() {
   md += `| | **합계** | 자동 ${c.score.total}/30 · 수동 ${manTotal}/8 | **${c.score.total + manTotal}** |\n`;
   navigator.clipboard.writeText(md).then(() => { $('#copyMsg').textContent = '복사됨'; setTimeout(() => $('#copyMsg').textContent = '', 1500); })
     .catch(() => { $('#copyMsg').textContent = '복사 실패 — 브라우저 권한 확인'; });
+}
+// ---------------- 심층 리포트 (docs/thesis/index.json + <code>.md) — http(s) 에서만 동작
+let DEEP = {};
+(function(){
+  if (!/^https?:$/.test(location.protocol)) return;
+  fetch('thesis/index.json', {cache:'no-store'}).then(r => r.ok ? r.json() : {}).then(idx => { DEEP = idx || {}; renderDeepList(); if (curC) showDeep(curC); }).catch(() => {});
+})();
+function renderDeepList() {
+  const rows = Object.entries(DEEP).map(([code, v]) => ({...v, code, __id: code})).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  if (!rows.length) return;
+  $('#secDeepList').classList.remove('hidden'); $('#deepListCnt').textContent = `${rows.length}종목`;
+  const cols = [
+    {h:'종목', l:true, v:r=>r.name, f:r=>`<b>${esc(r.name)}</b> <span class="code">${r.code}</span><span class="sub">${esc(r.ind||'')}</span>`},
+    {h:'작성일', v:r=>r.date, f:r=>r.date||'-'},
+    {h:'심층 점수', v:r=>r.score, f:r=>r.score == null ? '-' : `${scBadge(r.score)}${r.prev_score != null ? `<span class="sub ${cls(r.score - r.prev_score)}">${chgTxt(r.score - r.prev_score)} (${r.prev_date||''})</span>` : ''}`},
+    {h:'자동 점수', v:r=>r.auto_score, f:r=>r.auto_score == null ? '-' : scBadge(r.auto_score)},
+    {h:'분류', l:true, v:r=>r.cls||'', f:r=>r.cls ? `<span class="tag ${/Core|Tactical/.test(r.cls)?'t-core':/Beta/.test(r.cls)?'t-beta':'t-mixed'}">${esc(r.cls)}</span>` : '-'},
+  ];
+  makeTable($('#tblDeep'), cols, rows, 'deep', code => showCompany(code, true), curC);
+}
+function showDeep(code) {
+  const meta = DEEP[code]; const box = $('#cDeep');
+  if (!meta) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  $('#cDeepMeta').textContent = `${meta.date} · 심층 ${meta.score ?? '-'}/30 · ${meta.cls || ''}`;
+  $('#cDeepBody').innerHTML = '<div class="meta">불러오는 중…</div>';
+  fetch(meta.file, {cache:'no-store'}).then(r => r.text()).then(md => { $('#cDeepBody').innerHTML = mdToHtml(md.replace(/^---[\s\S]*?---\s*/, '')); }).catch(() => { $('#cDeepBody').innerHTML = '<div class="meta">리포트를 불러올 수 없습니다.</div>'; });
+}
+function mdToHtml(md) {
+  const inline = s => esc(s)
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<i>$2</i>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const lines = md.split(/\r?\n/); let out = [], i = 0;
+  while (i < lines.length) {
+    let ln = lines[i];
+    if (/^```/.test(ln)) { let buf = []; i++; while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]); i++; out.push(`<pre>${esc(buf.join('\n'))}</pre>`); continue; }
+    if (/^\s*\|/.test(ln)) { let rows = []; while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(lines[i++]);
+      rows = rows.filter(r => !/^\s*\|\s*:?-{2,}/.test(r));
+      const cells = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => inline(c.trim()));
+      out.push('<table><thead><tr>' + cells(rows[0]).map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>' + rows.slice(1).map(r => '<tr>' + cells(r).map(c => `<td>${c}</td>`).join('') + '</tr>').join('') + '</tbody></table>'); continue; }
+    const h = ln.match(/^(#{1,6})\s+(.*)/); if (h) { out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); i++; continue; }
+    if (/^\s*>/.test(ln)) { let buf = []; while (i < lines.length && /^\s*>/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, '')); out.push(`<blockquote>${inline(buf.join(' '))}</blockquote>`); continue; }
+    if (/^\s*[-*]\s+/.test(ln)) { let buf = []; while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) buf.push(lines[i++].replace(/^\s*[-*]\s+/, '')); out.push('<ul>' + buf.map(b => `<li>${inline(b)}</li>`).join('') + '</ul>'); continue; }
+    if (/^\s*\d+\.\s+/.test(ln)) { let buf = []; while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) buf.push(lines[i++].replace(/^\s*\d+\.\s+/, '')); out.push('<ol>' + buf.map(b => `<li>${inline(b)}</li>`).join('') + '</ol>'); continue; }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(ln)) { out.push('<hr>'); i++; continue; }
+    if (!ln.trim()) { i++; continue; }
+    let buf = []; while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|\s*[-*]\s|\s*\d+\.\s|\s*>|\s*\||```)/.test(lines[i])) buf.push(lines[i++]);
+    out.push(`<p>${inline(buf.join(' '))}</p>`);
+  }
+  return out.join('\n');
 }
 renderGroups();
 // URL 해시로 바로 열기: #g=업종|반도체와반도체장비 또는 #c=000660

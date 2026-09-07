@@ -154,6 +154,72 @@ def company_md(D, c) -> str:
     return "\n".join(L)
 
 
+def pack_md(D, c) -> str:
+    """LLM 종합용 데이터 팩: 종목 한 장 + 피어 비교 + 리포트 전문 요약 + 뉴스 + DART 전체 + 내러티브."""
+    C = D["companies"]
+    g = group_of(D, c)
+    L = [company_md(D, c), ""]
+    # 피어 비교 (업종 시총 상위 10)
+    peers = sorted((x for x in C.values() if x.get("ind") == c.get("ind") and x["code"] != c["code"]),
+                   key=lambda x: -(x["mcap"] or 0))[:9]
+    L.append("## 피어 비교 (업종 시총 상위)")
+    L.append("| 종목 | 자동점수 | 구분 | 시총(억) | RS | 52주고점 | OPM 최근Q (YoY pp) | 증분마진 | 매출YoY Q | EPS(E) 4주 | OP YoY(E) | PER(E) | PEG | 외인+기관 | 리포트30 | 공급계약60 |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    for x in [c] + peers:
+        L.append(f"| {'**' if x is c else ''}{x['name']}{'**' if x is c else ''} | {x['score']['total']} | {x.get('cls') or '-'} | {fi(x['mcap'])} | {nz(x['rs'],0)} | {sg(x['off_high'],0,'%')} | "
+                 f"{nz(x.get('opm_now'),1,'%')} ({sg(x.get('opm_yoy_pp'),1)}) | {nz(x.get('incr_margin'),0,'%')} | {sg(x.get('rev_yoy'),0,'%')} | {rev(x['eps_rev4w'])} | {sg(x['op_yoy_e'],0,'%')} | "
+                 f"{nz(x['per_e'],1,'x')} | {nz(x['peg_e'],2)} | {x.get('fi_netbuy_days') if x.get('fi_days') else '-'}/{x.get('fi_days') or '-'} | {x['rep_n30']} | {x.get('dart_contracts60') or 0} |")
+    L.append("")
+    # 이 종목 리포트 전문 요약
+    L.append("## 이 종목 증권사 리포트 (60일, 최신순)")
+    for r in c.get("reports") or []:
+        L.append(f"- {r['d']} [{r['br'] or '-'}] {r['op'] or ''} TP {fi(r['tp']) if r.get('tp') else '-'} — **{r['t']}**  \n  {r['s']}")
+    if not c.get("reports"):
+        L.append("- 없음")
+    L.append("")
+    # 업종 피어 리포트(증거 사다리)
+    if g.get("evidence"):
+        L.append("## 업종 증거 사다리 (리포트 30일 + DART 공시 60일, 계층 높은 순)")
+        for e in sorted(g["evidence"], key=lambda x: (-x["lv"], x["d"]))[:25]:
+            L.append(f"- L{e['lv']} {e['ln']} · {e['d']} · {e['name']} [{e['br']}] {e['t']} — {e['s'][:160]}")
+        L.append("")
+    # DART
+    L.append("## 이 종목 DART 수주·공급계약 공시 (60일)")
+    for h in c.get("dart") or []:
+        L.append(f"- {h['d']} {'[정정] ' if h.get('corr') else ''}{h['kind']} · {h.get('content') or h['nm']}"
+                 + (f" · {fi(h['amount'])}억" if h.get("amount") is not None else "")
+                 + (f" · 매출 대비 {h['ratio']:.1f}%" if h.get("ratio") is not None else "")
+                 + (f" · 상대 {h['cp']}" if h.get("cp") else "") + (f" · {h['start']}~{h['end']}" if h.get("start") else "") + f" · {h['url']}")
+    if not c.get("dart"):
+        L.append("- 없음")
+    L.append("")
+    # 뉴스
+    if c.get("news"):
+        L.append("## 뉴스 헤드라인 (7일)")
+        L += [f"- {n['d'][4:6]}/{n['d'][6:8]} [{n['src']}] {n['t']} {n['u']}" for n in c["news"]]
+        L.append("")
+    # 그룹 키워드·내러티브
+    if g.get("keywords"):
+        L.append("## 업종 재료 키워드 (리포트 빈도)")
+        L.append(", ".join(f"{k}({n})" for k, n in g["keywords"]))
+        L.append("")
+    if g.get("narratives"):
+        L.append("## 매크로·주도섹터 텍스트 언급 (14일)")
+        L += [f"- ({n['date']} {n['src']}) {n['text']}" for n in g["narratives"]]
+        L.append("")
+    if g.get("chain"):
+        L.append("## 업종 인과사슬 초안(자동)")
+        L += [f"{i + 1}. {s}" for i, s in enumerate(g["chain"])]
+        L.append("")
+    themes = [t for t in (c.get("themes") or [])]
+    if themes:
+        L.append("## 소속 테마(네이버)")
+        L.append(", ".join(themes))
+        L.append("")
+    L.append(f"_데이터 기준일 {D['asof']} · 추정치 비교 {D.get('prior_asof')} · 생성 {D['generated']}_")
+    return "\n".join(L)
+
+
 def group_md(D, name) -> str:
     C = D["companies"]
     g = next((x for x in D["groups"] if x["name"] == name), None)
@@ -207,6 +273,7 @@ if __name__ == "__main__":
     ap.add_argument("key", nargs="?", help="종목 코드 또는 이름")
     ap.add_argument("--group", help="업종/테마 이름")
     ap.add_argument("--top", type=int, help="자동점수 상위 N")
+    ap.add_argument("--pack", action="store_true", help="LLM 종합용 데이터 팩(피어·리포트·공시·뉴스 포함)")
     ap.add_argument("-o", "--out")
     a = ap.parse_args()
     D = load()
@@ -215,7 +282,8 @@ if __name__ == "__main__":
     elif a.top:
         md = top_md(D, a.top)
     elif a.key:
-        md = company_md(D, find_company(D, a.key))
+        co = find_company(D, a.key)
+        md = pack_md(D, co) if a.pack else company_md(D, co)
     else:
         ap.error("종목 코드/이름, --group, --top 중 하나가 필요합니다")
     if a.out:
