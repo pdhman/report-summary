@@ -104,7 +104,17 @@ def company_md(D, c) -> str:
     L.append("## 4. Bottleneck")
     L.append(f"(직접 작성) 힌트: 최근 분기 OPM {nz(c.get('opm_now'),1,'%')} (전년동기 {sg(c.get('opm_yoy_pp'),1,'pp')}, 전분기 {sg(c.get('opm_qoq_pp'),1,'pp')}) · 업종 OPM 확대 종목 비중 {nz(g.get('margin_up_share'),0,'%')}\n")
     L.append("## 5. Evidence")
-    L.append(f"증거 계층(업종 리포트 30일): {lv}  ")
+    dl = [h for h in (c.get("dart") or []) if h["kind"] == "공급계약"]
+    if dl:
+        L.append(f"L5 수주·공급계약 공시 60일 {c.get('dart_contracts60')}건" + (f" (매출 대비 합계 {c['dart_ratio60']:.1f}%)" if c.get("dart_ratio60") is not None else "") + ":  ")
+        for h in dl[:5]:
+            L.append(f"- {h['d']} {'[정정] ' if h.get('corr') else ''}{h.get('content') or '-'}"
+                     + (f" — {fi(h['amount'])}억" if h.get("amount") is not None else "")
+                     + (f" (매출 대비 {h['ratio']:.1f}%)" if h.get("ratio") is not None else "")
+                     + (f" · {h['cp']}" if h.get("cp") else "") + f" [공시]({h['url']})")
+    else:
+        L.append("- 이 종목 60일 수주·공급계약 공시 없음")
+    L.append(f"증거 계층(업종 리포트 30일): {lv}" + (f" · 업종 공급계약 공시 {g.get('dart60')}건/{g.get('dart_codes60')}종목" if g.get("dart60") else "") + "  ")
     L += [f"- L{e['lv']} {e['d']} {e['name']} — {e['t']}" for e in ev_peer]
     L.append(f"- 업종 커버 종목 중 EPS(E) 상향 {nz(g.get('eps_up_share'),0,'%')} · 이 종목 목표가 상향 {c['rep_tp_up']}건\n")
     L.append("## 6. Earnings Transmission")

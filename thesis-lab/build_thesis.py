@@ -304,6 +304,30 @@ def build(top: int = 15, offline: bool = False) -> str:
         news = S.fetch_news(sorted(news_codes))
     reports = S.load_reports(days=60, today=today)
     narratives = S.load_narratives(days=14, today=today)
+    try:
+        contracts = S.load_dart_contracts(days=60, today=today)
+    except Exception as ex:
+        S.log(f"경고: DART 공시 수집 실패 — 생략: {ex}")
+        contracts = []
+    dart_by_code: dict[str, list[dict]] = {}
+    for h in contracts:
+        dart_by_code.setdefault(h["code"], []).append(h)
+
+    def dart_metrics(code):
+        items = dart_by_code.get(code, [])
+        cons = [h for h in items if h["kind"] == "공급계약"]
+        ratios = [h["rev_ratio"] for h in cons if h.get("rev_ratio") is not None and not h.get("corrected")]
+        amt = [h["amount"] for h in cons if h.get("amount") is not None and not h.get("corrected")]
+        return {
+            "dart_n60": len(items), "dart_contracts60": len(cons),
+            "dart_ratio60": round(sum(ratios), 1) if ratios else None,      # 정정공시 제외 합계
+            "dart_amt60": round(sum(amt), 1) if amt else None,
+            "dart_max_ratio": max(ratios) if ratios else None,
+            "dart": [{"d": h["d"], "nm": h["nm"][:40], "kind": h["kind"], "corr": h.get("corrected", False),
+                      "content": h.get("content"), "amount": h.get("amount"), "ratio": h.get("rev_ratio"),
+                      "cp": h.get("counterpart"), "start": h.get("start"), "end": h.get("end"),
+                      "url": h["url"]} for h in items[:8]],
+        }
 
     # 분기 지표를 df 에 붙인다 (그룹 마진 확대 비중 계산용)
     qm = {c: S.quarter_metrics(quarters.get(c)) for c in deep}
@@ -401,6 +425,7 @@ def build(top: int = 15, offline: bool = False) -> str:
             lbl, dn = S.next_earnings_window(last_actual, today)
             c["next_earn_label"], c["next_earn_days"] = lbl, dn
         c.update(rep_metrics(code))
+        c.update(dart_metrics(code))
         if code in news and news[code]:
             cutoff = (today - dt.timedelta(days=7)).strftime("%Y%m%d")
             c["news"] = [{"d": n["dt"][:8], "src": n["src"], "t": n["title"][:90], "u": n["url"]}
@@ -466,11 +491,30 @@ def build(top: int = 15, offline: bool = False) -> str:
             for r in rep_by_code.get(code, []):
                 if (today - dt.date.fromisoformat(r["d"])).days <= 30:
                     ev.append({**r, "code": code, "name": companies[code]["name"] if code in companies else code})
-        ev.sort(key=lambda x: (-x["lv"], x["d"]), reverse=False)
-        ev.sort(key=lambda x: x["d"], reverse=True)
-        g["evidence"] = ev[:30]
         g["rep30"] = len(ev)
         g["rep_codes30"] = len({e["code"] for e in ev})
+        # DART 수주·공급계약 공시(60일) → L5 데이터 증거로 합류
+        dart_ev = []
+        for code in codes:
+            for h in dart_by_code.get(code, []):
+                if h["kind"] == "공급계약":
+                    amt = f"계약금액 {h['amount']:,.0f}억" if h.get("amount") is not None else "계약금액 -"
+                    ratio = f" · 최근 매출 대비 {h['rev_ratio']:.1f}%" if h.get("rev_ratio") is not None else ""
+                    per = f" · 기간 {h['start']}~{h['end']}" if h.get("start") else ""
+                    title = f"{'[정정] ' if h.get('corrected') else ''}단일판매ㆍ공급계약 — {h.get('content') or '-'}"
+                    summ = f"{amt}{ratio}{per}" + (f" · 계약상대 {h['cp']}" if h.get("cp") else "")
+                else:
+                    title = h["nm"][:80]
+                    summ = "투자판단 관련 주요경영사항(수주·공급·계약 관련)"
+                dart_ev.append({"d": h["d"], "br": "DART", "op": "공시", "tp": None, "px": None,
+                                "t": title[:110], "s": summ[:220], "lv": 5, "ln": "데이터·공시",
+                                "src": "DART", "u": h["url"], "code": code,
+                                "name": companies[code]["name"] if code in companies else h["name"]})
+        g["dart60"] = len(dart_ev)
+        g["dart_codes60"] = len({e["code"] for e in dart_ev})
+        ev = ev + dart_ev
+        ev.sort(key=lambda x: x["d"], reverse=True)
+        g["evidence"] = ev[:40]
         # 뉴스
         nw = []
         for code in codes:
@@ -480,8 +524,8 @@ def build(top: int = 15, offline: bool = False) -> str:
         g["news"] = nw[:24]
         g["news7"] = len(nw)
         # 키워드 — 리포트 본문 우선. 뉴스 헤드라인은 시황 노이즈가 많아 리포트가 적을 때만 보조로 쓴다.
-        texts = [e["t"] + " " + e["s"] for e in ev]
-        if len(ev) < 5:
+        texts = [e["t"] + " " + e["s"] for e in ev if e.get("src") != "DART"]
+        if len(texts) < 5:
             texts += [n["t"] for n in nw]
         member_names = {companies[c]["name"] for c in codes if c in companies}
         g["keywords"] = S.extract_keywords(texts, top=14, exclude=member_names)
@@ -500,7 +544,7 @@ def build(top: int = 15, offline: bool = False) -> str:
             f"현상: {kind} '{name}' 종합 RS {g['rs']} (1M {g['r1']} / 3M {g['r3']}), 4주 변화 "
             f"{'+' if (g['rs_chg4w'] or 0) >= 0 else ''}{g['rs_chg4w'] if g['rs_chg4w'] is not None else '-'}, "
             f"RS≥70 종목 {g['breadth70']}% ({g['n']}종목).",
-            f"확인: 최근 30일 리포트 {len(ev)}건/{g['rep_codes30']}종목 · 7일 뉴스 {len(nw)}건 · "
+            f"확인: 최근 30일 리포트 {g['rep30']}건/{g['rep_codes30']}종목 · 60일 수주·공급계약 공시 {g['dart60']}건/{g['dart_codes60']}종목 · 7일 뉴스 {len(nw)}건 · "
             f"증거 계층 {', '.join(f'L{k} {v}건' for k, v in sorted(lv.items(), reverse=True)) or '-'}.",
             f"재료 키워드: {', '.join(w for w, _ in g['keywords'][:8]) or '-'}.",
             f"실적 전달: 컨센서스 영업이익 YoY(E) 중앙값 {g['op_yoy_e_med'] if g['op_yoy_e_med'] is not None else '-'}% · "
@@ -546,6 +590,7 @@ def build(top: int = 15, offline: bool = False) -> str:
                      "증분마진(%)": c.get("incr_margin"), "PER(E)": c["per_e"], "PEG(E)": c["peg_e"],
                      "52주고점대비(%)": c["off_high"], "MA200대비(%)": c["ma200"],
                      "외인기관순매수일": c.get("fi_netbuy_days"), "리포트30일": c["rep_n30"],
+                     "공급계약공시60일": c.get("dart_contracts60"), "공급계약매출대비합(%)": c.get("dart_ratio60"),
                      **{f"항목{i + 1}": it[0] for i, it in enumerate(c["score"]["items"])}})
     sc = pd.DataFrame(rows).sort_values("자동점수", ascending=False)
     # 실행일 기준으로 저장해 평일 수동 실행도 히스토리로 쌓인다 (같은 날 재실행은 덮어씀)

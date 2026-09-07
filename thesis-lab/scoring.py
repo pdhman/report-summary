@@ -24,7 +24,7 @@ ITEMS = [
     ("ind_rs", "산업", "산업 상대강도가 상승·가속 중이다", "업종 RS 수준 + 1M vs 3M + 4주 변화"),
     ("margin_up", "병목", "가격 상승이 마진으로 전가되고 있다", "최근 분기 OPM 전년동기 대비 변화(pp)"),
     ("ind_margin", "병목", "업종 전체 마진이 확대되고 있다", "업종 내 OPM 확대 종목 비중"),
-    ("ev_reports", "증거", "회사·애널리스트가 확인한다", "최근 30일 증권사 리포트 건수·목표가 상향"),
+    ("ev_reports", "증거", "회사·애널리스트·공시가 확인한다", "최근 30일 리포트 건수·목표가 상향 + 60일 수주·공급계약 공시(매출 대비 %)"),
     ("ev_peers", "증거", "경쟁사(피어)가 확인한다", "업종 내 EPS(E) 상향 종목 비중"),
     ("co_position", "기업", "산업 내 시장 지위가 높다", "업종 내 매출액 순위"),
     ("co_leverage", "기업", "EPS 레버리지가 크다", "증분 영업이익률(ΔOP/ΔRev)·영업레버리지"),
@@ -117,11 +117,20 @@ def score_company(c: dict, g: dict) -> dict:
     add("ind_margin", None if v is None else 2 if v >= 60 else 1 if v >= 40 else 0,
         "-" if v is None else f"업종 내 OPM 확대 종목 {v:.0f}%")
 
-    # ⑥ 리포트
+    # ⑥ 리포트 + DART 수주·공급계약 공시 (L5 데이터: 실제 주문)
     n = int(c.get("rep_n30") or 0)
     up = int(c.get("rep_tp_up") or 0)
+    dn = int(c.get("dart_n60") or 0)
+    dr = _v(c.get("dart_ratio60"))            # 60일 공급계약 금액 합계 / 최근 매출액 (%)
     pts = 2 if (n >= 3 or (n >= 2 and up >= 1)) else 1 if n >= 1 else 0
-    add("ev_reports", pts, f"30일 리포트 {n}건 · 목표가 상향 {up}건")
+    if dn and ((dr is not None and dr >= 10) or dn >= 2):
+        pts = 2
+    elif dn:
+        pts = max(pts, 1)
+    why = f"30일 리포트 {n}건 · 목표가 상향 {up}건"
+    if dn:
+        why += f" · 60일 공급계약 공시 {dn}건" + (f" (매출 대비 합계 {dr:.0f}%)" if dr is not None else "")
+    add("ev_reports", pts, why)
 
     # ⑦ 피어 확인
     v = _v(g.get("eps_up_share"))

@@ -524,3 +524,166 @@ def search_narratives(docs: list[dict], keywords: list[str], limit: int = 8) -> 
         if len(out) >= limit:
             break
     return out
+
+
+# ------------------------------------------------------------------ DART 공시 (수주·공급계약 → L5 증거)
+DART_API = "https://opendart.fss.or.kr/api"
+DART_VIEW = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo={rcept}"
+# 거래소 수시공시 중 '실제 주문'에 해당하는 것만 고른다
+_CONTRACT_PAT = re.compile(r"공급계약|수주|판매ㆍ공급|판매·공급")
+_MGMT_PAT = re.compile(r"주요경영사항|기타\s*경영사항")
+_MGMT_KW = re.compile(r"수주|공급|계약|납품|발주|주문|채택|승인")
+
+
+def dart_key() -> str:
+    p = os.path.join(PROJ, "secrets.json")
+    try:
+        with open(p, encoding="utf-8") as f:
+            return str(json.load(f).get("dart_api_key") or "").strip()
+    except Exception:
+        return ""
+
+
+def _dart_list_day(key: str, ymd: str) -> list[dict]:
+    """하루치 거래소공시 목록(list.json, pblntf_ty=I). 100건씩 페이지 순회."""
+    out, page = [], 1
+    while page <= 20:
+        try:
+            r = requests.get(f"{DART_API}/list.json",
+                             params={"crtfc_key": key, "bgn_de": ymd, "end_de": ymd, "pblntf_ty": "I",
+                                     "page_count": 100, "page_no": page}, timeout=20)
+            j = r.json()
+        except Exception:
+            break
+        if j.get("status") not in ("000", "013"):        # 013 = 조회 결과 없음
+            log(f"  DART list {ymd} 오류: {j.get('status')} {j.get('message')}")
+            break
+        items = j.get("list") or []
+        out.extend({"code": str(x.get("stock_code") or "").strip(), "name": x.get("corp_name"),
+                    "nm": re.sub(r"\s+", " ", str(x.get("report_nm") or "")).strip(),
+                    "rcept": x.get("rcept_no"), "d": x.get("rcept_dt")} for x in items)
+        if page >= int(j.get("total_page") or 1):
+            break
+        page += 1
+        time.sleep(0.15)
+    return out
+
+
+def _dart_doc_text(key: str, rcept: str) -> str | None:
+    import io
+    import zipfile
+    try:
+        r = requests.get(f"{DART_API}/document.xml", params={"crtfc_key": key, "rcept_no": rcept}, timeout=30)
+        z = zipfile.ZipFile(io.BytesIO(r.content))
+        raw = z.read(z.namelist()[0]).decode("utf-8", "ignore")
+    except Exception:
+        return None
+    t = re.sub(r"<[^>]+>", " ", raw)
+    return re.sub(r"\s+", " ", html.unescape(t))
+
+
+def _won(s):
+    v = _num(s)
+    return None if v is None else round(v / 1e8, 1)          # 원 → 억원
+
+
+def parse_contract(text: str) -> dict:
+    """단일판매ㆍ공급계약체결 본문 → 내용·금액·매출대비·상대방·기간. 정정공시는 마지막 표 기준."""
+    r = {"content": None, "amount": None, "recent_rev": None, "rev_ratio": None,
+         "counterpart": None, "start": None, "end": None, "order_date": None, "conditional": None}
+    if not text:
+        return r
+    # 코스닥 양식: "1. 판매ㆍ공급계약 내용 X 2. 계약내역 ... 계약금액 총액(원) N 최근 매출액(원) N 매출액 대비(%) N 3. 계약상대방 Y"
+    # 코스피 양식: "1. 판매ㆍ공급계약 구분 공사수주 - 체결계약명 X 2. 계약내역 계약금액(원) N 최근매출액(원) N 매출액대비(%) N ... 3. 계약상대 Y"
+    # 정정공시는 정정 전·후 표가 반복되므로 마지막 표(rfind) 기준.
+    i = max(text.rfind("1. 판매ㆍ공급계약 내용"), text.rfind("1. 판매ㆍ공급계약 구분"))
+    if i < 0:
+        i = max(text.rfind("판매ㆍ공급계약 내용"), text.rfind("체결계약명"))
+    body = text[i:] if i >= 0 else text
+    m = re.search(r"판매ㆍ공급계약 내용\s*(.+?)\s*2\. 계약내역", body)
+    if m:
+        r["content"] = m.group(1).strip()[:120]
+    else:
+        m = re.search(r"판매ㆍ공급계약 구분\s*(.+?)\s*-?\s*체결계약명\s*(.+?)\s*2\. 계약내역", body)
+        if m:
+            r["content"] = f"[{m.group(1).strip(' -')}] {m.group(2).strip()}"[:120]
+    m = re.search(r"계약금액\s*(?:총액)?\s*\(원\)\s*([\d,]+)", body)
+    if m:
+        r["amount"] = _won(m.group(1))
+    m = re.search(r"최근\s*매출액\s*\(원\)\s*([\d,]+)", body)
+    if m:
+        r["recent_rev"] = _won(m.group(1))
+    m = re.search(r"매출액\s*대비\s*\(%\)\s*([\d.,]+)", body)
+    if m:
+        r["rev_ratio"] = _num(m.group(1))
+    m = re.search(r"3\. 계약상대(?:방)?\s*(.+?)\s*(?:-\s*)?(?:최근 매출액|주요사업|회사와의 관계|4\. 판매ㆍ공급지역)", body)
+    if m:
+        cp = m.group(1).strip(" -")
+        r["counterpart"] = cp[:60] if cp else None
+    m = re.search(r"5\. 계약기간\s*시작일\s*(\d{4}-\d{2}-\d{2})\s*종료일\s*(\d{4}-\d{2}-\d{2})", body)
+    if m:
+        r["start"], r["end"] = m.group(1), m.group(2)
+    m = re.search(r"계약\(수주\)일자\s*(\d{4}-\d{2}-\d{2})", body)
+    if m:
+        r["order_date"] = m.group(1)
+    m = re.search(r"조건부 계약여부\s*(해당|미해당)", body)
+    if m:
+        r["conditional"] = m.group(1) == "해당"
+    return r
+
+
+def load_dart_contracts(days: int = 60, today: dt.date | None = None) -> list[dict]:
+    """최근 days 일 거래소공시 중 수주·공급계약 공시. 일자별 목록·건별 본문을 캐시한다.
+
+    반환 항목: code, name, d(YYYY-MM-DD), rcept, nm(공시명), kind('공급계약'|'경영사항'),
+              corrected(기재정정), url, + parse_contract 필드
+    """
+    today = today or dt.date.today()
+    key = dart_key()
+    if not key:
+        log("DART 키 없음(secrets.json dart_api_key) — 공시 증거 생략")
+        return []
+    hits = []
+    fetched_days = 0
+    for k in range(days + 1):
+        d = today - dt.timedelta(days=k)
+        if d.weekday() >= 5:
+            continue
+        ymd = d.strftime("%Y%m%d")
+        ttl = 0.25 if k <= 1 else 3650          # 오늘·어제는 6시간, 과거는 영구
+        lst = _cache_get("dart_list", ymd, ttl)
+        if lst is None:
+            lst = _dart_list_day(key, ymd)
+            _cache_put("dart_list", ymd, lst)
+            fetched_days += 1
+            time.sleep(0.1)
+        for x in lst:
+            nm = x["nm"]
+            if not x["code"]:
+                continue
+            if _CONTRACT_PAT.search(nm):
+                kind = "공급계약"
+            elif _MGMT_PAT.search(nm) and _MGMT_KW.search(nm):
+                kind = "경영사항"
+            else:
+                continue
+            hits.append({**x, "kind": kind, "corrected": "정정" in nm,
+                         "d": f"{x['d'][:4]}-{x['d'][4:6]}-{x['d'][6:]}",
+                         "url": DART_VIEW.format(rcept=x["rcept"])})
+    # 본문 파싱 (공급계약만) — 원문 텍스트를 건별 영구 캐시하고 파싱은 매번 한다(파서 개선 즉시 반영)
+    n_doc = 0
+    for h in hits:
+        if h["kind"] != "공급계약":
+            continue
+        raw = _cache_get("dart_doc", h["rcept"], 3650)
+        if raw is None or not isinstance(raw, dict) or "text" not in raw:
+            txt = _dart_doc_text(key, h["rcept"]) or ""
+            raw = {"text": txt[:6000]}
+            _cache_put("dart_doc", h["rcept"], raw)
+            n_doc += 1
+            time.sleep(0.1)
+        h.update(parse_contract(raw["text"]))
+    hits.sort(key=lambda x: x["d"], reverse=True)
+    log(f"DART 수주·공급계약 공시: {len(hits)}건 / {len({h['code'] for h in hits})}종목 "
+        f"(최근 {days}일, 목록 수신 {fetched_days}일 · 본문 수신 {n_doc}건)")
+    return hits

@@ -84,6 +84,7 @@
   .t-beta { background: color-mix(in srgb, var(--tool) 16%, transparent); color: var(--tool); }
   .t-mixed { background: var(--soft); color: var(--muted); }
   .t-deep { background: var(--badge-hi); color: var(--badge-hi-ink); }
+  .t-dart { background: color-mix(in srgb, var(--lv5) 18%, transparent); color: var(--lv5); font-size: 10px; vertical-align: middle; }
   .lv { display: inline-block; font-size: 10.5px; font-weight: 800; padding: 1px 6px; border-radius: 4px; color: #fff; margin-right: 6px; vertical-align: middle; }
   .lv5 { background: var(--lv5); } .lv4 { background: var(--lv4); } .lv3 { background: var(--lv3); } .lv2 { background: var(--lv2); } .lv1 { background: var(--lv1); }
   .ev { padding: 8px 0; border-bottom: 1px dashed var(--grid); font-size: 13px; line-height: 1.5; }
@@ -170,8 +171,8 @@
     <ol class="chain" id="gChain"></ol>
     <div class="grid2">
       <div>
-        <h3>증거 사다리 — 증권사 리포트 30일 <span class="cnt" id="gEvCnt"></span></h3>
-        <div class="meta">L5 데이터(수주·판가·출하·증설) › L4 고객사 › L3 산업·경쟁사 › L2 애널리스트 › L1 회사 주장. 키워드 자동 태깅이라 참고용입니다. 여러 계층에서 같은 이야기가 나올 때가 가장 강한 아이디어입니다.</div>
+        <h3>증거 사다리 — 증권사 리포트 30일 + DART 수주·공급계약 공시 60일 <span class="cnt" id="gEvCnt"></span></h3>
+        <div class="meta">L5 데이터(DART 단일판매ㆍ공급계약 공시 = 실제 주문, 리포트의 수주·판가·출하·증설) › L4 고객사 › L3 산업·경쟁사 › L2 애널리스트 › L1 회사 주장. 리포트 태깅은 키워드 규칙이라 참고용, DART 공시는 원문 링크로 열립니다. 여러 계층에서 같은 이야기가 나올 때가 가장 강한 아이디어입니다.</div>
         <div class="chips" id="lvChips" style="margin-bottom:6px"></div>
         <div id="gEv"></div>
       </div>
@@ -211,6 +212,8 @@
       <div>
         <h3>분기 실적 추이 (네이버 · 억원)</h3>
         <div class="tblwrap"><table class="qt" id="cQ"></table></div>
+        <h3>DART 수주·공급계약 공시 60일 <span class="cnt" id="cDartCnt"></span></h3>
+        <div id="cDart"></div>
         <h3>최근 리포트 <span class="cnt" id="cRepCnt"></span></h3>
         <div id="cRep"></div>
         <h3 id="cNewsH">뉴스 7일</h3>
@@ -226,7 +229,7 @@
     <div class="tpl" id="cTpl"></div>
   </div>
 
-  <div class="attrib">데이터: 퀀트데이터 주간 스냅샷(시세·RS·FY0 실적·FY1 컨센서스, 네이버/FnGuide) · 분기 실적·투자자별 순매수·뉴스(네이버 증권 API) · 증권사 리포트(리포트서머리.xlsx, 네이버 리서치+한경 컨센서스) · X 모니터링·시황 브리핑·주도섹터 블로그 본문.
+  <div class="attrib">데이터: 퀀트데이터 주간 스냅샷(시세·RS·FY0 실적·FY1 컨센서스, 네이버/FnGuide) · 분기 실적·투자자별 순매수·뉴스(네이버 증권 API) · 증권사 리포트(리포트서머리.xlsx, 네이버 리서치+한경 컨센서스) · DART 거래소공시 60일(단일판매ㆍ공급계약체결 본문 파싱: 계약금액·최근 매출 대비·계약상대·기간) · X 모니터링·시황 브리핑·주도섹터 블로그 본문.
     자동 채점은 "논리를 찾는 출발점"이며 병목 구조·고객사 확인·반증 조건·손익비는 사람이 채워야 완성됩니다.</div>
 
 <script>
@@ -301,6 +304,7 @@ function renderGroups() {
     {h:'PER(E) 중앙', v:r=>r.per_e_med, f:r=>nz(r.per_e_med,1,'x')},
     {h:'평균점수', v:r=>r.score_avg, f:r=>r.score_avg == null ? '-' : `${r.score_avg}${r.score_avg_chg == null ? '<span class="sub">-</span>' : `<span class="sub ${cls(r.score_avg_chg)}">${chgTxt(r.score_avg_chg)} · ↑${r.n_up} ↓${r.n_down}</span>`}`},
     {h:'리포트30일', v:r=>r.rep30 ?? null, f:r=>r.deep ? `${r.rep30}건<span class="sub">${r.rep_codes30}종목</span>` : '-'},
+    {h:'공급계약 공시60일', v:r=>r.dart60 ?? null, f:r=>r.deep ? (r.dart60 ? `${r.dart60}건<span class="sub">${r.dart_codes60}종목</span>` : '0') : '-'},
     {h:'뉴스7일', v:r=>r.news7 ?? null, f:r=>r.deep ? r.news7 : '-'},
     {h:'재료 키워드', l:true, v:r=>(r.keywords||[]).map(k=>k[0]).join(' '), f:r=>(r.keywords||[]).slice(0,6).map(k=>`<span class="kw">${esc(k[0])}<b>${k[1]}</b></span>`).join('')},
   ];
@@ -324,7 +328,7 @@ function showGroup(id) {
   $('#gChain').innerHTML = (g.chain || ['심화 분석 대상 그룹이 아닙니다. build_thesis.py --top 값을 늘리면 포함됩니다.']).map(s => `<li>${esc(s)}</li>`).join('');
   // evidence
   const ev = g.evidence || []; const lv = g.ev_levels || {};
-  $('#gEvCnt').textContent = `${ev.length}건`;
+  $('#gEvCnt').textContent = `${ev.length}건 (리포트 ${g.rep30 ?? 0} · 공시 ${g.dart60 ?? 0})`;
   $('#lvChips').innerHTML = [0,5,4,3,2,1].map(l => `<span class="chip ${l===lvFilter?'on':''}" data-l="${l}">${l===0?'전체':'L'+l} ${l===0?ev.length:(lv[l]||0)}</span>`).join('');
   $('#lvChips').querySelectorAll('.chip').forEach(ch => ch.onclick = () => { lvFilter = +ch.dataset.l; showGroup(id); });
   $('#gEv').innerHTML = ev.filter(e => !lvFilter || e.lv === lvFilter).map(evHtml).join('') || '<div class="meta">리포트 없음</div>';
@@ -355,6 +359,7 @@ function showGroup(id) {
     {h:'PEG(E)', v:r=>r.peg_e, f:r=>nz(r.peg_e,2)},
     {h:'외인+기관 순매수', v:r=>r.fi_netbuy_days, f:r=>r.fi_days ? `${r.fi_netbuy_days}/${r.fi_days}일<span class="sub">거래량 ${nz(r.vol_ratio,2,'x')}</span>` : '-'},
     {h:'리포트30일', v:r=>r.rep_n30, f:r=>`${r.rep_n30}<span class="sub">TP↑ ${r.rep_tp_up}</span>`},
+    {h:'공급계약60일', v:r=>r.dart_ratio60 ?? (r.dart_contracts60 ? 0 : null), f:r=>r.dart_contracts60 ? `${r.dart_contracts60}건<span class="sub">${r.dart_ratio60 != null ? '매출대비 ' + r.dart_ratio60.toFixed(0) + '%' : ''}</span>` : '-'},
   ];
   makeTable($('#tblMem'), cols, mem, 'mem', code => showCompany(code, false), curC);
   $('#secGroup').scrollIntoView({behavior:'smooth', block:'start'});
@@ -362,8 +367,17 @@ function showGroup(id) {
 const fmtD = d => d && d.length >= 8 ? `${d.slice(4,6)}/${d.slice(6,8)}` : (d||'');
 const revTxt = v => v === null || v === undefined ? '-' : v >= 900 ? '적자→흑자' : v <= -900 ? '흑자→적자' : sg(v,1,'%');
 function evHtml(e) {
-  return `<div class="ev"><span class="lv lv${e.lv}">L${e.lv} ${esc(e.ln)}</span><span class="h">${e.name ? `<span onclick="showCompany('${e.code}',true)" style="cursor:pointer">${esc(e.name)}</span> · ` : ''}${esc(e.t)}</span>
+  const isDart = e.src === 'DART';
+  const title = isDart ? `<a href="${esc(e.u)}" target="_blank" rel="noopener">${esc(e.t)}</a>` : esc(e.t);
+  return `<div class="ev"><span class="lv lv${e.lv}">L${e.lv} ${esc(e.ln)}</span>${isDart ? '<span class="tag t-dart">DART</span> ' : ''}<span class="h">${e.name ? `<span onclick="showCompany('${e.code}',true)" style="cursor:pointer">${esc(e.name)}</span> · ` : ''}${title}</span>
     <div class="s">${esc(e.s)}</div><div class="m">${e.d} · ${esc(e.br || '-')} · ${esc(e.op || '-')}${e.tp ? ` · 목표가 ${fmtInt(e.tp)}${e.px ? ` (괴리 ${sg((e.tp/e.px-1)*100,0,'%')})` : ''}` : ''}</div></div>`;
+}
+function dartHtml(h) {
+  const amt = h.amount != null ? `계약금액 ${fmtInt(h.amount)}억` : '계약금액 -';
+  const ratio = h.ratio != null ? ` · 최근 매출 대비 <b>${h.ratio.toFixed(1)}%</b>` : '';
+  const per = h.start ? ` · ${h.start}~${h.end}` : '';
+  return `<div class="ev"><span class="lv lv5">L5 데이터·공시</span><span class="tag t-dart">DART</span> <span class="h"><a href="${esc(h.url)}" target="_blank" rel="noopener">${h.corr ? '[정정] ' : ''}${h.kind === '공급계약' ? esc(h.content || '단일판매ㆍ공급계약') : esc(h.nm)}</a></span>
+    <div class="s">${h.kind === '공급계약' ? `${amt}${ratio}${per}${h.cp ? ` · 계약상대 ${esc(h.cp)}` : ''}` : '투자판단 관련 주요경영사항'}</div><div class="m">${h.d}</div></div>`;
 }
 
 // ---------------- ③ company
@@ -394,7 +408,7 @@ function autoText(c, g) {
     why: (ev.length ? ev.slice(0,3).map(e => `· ${e.d} [${e.br || '-'}] ${e.t}${e.tp ? ` (TP ${fmtInt(e.tp)})` : ''}`).join('\n') : '· 최근 60일 이 종목 리포트 없음') + (news ? '\n' + news : ''),
     struct: `(직접 판단) 참고: 컨센서스 영업이익 YoY(E) ${sg(c.op_yoy_e,0,'%')} · 최근 분기 영업이익 YoY ${sg(c.op_yoy,0,'%')} · YoY 가속 ${sg(c.op_accel,0,'pp')}`,
     bottleneck: `(직접 작성) 자동 힌트: 최근 분기 OPM ${nz(c.opm_now,1,'%')} (전년동기 ${sg(c.opm_yoy_pp,1,'pp')}, 전분기 ${sg(c.opm_qoq_pp,1,'pp')}) — 마진 확대는 가격 전가·병목의 간접 증거. 업종 내 OPM 확대 종목 비중 ${nz(grp.margin_up_share,0,'%')}.`,
-    evidence: `증거 계층 분포(업종 리포트 30일): ${Object.entries(grp.ev_levels||{}).sort((a,b)=>b[0]-a[0]).map(([l,n])=>`L${l} ${n}건`).join(' · ') || '-'}\n` + (peersEv.length ? '피어 리포트:\n' + peersEv.map(e => `· L${e.lv} ${e.d} ${e.name} — ${e.t}`).join('\n') : '') + `\n업종 커버 종목 중 EPS(E) 상향 ${nz(grp.eps_up_share,0,'%')} · 이 종목 목표가 상향 ${c.rep_tp_up}건`,
+    evidence: ((c.dart||[]).filter(h=>h.kind==='공급계약').length ? 'L5 수주·공급계약 공시(60일):\n' + (c.dart||[]).filter(h=>h.kind==='공급계약').slice(0,4).map(h => `· ${h.d} ${h.content || '-'}${h.amount != null ? ` ${fmtInt(h.amount)}억` : ''}${h.ratio != null ? ` (매출 대비 ${h.ratio.toFixed(1)}%)` : ''}${h.cp ? ` — ${h.cp}` : ''}`).join('\n') + '\n' : '이 종목 60일 수주·공급계약 공시 없음\n') + `증거 계층 분포(업종 리포트 30일): ${Object.entries(grp.ev_levels||{}).sort((a,b)=>b[0]-a[0]).map(([l,n])=>`L${l} ${n}건`).join(' · ') || '-'}` + (grp.dart60 ? ` · 업종 공급계약 공시 ${grp.dart60}건/${grp.dart_codes60}종목` : '') + `\n` + (peersEv.length ? '피어 리포트:\n' + peersEv.map(e => `· L${e.lv} ${e.d} ${e.name} — ${e.t}`).join('\n') : '') + `\n업종 커버 종목 중 EPS(E) 상향 ${nz(grp.eps_up_share,0,'%')} · 이 종목 목표가 상향 ${c.rep_tp_up}건`,
     transmission: `최근 분기 매출 YoY ${sg(c.rev_yoy,0,'%')} → 영업이익 YoY ${sg(c.op_yoy,0,'%')} (증분마진 ${nz(c.incr_margin,0,'%')}, 영업레버리지 ${nz(c.op_leverage,1,'x')})\n컨센서스 FY1: 매출 ${sg(c.rev_yoy_e,0,'%')} · 영업이익 ${sg(c.op_yoy_e,0,'%')} · EPS(E) ${fmtInt(c.eps_e)}원 (FY0 ${fmtInt(c.eps0)}원)\n4주 추정치 변화: EPS ${revTxt(c.eps_rev4w)} · 영업이익 ${revTxt(c.op_rev4w)} · 매출 ${revTxt(c.rev_rev4w)}\n다음 분기 컨센서스 영업이익 ${fmtInt(c.next_q_op)}억 (YoY ${sg(c.next_q_op_yoy,0,'%')})`,
     whyco: `업종 내 매출 ${c.rev_rank ?? '-'}위 / ${grp.n_rev ?? '-'} · 분류 ${c.cls || '-'} (Core=가시성·규모, Beta=레버리지·변동성)\n변동성60일 ${nz(c.vol60,0,'%')} · ROE(E) ${nz(c.roe_e,1,'%')} · 부채비율 ${nz(c.debt,0,'%')}\n그룹 자동점수 상위: ${top || '-'}`,
     expect: `PER(E) ${nz(c.per_e,1,'x')} vs 업종 중앙값 ${nz(grp.per_e_med,1,'x')} · PEG(E) ${nz(c.peg_e,2)} · PBR ${nz(c.pbr,2,'x')} · 트레일링 PER ${nz(c.per,1,'x')}\n컨센서스가 가정하는 FY1 영업이익 ${fmtInt(c.op_e)}억 (${sg(c.op_yoy_e,0,'%')})`,
@@ -446,6 +460,8 @@ function showCompany(code, scroll) {
     qh += '<tr><td class="l">영업이익률</td>' + c.q_opm.map(v => `<td>${nz(v,1,'%')}</td>`).join('') + `<td>${spark(c.q_opm)}</td></tr></tbody>`;
     $('#cQ').innerHTML = qh;
   } else $('#cQ').innerHTML = '<tbody><tr><td class="l meta">분기 자료 없음 (심화 대상 아님 또는 우선주)</td></tr></tbody>';
+  const dl = c.dart || []; $('#cDartCnt').textContent = dl.length ? `${c.dart_contracts60}건${c.dart_ratio60 != null ? ` · 매출 대비 합계 ${c.dart_ratio60.toFixed(1)}%` : ''}${c.dart_max_ratio != null ? ` · 최대 ${c.dart_max_ratio.toFixed(1)}%` : ''}` : '없음';
+  $('#cDart').innerHTML = dl.map(dartHtml).join('') || '<div class="meta">최근 60일 수주·공급계약 공시 없음</div>';
   const reps = c.reports || []; $('#cRepCnt').textContent = `${c.rep_n60}건/60일 · 목표가 상향 ${c.rep_tp_up}건`;
   $('#cRep').innerHTML = reps.map(evHtml).join('') || '<div class="meta">최근 60일 리포트 없음</div>';
   const nw = c.news || []; $('#cNewsH').style.display = nw.length ? '' : 'none';
