@@ -68,3 +68,9 @@ price-alert/holdings.json
 crypto-monitor/crypto.html
 crypto-monitor/*.csv
 crypto-monitor/crypto_run.log
+
+# thesis-lab: API cache / local outputs
+thesis-lab/cache/
+thesis-lab/output/
+thesis-lab/build_log.txt
+thesis-lab/__pycache__/

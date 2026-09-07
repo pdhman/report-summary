@@ -51,6 +51,13 @@ try {
     Write-Log 'rs_build start'
     & $py -X utf8 -u 'rs_build.py' 2>&1 | Add-Content -Path $log -Encoding UTF8
     if ($LASTEXITCODE -ne 0) { Write-Log "ERROR: rs_build exit $LASTEXITCODE"; exit 1 }
+
+    # thesis-lab: RS 그룹 → 재료·증거 → 실적 전달 → 스코어링 (docs	hesis_data.js).
+    # 실패해도 RS 배포는 계속한다(네이버 API 장애 등).
+    Write-Log 'thesis build start'
+    Set-Location (Join-Path $proj 'thesis-lab')
+    & $py -X utf8 -u 'build_thesis.py' 2>&1 | Add-Content -Path $log -Encoding UTF8
+    if ($LASTEXITCODE -ne 0) { Write-Log "WARN: thesis build exit $LASTEXITCODE (RS 배포는 계속)" }
     Set-Location $proj
 
     # wait while other scheduled git automations are running (max 6 min)
@@ -65,7 +72,7 @@ try {
         Start-Sleep -Seconds 10
     }
 
-    git add docs/rs_data.js docs/rs.html 2>&1 | Add-Content -Path $log -Encoding UTF8
+    git add docs/rs_data.js docs/rs.html docs/thesis_data.js docs/thesis.html 2>&1 | Add-Content -Path $log -Encoding UTF8
     git diff --staged --quiet
     if ($LASTEXITCODE -ne 0) {
         git commit -m ("rs: {0:yyyy-MM-dd} RS screener data update" -f (Get-Date)) 2>&1 | Add-Content -Path $log -Encoding UTF8
