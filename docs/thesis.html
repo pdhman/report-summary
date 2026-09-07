@@ -184,7 +184,7 @@
       </div>
     </div>
     <h3>③ 누가 가장 많이 버는가 — 그룹 내 기업 비교 <span class="cnt" id="gMemCnt"></span></h3>
-    <div class="meta">자동점수 = 15항목×2점(30점). Core = 규모·가시성 우위, Beta = 변동성·영업레버리지 우위(업종 피어 대비). 열 머리글로 정렬, 행을 누르면 종목 논리 템플릿으로.</div>
+    <div class="meta">자동점수 = 15항목×2점(30점), 아래 작은 숫자는 전회 실행 대비 변화(업종 기준). 점수 추이는 실행일별 기록(0~30 고정 축). Core = 규모·가시성 우위, Beta = 변동성·영업레버리지 우위(업종 피어 대비). 열 머리글로 정렬, 행을 누르면 종목 논리 템플릿으로.</div>
     <div class="tblwrap"><table id="tblMem"></table></div>
   </div>
 
@@ -241,6 +241,8 @@ const fmtInt = v => (v === null || v === undefined) ? '-' : Math.round(v).toLoca
 const rsBadge = v => v === null || v === undefined ? '<span class="badge b-mid">-</span>' : `<span class="badge ${v>=80?'b-hi':v>=50?'b-mid':'b-lo'}">${v.toFixed(0)}</span>`;
 const scBadge = v => `<span class="badge ${v>=21?'b-hi':v>=17?'b-mid':'b-lo'}">${v}</span>`;
 const tagCls = c => c === 'Core' ? 't-core' : c === 'Beta' ? 't-beta' : 't-mixed';
+const chgTxt = v => (v === null || v === undefined) ? '' : v === 0 ? '±0' : (v > 0 ? '+' : '') + v;
+const chgHtml = (v, unit='') => (v === null || v === undefined) ? '<span class="sub">첫 기록</span>' : `<span class="sub ${cls(v)}">${chgTxt(v)}${unit} 전회</span>`;
 const gradeOf = t => t >= 25 ? '매우 강한 투자 후보' : t >= 21 ? '적극적인 관심' : t >= 17 ? 'Watchlist' : t >= 13 ? '논리가 아직 부족' : '투자 보류';
 let kind = '업종', curG = null, curC = null, lvFilter = 0;
 const sortState = {};
@@ -297,6 +299,7 @@ function renderGroups() {
     {h:'EPS↑ 비중', v:r=>r.eps_up_share, f:r=>nz(r.eps_up_share,0,'%')},
     {h:'OPM↑ 비중', v:r=>r.margin_up_share, f:r=>nz(r.margin_up_share,0,'%')},
     {h:'PER(E) 중앙', v:r=>r.per_e_med, f:r=>nz(r.per_e_med,1,'x')},
+    {h:'평균점수', v:r=>r.score_avg, f:r=>r.score_avg == null ? '-' : `${r.score_avg}${r.score_avg_chg == null ? '<span class="sub">-</span>' : `<span class="sub ${cls(r.score_avg_chg)}">${chgTxt(r.score_avg_chg)} · ↑${r.n_up} ↓${r.n_down}</span>`}`},
     {h:'리포트30일', v:r=>r.rep30 ?? null, f:r=>r.deep ? `${r.rep30}건<span class="sub">${r.rep_codes30}종목</span>` : '-'},
     {h:'뉴스7일', v:r=>r.news7 ?? null, f:r=>r.deep ? r.news7 : '-'},
     {h:'재료 키워드', l:true, v:r=>(r.keywords||[]).map(k=>k[0]).join(' '), f:r=>(r.keywords||[]).slice(0,6).map(k=>`<span class="kw">${esc(k[0])}<b>${k[1]}</b></span>`).join('')},
@@ -316,6 +319,7 @@ function showGroup(id) {
     ['확산 (RS≥70)', nz(g.breadth70,0,'%'), `RS≥90 ${nz(g.p90,0,'%')}`], ['OP YoY(E) 중앙값', sg(g.op_yoy_e_med,0,'%'), `커버 ${g.n_cov}종목`],
     ['EPS(E) 4주 상향 비중', nz(g.eps_up_share,0,'%'), ''], ['OPM 확대 종목 비중', nz(g.margin_up_share,0,'%'), '최근분기 vs 전년동기'],
     ['PER(E) 중앙값', nz(g.per_e_med,1,'x'), ''], ['리포트 30일', g.deep ? `${g.rep30}건` : '-', g.deep ? `${g.rep_codes30}종목` : ''],
+    ['멤버 평균 점수', g.score_avg ?? '-', g.score_avg_chg == null ? '전회 기록 없음' : `${chgTxt(g.score_avg_chg)} 전회 · 상승 ${g.n_up} / 하락 ${g.n_down}`],
   ].map(([k,v,s]) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}${s?` <small>${s}</small>`:''}</div></div>`).join('');
   $('#gChain').innerHTML = (g.chain || ['심화 분석 대상 그룹이 아닙니다. build_thesis.py --top 값을 늘리면 포함됩니다.']).map(s => `<li>${esc(s)}</li>`).join('');
   // evidence
@@ -334,7 +338,8 @@ function showGroup(id) {
   $('#gMemCnt').textContent = `${mem.length}종목 (시총 상위 40 이내)`;
   const cols = [
     {h:'종목', l:true, v:r=>r.name, f:r=>`<b>${esc(r.name)}</b> <span class="code">${r.code}</span><span class="sub">${esc(r.ind||'')} · 매출 ${r.rev_rank??'-'}위</span>`},
-    {h:'점수', v:r=>r.gtotal, f:r=>scBadge(r.gtotal)},
+    {h:'점수', v:r=>r.gtotal, f:r=>`${scBadge(r.gtotal)}${chgHtml(r.score_chg)}`},
+    {h:'점수 추이', v:r=>(r.hist||[]).length, f:r=>spark((r.hist||[]).map(h=>h[1]), 0, 30)},
     {h:'구분', v:r=>r.cls||'', f:r=>r.cls ? `<span class="tag ${tagCls(r.cls)}">${r.cls}</span>` : '-'},
     {h:'시총(억)', v:r=>r.mcap, f:r=>fmtInt(r.mcap)},
     {h:'RS', v:r=>r.rs, f:r=>rsBadge(r.rs)},
@@ -410,7 +415,7 @@ function showCompany(code, scroll) {
   const man = LS(code); const manTotal = D.manual_items.reduce((s,m) => s + (+man[m.k] || 0), 0);
   const sc = c.score;
   $('#cScore').innerHTML = `${sc.total}<small> /30 자동</small>${manTotal ? ` <small>+${manTotal} 수동</small>` : ''}`;
-  $('#cGrade').textContent = `${sc.grade}${sc.na ? ` · 자료없음 ${sc.na}항목` : ''}`;
+  $('#cGrade').innerHTML = `${sc.grade}${sc.na ? ` · 자료없음 ${sc.na}항목` : ''}<br>${c.score_chg == null ? '점수 히스토리 첫 기록' : `전회(${fmtD(c.prev_ymd)}) ${c.score_prev} → <b class="${cls(c.score_chg)}">${chgTxt(c.score_chg)}</b>`}${c.hist_max != null && c.hist_max > sc.total ? ` · 최고 ${c.hist_max}` : ''}`;
   $('#cKpis').innerHTML = [
     ['종합 RS', rsBadge(c.rs), `1M ${nz(c.r1,0)} · 3M ${nz(c.r3,0)} · 12M ${nz(c.r12,0)}`],
     ['52주 고점 대비', `<span class="${cls(c.off_high)}">${sg(c.off_high,1,'%')}</span>`, `MA200 ${sg(c.ma200,1,'%')}`],
@@ -420,11 +425,14 @@ function showCompany(code, scroll) {
     ['PER(E) / PEG', `${nz(c.per_e,1,'x')} / ${nz(c.peg_e,2)}`, `업종 PER(E) 중앙 ${nz(g.per_e_med,1,'x')}`],
     ['외인+기관 순매수', c.fi_days ? `${c.fi_netbuy_days}/${c.fi_days}일` : '-', `거래량 5/20일 ${nz(c.vol_ratio,2,'x')} · 외인 ${nz(c.foreign_ratio,1,'%')} (${sg(c.foreign_ratio_chg,2,'pp')})`],
     ['다음 실적', c.next_earn_days != null ? `D-${c.next_earn_days}` : '-', c.next_earn_label || ''],
+    ['점수 추이', `${spark((c.hist||[]).map(h=>h[1]), 0, 30, 90, 22)} <span style="font-size:12px">${(c.hist||[]).length}회</span>`, (c.hist||[]).slice(-6).map(h=>`${fmtD(h[0])} ${h[1]}`).join(' · ')],
   ].map(([k,v,s]) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}${s?` <small>${s}</small>`:''}</div></div>`).join('');
   // checklist
   let h = '<thead><tr><th>구분</th><th>항목</th><th>근거</th><th style="text-align:center">점수</th></tr></thead><tbody>';
+  const ichg = {}; (c.item_chg || []).forEach(([i, d]) => ichg[i] = d);
   D.items.forEach((it, i) => { const r = sc.items[i]; const p = r[0]; const pc = p === null ? 'pna' : 'p' + p;
-    h += `<tr><td class="cat">${it.cat}</td><td><b>${esc(it.q)}</b><div class="why">${esc(it.how)}</div></td><td class="why">${esc(r[1])}</td><td class="p ${pc}">${p === null ? '-' : p}</td></tr>`; });
+    const d = ichg[i]; const dh = d == null ? '' : `<div class="sub ${cls(d)}" style="font-size:10.5px">${chgTxt(d)}</div>`;
+    h += `<tr><td class="cat">${it.cat}</td><td><b>${esc(it.q)}</b><div class="why">${esc(it.how)}</div></td><td class="why">${esc(r[1])}</td><td class="p ${pc}">${p === null ? '-' : p}${dh}</td></tr>`; });
   D.manual_items.forEach(m => { const v = man[m.k] ?? '';
     h += `<tr><td class="cat">${m.cat}</td><td><b>${esc(m.q)}</b><div class="why">수동 판단</div></td><td class="why">직접 판단 (0 나쁨 · 1 보통 · 2 좋음)</td><td class="p"><select data-k="${m.k}" class="manSel"><option value="">-</option><option value="0" ${v==='0'||v===0?'selected':''}>0</option><option value="1" ${v==='1'||v===1?'selected':''}>1</option><option value="2" ${v==='2'||v===2?'selected':''}>2</option></select></td></tr>`; });
   h += `<tr><td></td><td><b>합계</b></td><td class="why">자동 ${sc.total}/30 (${sc.grade}) · 수동 ${manTotal}/8</td><td class="p">${sc.total + manTotal}</td></tr></tbody>`;
@@ -448,16 +456,18 @@ function showCompany(code, scroll) {
   $('#cTpl').querySelectorAll('textarea').forEach(t => t.oninput = () => { const m = LS(code); m['t_' + t.dataset.k] = t.value; LSset(code, m); });
   if (scroll) $('#secCo').scrollIntoView({behavior:'smooth', block:'start'});
 }
-function spark(vals) {
-  const v = vals.filter(x => x !== null && x !== undefined); if (v.length < 2) return '';
-  const mn = Math.min(...v), mx = Math.max(...v), w = 70, hgt = 20, rng = (mx - mn) || 1;
-  const pts = v.map((x,i) => `${(i/(v.length-1)*w).toFixed(1)},${(hgt - (x-mn)/rng*hgt).toFixed(1)}`).join(' ');
-  return `<svg class="spark" width="${w}" height="${hgt}" viewBox="0 0 ${w} ${hgt}"><polyline fill="none" stroke="var(--accent)" stroke-width="1.6" points="${pts}"/></svg>`;
+function spark(vals, fixMin, fixMax, w = 70, hgt = 20) {
+  const v = vals.filter(x => x !== null && x !== undefined);
+  if (v.length < 2) return v.length === 1 && fixMin != null ? `<span class="sub">${v[0]} (1회)</span>` : '';
+  const mn = fixMin != null ? fixMin : Math.min(...v), mx = fixMax != null ? fixMax : Math.max(...v), rng = (mx - mn) || 1;
+  const pts = v.map((x,i) => `${(i/(v.length-1)*(w-4)+2).toFixed(1)},${(hgt - 2 - (x-mn)/rng*(hgt-4)).toFixed(1)}`).join(' ');
+  const last = v[v.length-1], lx = (w-2).toFixed(1), ly = (hgt - 2 - (last-mn)/rng*(hgt-4)).toFixed(1);
+  return `<svg class="spark" width="${w}" height="${hgt}" viewBox="0 0 ${w} ${hgt}"><polyline fill="none" stroke="var(--accent)" stroke-width="1.6" points="${pts}"/><circle cx="${lx}" cy="${ly}" r="2" fill="var(--accent)"/></svg>`;
 }
 function resetManual() { if (!curC) return; try { localStorage.removeItem('thesis:' + curC); } catch(e) {} showCompany(curC, false); }
 function copyMd() {
   const c = C[curC]; if (!c) return; const g = G.find(x => x.kind === '업종' && x.name === c.ind) || {}; const at = autoText(c, g); const man = LS(curC);
-  let md = `# ${c.name} (${c.code}) 투자 논리 — 기준 ${D.asof}\n\n업종 ${c.ind||'-'} · ${c.cls||'-'} · 자동점수 **${c.score.total}/30** (${c.score.grade})\n\n`;
+  let md = `# ${c.name} (${c.code}) 투자 논리 — 기준 ${D.asof}\n\n업종 ${c.ind||'-'} · ${c.cls||'-'} · 자동점수 **${c.score.total}/30** (${c.score.grade})${c.score_chg == null ? '' : ` · 전회 ${c.score_prev} (${chgTxt(c.score_chg)})`}\n점수 추이: ${(c.hist||[]).map(h=>`${fmtD(h[0])} ${h[1]}`).join(' → ')}\n\n`;
   TPL.forEach(([k, q]) => { md += `## ${q}\n${at[k]}\n${man['t_' + k] ? '\n> ' + man['t_' + k].replace(/\n/g, '\n> ') + '\n' : ''}\n`; });
   md += `## 체크리스트\n| 구분 | 항목 | 근거 | 점수 |\n|---|---|---|---|\n`;
   D.items.forEach((it, i) => { const r = c.score.items[i]; md += `| ${it.cat} | ${it.q} | ${r[1]} | ${r[0] === null ? '-' : r[0]} |\n`; });

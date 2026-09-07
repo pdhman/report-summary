@@ -15,7 +15,7 @@ thesis-lab 빌더 — "현상 → 원인 → 산업 확인 → 병목 → 증거
 
 출력
   ../docs/thesis_data.js        (window.THESIS_DATA = {...})
-  output/스코어_YYYYMMDD.csv     종목별 자동 점수(히스토리 누적)
+  output/스코어_YYYYMMDD.csv     종목별 자동 점수 — 실행일 기준 누적(점수 히스토리 원천)
   output/스코어_latest.csv
 
 실행:  python build_thesis.py              # 전체
@@ -198,6 +198,40 @@ def group_stats(sub: pd.DataFrame, prior_rs: pd.Series | None) -> dict | None:
     return out
 
 
+# ------------------------------------------------------------------ 점수 히스토리
+HIST_KEEP = 12         # 종목별 보관 스냅샷 수
+
+
+def load_score_history(exclude_ymd: str) -> dict[str, list]:
+    """output/스코어_YYYYMMDD.csv (실행일 기준) → 코드별 [(ymd, 총점, [항목점수 15]) ...] 오름차순.
+
+    오늘자 파일은 지금 다시 쓰므로 제외한다. 항목 열이 없는 옛 파일은 항목을 None 으로 둔다.
+    """
+    import glob as _glob
+    hist: dict[str, list] = {}
+    for p in sorted(_glob.glob(os.path.join(OUT_DIR, "스코어_2*.csv"))):
+        m = __import__("re").fullmatch(r"스코어_(\d{8})\.csv", os.path.basename(p))
+        if not m or m.group(1) == exclude_ymd:
+            continue
+        ymd = m.group(1)
+        try:
+            d = pd.read_csv(p, dtype={"코드": str}, encoding="utf-8-sig")
+        except Exception:
+            continue
+        item_cols = [f"항목{i + 1}" for i in range(len(ITEMS))]
+        has_items = all(c in d.columns for c in item_cols)
+        for _, r in d.iterrows():
+            tot = pd.to_numeric(r.get("자동점수"), errors="coerce")
+            if pd.isna(tot):
+                continue
+            items = None
+            if has_items:
+                items = [None if pd.isna(r[c]) else int(r[c]) for c in item_cols]
+            hist.setdefault(str(r["코드"]).zfill(6), []).append((ymd, int(tot), items))
+    S.log(f"점수 히스토리: {len(hist)}종목 · 스냅샷 {len({h[0] for v in hist.values() for h in v})}개")
+    return hist
+
+
 # ------------------------------------------------------------------ 메인
 def build(top: int = 15, offline: bool = False) -> str:
     today = dt.date.today()
@@ -374,6 +408,25 @@ def build(top: int = 15, offline: bool = False) -> str:
         c["score"] = score_company(c, g or {})
         companies[code] = c
 
+    # 점수 히스토리 (실행일 기준 누적 CSV) → 전회 대비 변화·항목별 변화
+    today_ymd = today.strftime("%Y%m%d")
+    hist = load_score_history(exclude_ymd=today_ymd)
+    for code, c in companies.items():
+        h = hist.get(code, [])
+        tot = c["score"]["total"]
+        c["hist"] = [[ymd, t] for ymd, t, _ in h][-(HIST_KEEP - 1):] + [[today_ymd, tot]]
+        if h:
+            p_ymd, p_tot, p_items = h[-1]
+            c["prev_ymd"], c["score_prev"], c["score_chg"] = p_ymd, p_tot, tot - p_tot
+            if p_items:
+                c["item_chg"] = [[i, (it[0] or 0) - (p_items[i] or 0)]
+                                 for i, it in enumerate(c["score"]["items"])
+                                 if (it[0] or 0) != (p_items[i] or 0)]
+            # 첫 등장일(히스토리 시작)과 최고점
+            c["hist_max"] = max(t for _, t, _ in h + [(today_ymd, tot, None)])
+        else:
+            c["prev_ymd"], c["score_prev"], c["score_chg"] = None, None, None
+
     # Core/Beta (업종 피어 대비)
     for name, sub in ind_groups.items():
         peers = [companies[k] for k in sub["코드"] if k in companies]
@@ -397,6 +450,13 @@ def build(top: int = 15, offline: bool = False) -> str:
             members.append({"code": code, "total": total})
         members.sort(key=lambda m: -m["total"])
         g["members"] = members
+        if members:
+            g["score_avg"] = round(sum(m["total"] for m in members) / len(members), 1)
+            chg = [companies[m["code"]]["score_chg"] for m in members
+                   if companies[m["code"]].get("score_chg") is not None]
+            g["score_avg_chg"] = round(sum(chg) / len(chg), 1) if len(chg) >= max(2, len(members) * 0.5) else None
+            g["n_up"] = sum(1 for x in chg if x > 0)
+            g["n_down"] = sum(1 for x in chg if x < 0)
         if not g.get("deep"):
             return
         codes = set(sub["코드"])
@@ -479,7 +539,8 @@ def build(top: int = 15, offline: bool = False) -> str:
         if not c["deep"]:
             continue
         rows.append({"코드": c["code"], "회사명": c["name"], "업종": c["ind"], "시가총액(억)": c["mcap"],
-                     "RS": c["rs"], "자동점수": c["score"]["total"], "자료없음항목": c["score"]["na"],
+                     "RS": c["rs"], "자동점수": c["score"]["total"], "전회점수": c.get("score_prev"),
+                     "점수변화": c.get("score_chg"), "자료없음항목": c["score"]["na"],
                      "판정": c["score"]["grade"], "Core/Beta": c.get("cls"),
                      "EPS추정변화4주(%)": c["eps_rev4w"], "OPM_YoY(pp)": c.get("opm_yoy_pp"),
                      "증분마진(%)": c.get("incr_margin"), "PER(E)": c["per_e"], "PEG(E)": c["peg_e"],
@@ -487,12 +548,16 @@ def build(top: int = 15, offline: bool = False) -> str:
                      "외인기관순매수일": c.get("fi_netbuy_days"), "리포트30일": c["rep_n30"],
                      **{f"항목{i + 1}": it[0] for i, it in enumerate(c["score"]["items"])}})
     sc = pd.DataFrame(rows).sort_values("자동점수", ascending=False)
-    for p in (os.path.join(OUT_DIR, f"스코어_{cur_ymd}.csv"), os.path.join(OUT_DIR, "스코어_latest.csv")):
+    # 실행일 기준으로 저장해 평일 수동 실행도 히스토리로 쌓인다 (같은 날 재실행은 덮어씀)
+    for p in (os.path.join(OUT_DIR, f"스코어_{today_ymd}.csv"), os.path.join(OUT_DIR, "스코어_latest.csv")):
         sc.to_csv(p, index=False, encoding="utf-8-sig")
 
     S.log(f"완료: 그룹 {len(groups)} (심화 {sum(1 for g in groups if g.get('deep'))}) · 종목 {len(companies)} "
           f"(심화 {len(deep)}) → {OUT_JS} ({os.path.getsize(OUT_JS) / 1024:.0f}KB)")
-    S.log("자동점수 상위 10:\n" + sc.head(10)[["회사명", "업종", "자동점수", "판정", "Core/Beta"]].to_string(index=False))
+    S.log("자동점수 상위 10:\n" + sc.head(10)[["회사명", "업종", "자동점수", "점수변화", "판정", "Core/Beta"]].to_string(index=False))
+    up = sc[sc["점수변화"].notna()].sort_values("점수변화", ascending=False)
+    if len(up):
+        S.log("점수 상승 상위 5:\n" + up.head(5)[["회사명", "업종", "전회점수", "자동점수", "점수변화"]].to_string(index=False))
     return OUT_JS
 
 

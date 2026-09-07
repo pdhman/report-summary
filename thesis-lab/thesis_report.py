@@ -83,7 +83,13 @@ def company_md(D, c) -> str:
     L = []
     L.append(f"# {c['name']} ({c['code']}) 투자 논리 — 기준 {D['asof']}\n")
     L.append(f"업종 {c.get('ind') or '-'} · {c.get('cls') or '-'} · 자동점수 **{sc['total']}/30** ({sc['grade']})"
-             + (f" · 자료없음 {sc['na']}항목" if sc.get("na") else "") + "\n")
+             + (f" · 자료없음 {sc['na']}항목" if sc.get("na") else "")
+             + (f" · 전회({c['prev_ymd'][4:6]}/{c['prev_ymd'][6:]}) {c['score_prev']} → {c['score_chg']:+d}" if c.get("score_chg") is not None else " · 점수 히스토리 첫 기록"))
+    if c.get("hist"):
+        L.append("점수 추이: " + " → ".join(f"{h[0][4:6]}/{h[0][6:]} {h[1]}" for h in c["hist"]))
+    if c.get("item_chg"):
+        L.append("변화 항목: " + " · ".join(f"{D['items'][i]['q']} {d:+d}" for i, d in c["item_chg"]))
+    L.append("")
     L.append("## 1. What is happening?")
     L.append(f"종목 RS {nz(c['rs'],0)} (1M {nz(c['r1'],0)} / 3M {nz(c['r3'],0)}), 1개월 {sg(c['ret1m'],1,'%')} · 3개월 {sg(c['ret3m'],1,'%')}.  ")
     L.append(f"업종 RS {nz(g.get('rs'),0)} · 4주 {sg(g.get('rs_chg4w'))} · RS≥70 비중 {nz(g.get('breadth70'),0,'%')} → "
@@ -178,9 +184,10 @@ def group_md(D, name) -> str:
 def top_md(D, n) -> str:
     rows = sorted((c for c in D["companies"].values() if c.get("deep")), key=lambda c: -c["score"]["total"])[:n]
     L = [f"# 자동점수 상위 {n} — 기준 {D['asof']}\n",
-         "| # | 종목 | 업종 | 점수 | 판정 | 구분 | RS | EPS(E) 4주 | OPM YoY | PER(E) |\n|---|---|---|---|---|---|---|---|---|---|"]
+         "| # | 종목 | 업종 | 점수 | Δ전회 | 판정 | 구분 | RS | EPS(E) 4주 | OPM YoY | PER(E) |\n|---|---|---|---|---|---|---|---|---|---|---|"]
     for i, c in enumerate(rows, 1):
-        L.append(f"| {i} | {c['name']} ({c['code']}) | {c.get('ind') or '-'} | **{c['score']['total']}** | {c['score']['grade']} | {c.get('cls') or '-'} | "
+        dv = c.get("score_chg")
+        L.append(f"| {i} | {c['name']} ({c['code']}) | {c.get('ind') or '-'} | **{c['score']['total']}** | {'-' if dv is None else f'{dv:+d}'} | {c['score']['grade']} | {c.get('cls') or '-'} | "
                  f"{nz(c['rs'],0)} | {rev(c['eps_rev4w'])} | {sg(c.get('opm_yoy_pp'),1,'pp')} | {nz(c['per_e'],1,'x')} |")
     return "\n".join(L)
 
