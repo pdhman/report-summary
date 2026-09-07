@@ -170,6 +170,10 @@
         <p class="note">HBM 주문의 카나리아 — 마이크론은 회계분기(2·5·8·11월 마감)가 빨라
           빅테크·엔비디아보다 분기 신호가 먼저 찍힘. 물량 둔화는 매출 둔화로 나타남</p>
         <div id="ch-mu"></div></div>
+      <div class="card"><h3>AI 토큰 P×Q — 제번스 모니터 (OpenRouter, 시작=100)</h3>
+        <p class="note" id="pxqNote">주간 처리량 Q × 사용량 가중 단가 P(모델별 토큰×정가) = 지출 P×Q.
+          단가↓인데 지출↑ = 제번스 국면, 지출↓ = 효율이 수요를 이기는 전환 (OpenRouter 표본·정가 기준, 자동)</p>
+        <div id="ch-pxq"></div></div>
     </div>
   </section>
 
@@ -485,6 +489,20 @@ function renderAll(){
     lineChart('ch-mu',[{name:'MU',dates:mu.quarters,values:mu.yoy}],{labels:mu.quarters,unit:'%',h:190});
   } else {
     document.getElementById('ch-mu').innerHTML='<div class="empty">수집 대기</div>';
+  }
+  const tk=DATA.demand.token_pxq||{};
+  if(tk.labels&&tk.labels.length){
+    const idx=a=>{const b=a.find(v=>v!=null);return a.map(v=>v==null?null:+(v/b*100).toFixed(1));};
+    const L=tk.labels.length-1;
+    document.getElementById('pxqNote').textContent=
+      `최근주 ${tk.labels[L]}: Q ${fmt(tk.tokens_t[L])}T 토큰 · P $${fmt(tk.price[L],3)}/1M · 지출 $${fmt(tk.spend_m[L])}M — `+
+      `주간 처리량(Q) × 사용량 가중 단가(P, 모델별 토큰×정가) = 지출 P×Q. 단가↓인데 지출↑ = 제번스 국면, 지출↓ = 효율이 수요를 이기는 전환 (OpenRouter 표본·정가 기준, 자동)`;
+    lineChart('ch-pxq',[
+      {name:'Q 처리량',dates:tk.labels,values:idx(tk.tokens_t)},
+      {name:'P 단가',dates:tk.labels,values:idx(tk.price)},
+      {name:'P×Q 지출',dates:tk.labels,values:idx(tk.spend_m)}],{labels:tk.labels,unit:''});
+  } else {
+    document.getElementById('ch-pxq').innerHTML='<div class="empty">OpenRouter 수집 대기</div>';
   }
   const cap=DATA.demand.capex_total||{};
   if(cap.labels&&cap.labels.length){

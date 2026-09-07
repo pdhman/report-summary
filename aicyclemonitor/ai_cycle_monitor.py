@@ -47,6 +47,8 @@ REVENUE_CACHE_CSV = os.path.join(BASE_DIR, "revenue_history.csv")
 CRWV_CAPEX_CSV = os.path.join(BASE_DIR, "crwv_capex_history.csv")
 HS_CAPEX_CSV = os.path.join(BASE_DIR, "hyperscaler_capex_history.csv")
 ORCL_RPO_CSV = os.path.join(BASE_DIR, "orcl_rpo_history.csv")
+TOKEN_PXQ_CSV = os.path.join(BASE_DIR, "token_pxq_history.csv")   # date,tokens,spend_usd,price_per_1m,coverage
+OR_HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 CAPEX_CIK = {"GOOGL": "0001652044", "MSFT": "0000789019", "AMZN": "0001018724",
              "META": "0001326801", "ORCL": "0001341439"}
 CAPEX_CONCEPTS = ["PaymentsToAcquirePropertyPlantAndEquipment",
@@ -91,6 +93,7 @@ TH = {
     "ccc_oas_chg_90d": 150.0,      # CCC OAS 90일 상승폭(bp) 이 값 이상 → 경계 (최약체 조달창구 경색)
     "orcl_rpo_qoq": 0.0,           # 오라클 RPO QoQ(%) 이 값 이하 → 경계 (계약 취소/전환 실패)
     "mu_slowdown_q": 2,            # 마이크론 매출 YoY 연속 둔화 분기 이상 → 경계 (HBM 주문 프록시)
+    "pxq_chg_13w": 0.0,            # AI 토큰 지출(P×Q) 13주 변화(%) 이 값 이하 → 경계 (제번스 역전)
     "neocloud_drawdown": -50.0,    # 네오클라우드 평균 52주 낙폭(%) → 경계
     "crwv_capex_yoy": 0.0,         # CRWV 분기 capex YoY(%) 이 값 이하(감소 전환) → 경계
     "orcl_drawdown": -40.0,        # 오라클 52주 낙폭(%) → 경계
@@ -248,7 +251,8 @@ def _gpu_stats_500farm():
             def med(sec):
                 for k in ("verified", "all", "unverified"):
                     rows = st.get(sec, {}).get(k) or []
-                    if rows and rows[0].get("price_median"):
+                    # 표본 5건 미만 버킷은 노이즈 — 건너뜀 (얇은 P2P 시장의 순간 스냅샷 방어)
+                    if rows and rows[0].get("price_median") and (rows[0].get("count") or 0) >= 5:
                         return round(float(rows[0]["price_median"]), 3)
                 return None
 
@@ -430,6 +434,89 @@ def fetch_orcl_rpo():
     return cache
 
 
+def _or_price_map(models):
+    """OpenRouter models → {slug: (prompt $/token, completion $/token)} — id·canonical_slug 둘 다 키"""
+    price = {}
+    for m in models:
+        p = m.get("pricing") or {}
+        try:
+            pi, po = float(p.get("prompt") or 0), float(p.get("completion") or 0)
+        except (TypeError, ValueError):
+            continue
+        if pi <= 0 and po <= 0:
+            continue
+        for key in (m.get("id"), m.get("canonical_slug")):
+            if key:
+                price[key] = (pi, po)
+    return price
+
+
+def _or_lookup(price, slug):
+    """permaslug(끝에 -YYYYMMDD 버전 접미) → 정가: 정확 일치 → 접미 제거 → 접두 일치"""
+    import re
+    if slug in price:
+        return price[slug]
+    base = re.sub(r"-\d{8}$", "", slug)
+    if base in price:
+        return price[base]
+    for k in price:
+        if k.startswith(base):
+            return price[k]
+    return None
+
+
+def _or_week_stats(rows, price):
+    """주간 랭킹 행 → (주 기준일, 총토큰, 추정지출$, 가중단가 $/1M, 가격매핑 커버리지)
+    가중단가 = Σ(토큰×정가)/Σ매핑토큰, 지출 = 가중단가 × 총토큰(미매핑분은 외삽)"""
+    tot = mapped = spend = 0.0
+    for r in rows:
+        pt = float(r.get("total_prompt_tokens") or 0)
+        ct = float(r.get("total_completion_tokens") or 0)
+        tot += pt + ct
+        pr = _or_lookup(price, r.get("model_permaslug") or "")
+        if pr:
+            mapped += pt + ct
+            spend += pt * pr[0] + ct * pr[1]
+    if tot < 1e12 or mapped / tot < 0.5:  # 부분 응답(아카이브 잘림 등)·매핑 붕괴 방어
+        raise ValueError(f"주간 데이터 불완전: {tot/1e12:.2f}T 토큰, 매핑 {mapped/max(tot,1)*100:.0f}%")
+    p1m = spend / mapped * 1e6
+    return str(rows[0].get("date", ""))[:10], tot, p1m * tot / 1e6, p1m, mapped / tot
+
+
+def read_token_pxq():
+    hist = {}
+    if os.path.exists(TOKEN_PXQ_CSV):
+        with open(TOKEN_PXQ_CSV, encoding="utf-8") as f:
+            for row in csv.reader(f):
+                if len(row) >= 5:
+                    hist[row[0]] = [float(x) for x in row[1:5]]
+    return hist
+
+
+def fetch_token_pxq():
+    """OpenRouter 주간 토큰 처리량(Q)·사용량 가중 단가(P)·지출(P×Q)을 CSV에 누적 — 제번스 모니터.
+    P 는 Silicon Data 토큰 지수와 같은 '사용량 가중' 방식(단, 정가·OpenRouter 표본 기준).
+    실패 시 기존 히스토리 사용."""
+    hist = read_token_pxq()
+    try:
+        import requests
+        models = requests.get("https://openrouter.ai/api/v1/models", timeout=30,
+                              headers=OR_HEADERS).json()["data"]
+        rows = requests.get("https://openrouter.ai/api/frontend/v1/rankings/models?view=week",
+                            timeout=30, headers=OR_HEADERS).json()["data"]
+        wk, tot, spend, p1m, cov = _or_week_stats(rows, _or_price_map(models))
+        hist[wk] = [tot, spend, p1m, cov]
+        with open(TOKEN_PXQ_CSV, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            for d, v in sorted(hist.items()):
+                w.writerow([d, round(v[0]), round(v[1], 2), round(v[2], 4), round(v[3], 3)])
+        log(f"토큰 P×Q(OpenRouter {wk}): {tot/1e12:.1f}T 토큰/주 · 단가 ${p1m:.3f}/1M · "
+            f"지출 ${spend/1e6:.1f}M/주 (가격 매핑 {cov*100:.0f}%)")
+    except Exception as e:
+        log(f"OpenRouter 토큰 수집 실패(기존 히스토리 사용): {e}")
+    return hist
+
+
 def revenue_yoy_series(cache, tickers=HYPERSCALER):
     """분기 매출 캐시 → 티커별 YoY 시계열 {ticker: {"quarters":[...], "yoy":[...]}}"""
     out = {}
@@ -564,6 +651,13 @@ def collect_live():
         if cur_v.get(key) and prev_v.get(key):
             consensus_rev = pct(cur_v[key], prev_v[key])
 
+    # ── 수요: AI 토큰 P×Q — 제번스 모니터 (OpenRouter 주간, 자동) ──
+    tok = sorted(fetch_token_pxq().items())
+    token_pxq = {"labels": [d for d, _ in tok],
+                 "tokens_t": [round(v[0] / 1e12, 2) for _, v in tok],
+                 "price": [round(v[2], 3) for _, v in tok],
+                 "spend_m": [round(v[1] / 1e6, 1) for _, v in tok]}
+
     # ── 레버리지: CoreWeave 분기 capex (GPU 담보부채로 조달하는 buildout) ──
     crwv_cx = sorted(fetch_crwv_capex().items())
     crwv_capex = {"labels": [f"{d[:4]}Q{(int(d[5:7]) - 1) // 3 + 1}" for d, _ in crwv_cx],
@@ -583,7 +677,11 @@ def collect_live():
         if pts:
             s = pd.Series([r for _, r in pts],
                           index=pd.to_datetime([d for d, _ in pts]))
-            metrics[f"{key}_rent_chg_90d"] = change_over_days(s, 90)
+            # 얇은 P2P 시장의 스냅샷 노이즈 완화: 양 끝 모두 인접 3개 관측의 중앙값으로 비교
+            cur = float(s.tail(3).median())
+            past = s[s.index <= s.index[-1] - timedelta(days=90)]
+            metrics[f"{key}_rent_chg_90d"] = (pct(cur, float(past.tail(3).median()))
+                                              if len(past) else None)
             metrics[f"{key}_last"] = pts[-1][1]
     for t in DC_REIT + PRIVATE_CREDIT:
         metrics[f"{t}_chg_180d"] = change_over_days(px[t], 180)
@@ -605,6 +703,20 @@ def collect_live():
     metrics["nvda_dc_last_bil"] = nvda_dc["values"][-1] if nvda_dc["values"] else None
     metrics["capex_runrate_bil"] = runrate
     metrics["capex_consensus_rev"] = consensus_rev
+    if tok:
+        def _tok_chg(idx, weeks):  # 최근 주 vs weeks주 전(이하 가장 가까운 주)
+            last_d = date.fromisoformat(tok[-1][0])
+            cutoff = last_d - timedelta(days=7 * weeks)
+            past = [v[idx] for d, v in tok if date.fromisoformat(d) <= cutoff]
+            if not past and (last_d - date.fromisoformat(tok[0][0])).days >= 56:
+                past = [tok[0][1][idx]]  # 히스토리 13주 미만·8주 이상이면 최초 시점 대비
+            return pct(tok[-1][1][idx], past[-1]) if past else None
+        metrics["pxq_chg_13w"] = _tok_chg(1, 13)
+        metrics["q_chg_13w"] = _tok_chg(0, 13)
+        metrics["p_chg_13w"] = _tok_chg(2, 13)
+        metrics["token_q_last_t"] = round(tok[-1][1][0] / 1e12, 1)
+        metrics["token_p_last"] = round(tok[-1][1][2], 3)
+        metrics["token_spend_last_m"] = round(tok[-1][1][1] / 1e6, 1)
     # 같은 SEC 기준끼리 비교: 런레이트 vs 직전 4분기 합 — 가속이 멈추면(≤0%) 경계.
     # (컨센서스와의 직접 비교는 집계 정의 차이·램프업 편향으로 가짜 신호가 남)
     ttm4 = [sorted(en for (tk, en) in hs_cx if tk == t)[-4:] for t in CAPEX_CIK]
@@ -645,6 +757,7 @@ def collect_live():
             "nvda_dc": nvda_dc,
             "capex_total": capex_total,
             "mu_yoy": mu_yoy,
+            "token_pxq": token_pxq,
         },
         "leverage": {
             "spreads": spreads,
@@ -771,6 +884,14 @@ def collect_sample():
                             "vintage": "2026-08-31", "prev_vintage": "2026-07-31"},
             "mu_yoy": {"quarters": ["2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2"],
                        "yoy": [38.3, 36.6, 30.3, 46.1, 44.0, 40.2]},
+            "token_pxq": {"labels": [f"2026-{mo:02d}-{dd:02d}" for mo, dd in
+                                     [(6, 7), (6, 14), (6, 21), (6, 28), (7, 5), (7, 12), (7, 19),
+                                      (7, 26), (8, 2), (8, 9), (8, 16), (8, 23), (8, 30), (9, 6)]],
+                          "tokens_t": [52, 55, 58, 61, 65, 70, 74, 79, 85, 90, 96, 103, 109, 115],
+                          "price": [0.95, 0.93, 0.90, 0.88, 0.84, 0.80, 0.77, 0.73, 0.70, 0.66,
+                                    0.63, 0.60, 0.58, 0.56],
+                          "spend_m": [49.4, 51.2, 52.2, 53.7, 54.6, 56.0, 57.0, 57.7, 59.5, 59.4,
+                                      60.5, 61.8, 63.2, 64.4]},
         },
         "leverage": {
             "spreads": {"AA_OAS": pack(aa), "BBB_OAS": pack(bbb),
@@ -817,6 +938,8 @@ def collect_sample():
             "orcl_rpo_last_bil": 638,
             "mu_slowdown_q": 2,
             "mu_yoy_last": 40.2,
+            "pxq_chg_13w": 30.4, "q_chg_13w": 121.2, "p_chg_13w": -41.1,
+            "token_q_last_t": 115.0, "token_p_last": 0.56, "token_spend_last_m": 64.4,
         },
     }
     return data
@@ -900,6 +1023,9 @@ def judge(data):
     v = m.get("mu_slowdown_q")
     add("수요", "메모리(MU) 매출 YoY 연속 둔화 — HBM 주문 프록시", v, "개",
         f"{TH['mu_slowdown_q']}분기 이상", v is not None and v >= TH["mu_slowdown_q"])
+    v = m.get("pxq_chg_13w")
+    add("수요", "AI 토큰 지출 P×Q 13주 변화 (OpenRouter, 제번스 모니터)", v, "%",
+        f"{TH['pxq_chg_13w']:.0f}% 이하 (Q 증가 < P 하락)", v is not None and v <= TH["pxq_chg_13w"])
 
     v = m.get("bbb_last")
     add("레버리지", "BBB 회사채 OAS 수준 (오라클·브로드컴급)", v, "bp",
@@ -1121,6 +1247,10 @@ TEMPLATE = r"""<!DOCTYPE html>
         <p class="note">HBM 주문의 카나리아 — 마이크론은 회계분기(2·5·8·11월 마감)가 빨라
           빅테크·엔비디아보다 분기 신호가 먼저 찍힘. 물량 둔화는 매출 둔화로 나타남</p>
         <div id="ch-mu"></div></div>
+      <div class="card"><h3>AI 토큰 P×Q — 제번스 모니터 (OpenRouter, 시작=100)</h3>
+        <p class="note" id="pxqNote">주간 처리량 Q × 사용량 가중 단가 P(모델별 토큰×정가) = 지출 P×Q.
+          단가↓인데 지출↑ = 제번스 국면, 지출↓ = 효율이 수요를 이기는 전환 (OpenRouter 표본·정가 기준, 자동)</p>
+        <div id="ch-pxq"></div></div>
     </div>
   </section>
 
@@ -1436,6 +1566,20 @@ function renderAll(){
     lineChart('ch-mu',[{name:'MU',dates:mu.quarters,values:mu.yoy}],{labels:mu.quarters,unit:'%',h:190});
   } else {
     document.getElementById('ch-mu').innerHTML='<div class="empty">수집 대기</div>';
+  }
+  const tk=DATA.demand.token_pxq||{};
+  if(tk.labels&&tk.labels.length){
+    const idx=a=>{const b=a.find(v=>v!=null);return a.map(v=>v==null?null:+(v/b*100).toFixed(1));};
+    const L=tk.labels.length-1;
+    document.getElementById('pxqNote').textContent=
+      `최근주 ${tk.labels[L]}: Q ${fmt(tk.tokens_t[L])}T 토큰 · P $${fmt(tk.price[L],3)}/1M · 지출 $${fmt(tk.spend_m[L])}M — `+
+      `주간 처리량(Q) × 사용량 가중 단가(P, 모델별 토큰×정가) = 지출 P×Q. 단가↓인데 지출↑ = 제번스 국면, 지출↓ = 효율이 수요를 이기는 전환 (OpenRouter 표본·정가 기준, 자동)`;
+    lineChart('ch-pxq',[
+      {name:'Q 처리량',dates:tk.labels,values:idx(tk.tokens_t)},
+      {name:'P 단가',dates:tk.labels,values:idx(tk.price)},
+      {name:'P×Q 지출',dates:tk.labels,values:idx(tk.spend_m)}],{labels:tk.labels,unit:''});
+  } else {
+    document.getElementById('ch-pxq').innerHTML='<div class="empty">OpenRouter 수집 대기</div>';
   }
   const cap=DATA.demand.capex_total||{};
   if(cap.labels&&cap.labels.length){
