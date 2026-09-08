@@ -174,6 +174,10 @@
         <p class="note" id="pxqNote">주간 처리량 Q × 사용량 가중 단가 P(모델별 토큰×정가) = 지출 P×Q.
           단가↓인데 지출↑ = 제번스 국면, 지출↓ = 효율이 수요를 이기는 전환 (OpenRouter 표본·정가 기준, 자동)</p>
         <div id="ch-pxq"></div></div>
+      <div class="card"><h3>Compute/Task 프록시 (OpenRouter·500.farm, 시작=100)</h3>
+        <p class="note" id="ctNote">작업당 계산량의 대리 지표 — 요청당 토큰(작업 무게)·요청 수(작업 수)·프론티어 단가(랩이 매긴
+          compute 원가)·중국계 점유율. 토큰에 안 잡히는 계산은 GPU 가동률(하드웨어 측)로만 확인 — 짝으로 읽을 것</p>
+        <div id="ch-ct"></div></div>
     </div>
   </section>
 
@@ -503,6 +507,23 @@ function renderAll(){
       {name:'P×Q 지출',dates:tk.labels,values:idx(tk.spend_m)}],{labels:tk.labels,unit:''});
   } else {
     document.getElementById('ch-pxq').innerHTML='<div class="empty">OpenRouter 수집 대기</div>';
+  }
+  const ct=DATA.demand.compute_task||{};
+  if(ct.labels&&ct.labels.length){
+    const idx=a=>{const b=a.find(v=>v!=null);return b?a.map(v=>v==null?null:+(v/b*100).toFixed(1)):a;};
+    const L=ct.labels.length-1, mm=DATA.metrics||{};
+    document.getElementById('ctNote').textContent=
+      `최근주 ${ct.labels[L]}: 요청당 ${fmt(ct.tok_per_req[L],0)}토큰 · 요청 ${fmt(ct.requests_b[L])}B/주 · `+
+      `프론티어 $${fmt(ct.frontier_price[L],2)}/1M(전체 대비 ${fmt(ct.tier_gap[L])}배) · 중국계 점유율 ${fmt(ct.cn_share[L])}% · `+
+      `GPU 가동률 ${mm.gpu_util_pct!=null?fmt(mm.gpu_util_pct)+'%':'—'} — 작업당 계산량의 대리 지표. `+
+      `토큰에 안 잡히는 계산은 GPU 가동률(하드웨어 측)로만 확인되므로 짝으로 읽을 것`;
+    lineChart('ch-ct',[
+      {name:'요청당 토큰',dates:ct.labels,values:idx(ct.tok_per_req)},
+      {name:'요청 수',dates:ct.labels,values:idx(ct.requests_b)},
+      {name:'프론티어 단가',dates:ct.labels,values:idx(ct.frontier_price)},
+      {name:'중국계 점유율(%)',dates:ct.labels,values:ct.cn_share}],{labels:ct.labels,unit:''});
+  } else {
+    document.getElementById('ch-ct').innerHTML='<div class="empty">OpenRouter 수집 대기</div>';
   }
   const cap=DATA.demand.capex_total||{};
   if(cap.labels&&cap.labels.length){

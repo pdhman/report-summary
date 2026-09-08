@@ -49,6 +49,9 @@ HS_CAPEX_CSV = os.path.join(BASE_DIR, "hyperscaler_capex_history.csv")
 ORCL_RPO_CSV = os.path.join(BASE_DIR, "orcl_rpo_history.csv")
 TOKEN_PXQ_CSV = os.path.join(BASE_DIR, "token_pxq_history.csv")   # date,tokens,spend_usd,price_per_1m,coverage
 OR_HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
+COMPUTE_TASK_CSV = os.path.join(BASE_DIR, "compute_task_history.csv")
+# date,requests,tok_per_req,frontier_price,tier_gap,cn_share,gpu_util_h100,gpu_util_b200
+CN_MODEL_RE = r"^(qwen|deepseek|moonshotai|z-ai|zhipu|baidu|minimax|bytedance|tencent|stepfun|01-ai|alibaba)/"
 CAPEX_CIK = {"GOOGL": "0001652044", "MSFT": "0000789019", "AMZN": "0001018724",
              "META": "0001326801", "ORCL": "0001341439"}
 CAPEX_CONCEPTS = ["PaymentsToAcquirePropertyPlantAndEquipment",
@@ -94,6 +97,8 @@ TH = {
     "orcl_rpo_qoq": 0.0,           # 오라클 RPO QoQ(%) 이 값 이하 → 경계 (계약 취소/전환 실패)
     "mu_slowdown_q": 2,            # 마이크론 매출 YoY 연속 둔화 분기 이상 → 경계 (HBM 주문 프록시)
     "pxq_chg_13w": 0.0,            # AI 토큰 지출(P×Q) 13주 변화(%) 이 값 이하 → 경계 (제번스 역전)
+    "ct_requests_chg_13w": 0.0,    # AI 요청 수 13주 변화(%) 이 값 이하 → 경계 (작업 수 정체)
+    "gpu_util_floor": 60.0,        # GPU 가동률 프록시(임대중 비율 %) 이 값 미만 → 경계 (유휴 GPU 증가)
     "neocloud_drawdown": -50.0,    # 네오클라우드 평균 52주 낙폭(%) → 경계
     "crwv_capex_yoy": 0.0,         # CRWV 분기 capex YoY(%) 이 값 이하(감소 전환) → 경계
     "orcl_drawdown": -40.0,        # 오라클 52주 낙폭(%) → 경계
@@ -504,7 +509,8 @@ def fetch_token_pxq():
                               headers=OR_HEADERS).json()["data"]
         rows = requests.get("https://openrouter.ai/api/frontend/v1/rankings/models?view=week",
                             timeout=30, headers=OR_HEADERS).json()["data"]
-        wk, tot, spend, p1m, cov = _or_week_stats(rows, _or_price_map(models))
+        price_map = _or_price_map(models)
+        wk, tot, spend, p1m, cov = _or_week_stats(rows, price_map)
         hist[wk] = [tot, spend, p1m, cov]
         with open(TOKEN_PXQ_CSV, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
@@ -512,9 +518,95 @@ def fetch_token_pxq():
                 w.writerow([d, round(v[0]), round(v[1], 2), round(v[2], 4), round(v[3], 3)])
         log(f"토큰 P×Q(OpenRouter {wk}): {tot/1e12:.1f}T 토큰/주 · 단가 ${p1m:.3f}/1M · "
             f"지출 ${spend/1e6:.1f}M/주 (가격 매핑 {cov*100:.0f}%)")
+        # Compute/Task 프록시 — 같은 응답에서 산출, GPU 가동률은 500.farm 에서 보조 수집
+        try:
+            ct = _or_compute_task_stats(rows, price_map)
+            try:
+                util = _gpu_util_500farm()
+            except Exception:
+                util = {}
+            ct_hist = read_compute_task()
+            ct_hist[wk] = [ct["requests"], ct["tok_per_req"], ct["frontier_price"],
+                           ct["tier_gap"], ct["cn_share"], util.get("H100 SXM"), util.get("B200")]
+            _write_compute_task(ct_hist)
+            u_txt = " · ".join(f"{k} {v*100:.0f}%" for k, v in util.items()) or "—"
+            log(f"Compute/Task({wk}): 요청 {ct['requests']/1e9:.1f}B/주 · 요청당 {ct['tok_per_req']:,.0f}토큰 · "
+                f"프론티어 ${ct['frontier_price']:.2f}/1M(격차 {ct['tier_gap']:.1f}x) · "
+                f"중국계 {ct['cn_share']*100:.0f}% · GPU 가동률 {u_txt}")
+        except Exception as e:
+            log(f"Compute/Task 산출 실패(기존 히스토리 사용): {e}")
     except Exception as e:
         log(f"OpenRouter 토큰 수집 실패(기존 히스토리 사용): {e}")
     return hist
+
+
+def _or_compute_task_stats(rows, price):
+    """주간 랭킹 → Compute/Task 프록시: 요청 수, 요청당 토큰(작업 무게), 프론티어 티어 단가
+    (사용량 상위 100개 모델 중 실효단가 상위 5개의 사용량 가중 단가 — 랩이 매긴 compute 원가의
+    그림자), 티어 격차(프론티어÷전체 가중단가), 중국계 모델 토큰 점유율"""
+    import re
+    tot = reqs = cn = 0.0
+    per_model = []  # (tokens, spend)
+    for r in rows:
+        pt = float(r.get("total_prompt_tokens") or 0)
+        ct = float(r.get("total_completion_tokens") or 0)
+        t = pt + ct
+        tot += t
+        reqs += float(r.get("count") or 0)
+        slug = r.get("model_permaslug") or ""
+        if re.match(CN_MODEL_RE, slug):
+            cn += t
+        pr = _or_lookup(price, slug)
+        if pr and t > 0:
+            per_model.append((t, pt * pr[0] + ct * pr[1]))
+    if tot < 1e12 or reqs <= 0 or len(per_model) < 20:
+        raise ValueError("compute/task 산출 불가(데이터 불완전)")
+    per_model.sort(key=lambda x: -x[0])
+    overall = sum(s for _, s in per_model) / sum(t for t, _ in per_model) * 1e6
+    frontier = sorted(per_model[:100], key=lambda x: -(x[1] / x[0]))[:5]
+    f_price = sum(s for _, s in frontier) / sum(t for t, _ in frontier) * 1e6
+    return {"requests": reqs, "tok_per_req": tot / reqs, "frontier_price": f_price,
+            "tier_gap": f_price / overall if overall else None, "cn_share": cn / tot}
+
+
+def _gpu_util_500farm():
+    """500.farm — 모델별 GPU 가동률 프록시 = 임대중 ÷ (임대중+가용).
+    표본이 큰 전체(all=검증+미검증) 우선, 30대 이상일 때만 채택 (얇은 표본의 0/100% 튐 방어)"""
+    import requests
+    r = requests.get("https://500.farm/vastai-exporter/gpu-stats", timeout=30,
+                     headers={"User-Agent": "Mozilla/5.0"})
+    r.raise_for_status()
+    out = {}
+    for m in r.json().get("models", []):
+        if m.get("name") in GPU_MODELS:
+            st = m.get("stats", {})
+            for k in ("all", "verified"):
+                rc = ((st.get("rented", {}).get(k) or [{}])[0]).get("count") or 0
+                ac = ((st.get("available", {}).get(k) or [{}])[0]).get("count") or 0
+                if rc + ac >= 30:
+                    out[m["name"]] = rc / (rc + ac)
+                    break
+    return out
+
+
+def read_compute_task():
+    """CSV → {date: [requests, tok_per_req, frontier_price, tier_gap, cn_share, util_h100, util_b200]}"""
+    hist = {}
+    if os.path.exists(COMPUTE_TASK_CSV):
+        with open(COMPUTE_TASK_CSV, encoding="utf-8") as f:
+            for row in csv.reader(f):
+                if len(row) >= 6:
+                    vals = [float(x) if x not in ("", None) else None for x in row[1:8]]
+                    hist[row[0]] = vals + [None] * (7 - len(vals))
+    return hist
+
+
+def _write_compute_task(hist):
+    with open(COMPUTE_TASK_CSV, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        for d, v in sorted(hist.items()):
+            vals = list(v) + [None] * (7 - len(v))
+            w.writerow([d] + ["" if x is None else round(x, 4) for x in vals])
 
 
 def revenue_yoy_series(cache, tickers=HYPERSCALER):
@@ -658,6 +750,18 @@ def collect_live():
                  "price": [round(v[2], 3) for _, v in tok],
                  "spend_m": [round(v[1] / 1e6, 1) for _, v in tok]}
 
+    # ── 수요: Compute/Task 프록시 (fetch_token_pxq 가 같은 응답에서 산출해 CSV 누적) ──
+    ctk = sorted(read_compute_task().items())
+
+    def _ct_col(i, scale=1.0, nd=3):
+        return [None if v[i] is None else round(v[i] * scale, nd) for _, v in ctk]
+
+    compute_task = {"labels": [d for d, _ in ctk],
+                    "requests_b": _ct_col(0, 1e-9, 2), "tok_per_req": _ct_col(1, 1, 0),
+                    "frontier_price": _ct_col(2, 1, 3), "tier_gap": _ct_col(3, 1, 2),
+                    "cn_share": _ct_col(4, 100, 1),
+                    "gpu_util_h100": _ct_col(5, 100, 1), "gpu_util_b200": _ct_col(6, 100, 1)}
+
     # ── 레버리지: CoreWeave 분기 capex (GPU 담보부채로 조달하는 buildout) ──
     crwv_cx = sorted(fetch_crwv_capex().items())
     crwv_capex = {"labels": [f"{d[:4]}Q{(int(d[5:7]) - 1) // 3 + 1}" for d, _ in crwv_cx],
@@ -717,6 +821,29 @@ def collect_live():
         metrics["token_q_last_t"] = round(tok[-1][1][0] / 1e12, 1)
         metrics["token_p_last"] = round(tok[-1][1][2], 3)
         metrics["token_spend_last_m"] = round(tok[-1][1][1] / 1e6, 1)
+    if ctk:
+        last = ctk[-1][1]
+        metrics["ct_tok_per_req"] = round(last[1]) if last[1] else None
+        metrics["ct_requests_b"] = round(last[0] / 1e9, 2) if last[0] else None
+        metrics["ct_frontier_price"] = round(last[2], 2) if last[2] else None
+        metrics["ct_tier_gap"] = round(last[3], 1) if last[3] else None
+        metrics["ct_cn_share"] = round(last[4] * 100, 1) if last[4] is not None else None
+        # 주별 H100·B200 평균 → 최근 3주 중앙값 (얇은 표본 스냅샷 노이즈 완화)
+        def _row_util(v):
+            us = [u for u in (v[5], v[6]) if u is not None]
+            return sum(us) / len(us) * 100 if us else None
+        recent = sorted(x for x in (_row_util(v) for _, v in ctk[-3:]) if x is not None)
+        metrics["gpu_util_pct"] = round(recent[len(recent) // 2], 1) if recent else None
+
+        def _ct_chg(i, weeks=13):
+            ld = date.fromisoformat(ctk[-1][0])
+            cutoff = ld - timedelta(days=7 * weeks)
+            past = [v[i] for d, v in ctk if date.fromisoformat(d) <= cutoff and v[i]]
+            if not past and (ld - date.fromisoformat(ctk[0][0])).days >= 56 and ctk[0][1][i]:
+                past = [ctk[0][1][i]]
+            return pct(last[i], past[-1]) if past and last[i] else None
+        metrics["ct_requests_chg_13w"] = _ct_chg(0)
+        metrics["ct_tok_per_req_chg_13w"] = _ct_chg(1)
     # 같은 SEC 기준끼리 비교: 런레이트 vs 직전 4분기 합 — 가속이 멈추면(≤0%) 경계.
     # (컨센서스와의 직접 비교는 집계 정의 차이·램프업 편향으로 가짜 신호가 남)
     ttm4 = [sorted(en for (tk, en) in hs_cx if tk == t)[-4:] for t in CAPEX_CIK]
@@ -758,6 +885,7 @@ def collect_live():
             "capex_total": capex_total,
             "mu_yoy": mu_yoy,
             "token_pxq": token_pxq,
+            "compute_task": compute_task,
         },
         "leverage": {
             "spreads": spreads,
@@ -892,6 +1020,19 @@ def collect_sample():
                                     0.63, 0.60, 0.58, 0.56],
                           "spend_m": [49.4, 51.2, 52.2, 53.7, 54.6, 56.0, 57.0, 57.7, 59.5, 59.4,
                                       60.5, 61.8, 63.2, 64.4]},
+            "compute_task": {"labels": [f"2026-{mo:02d}-{dd:02d}" for mo, dd in
+                                        [(6, 7), (6, 14), (6, 21), (6, 28), (7, 5), (7, 12), (7, 19),
+                                         (7, 26), (8, 2), (8, 9), (8, 16), (8, 23), (8, 30), (9, 6)]],
+                             "requests_b": [3.1, 3.2, 3.3, 3.5, 3.6, 3.8, 3.9, 4.1, 4.4, 4.6, 4.9, 5.1, 5.3, 5.5],
+                             "tok_per_req": [16800, 17200, 17600, 17400, 18100, 18400, 19000, 19300,
+                                             19300, 19600, 19600, 20200, 20600, 20900],
+                             "frontier_price": [12.5, 12.5, 12.5, 12.8, 12.8, 13.0, 13.0, 13.0, 13.5, 13.5,
+                                                13.5, 14.0, 14.0, 14.0],
+                             "tier_gap": [13.2, 13.4, 13.9, 14.5, 15.2, 16.3, 16.9, 17.8, 19.3, 20.5,
+                                          21.4, 23.3, 24.1, 25.0],
+                             "cn_share": [41, 42, 44, 45, 47, 48, 50, 51, 53, 55, 56, 57, 59, 60],
+                             "gpu_util_h100": [78, 79, 80, 80, 81, 82, 82, 83, 84, 84, 85, 85, 86, 86],
+                             "gpu_util_b200": [70, 72, 74, 75, 76, 78, 79, 80, 82, 83, 84, 85, 85, 86]},
         },
         "leverage": {
             "spreads": {"AA_OAS": pack(aa), "BBB_OAS": pack(bbb),
@@ -940,6 +1081,9 @@ def collect_sample():
             "mu_yoy_last": 40.2,
             "pxq_chg_13w": 30.4, "q_chg_13w": 121.2, "p_chg_13w": -41.1,
             "token_q_last_t": 115.0, "token_p_last": 0.56, "token_spend_last_m": 64.4,
+            "ct_tok_per_req": 20900, "ct_requests_b": 5.5, "ct_frontier_price": 14.0,
+            "ct_tier_gap": 25.0, "ct_cn_share": 60.0, "gpu_util_pct": 86.0,
+            "ct_requests_chg_13w": 77.4, "ct_tok_per_req_chg_13w": 24.4,
         },
     }
     return data
@@ -977,6 +1121,9 @@ def judge(data):
     vv = vac[-1]["vacancy_pct"] if vac else None
     add("공급", "데이터센터 공실률 (CBRE, 수동)", vv, "%",
         f"{TH['vacancy_pct']}% 이상", vv is not None and vv >= TH["vacancy_pct"])
+    v = m.get("gpu_util_pct")
+    add("공급", "GPU 가동률 프록시 (임대중 비율, H100·B200 평균, 500.farm)", v, "%",
+        f"{TH['gpu_util_floor']:.0f}% 미만 (유휴 증가)", v is not None and v < TH["gpu_util_floor"])
 
     # 수요: 합산 YoY 연속 둔화
     ry = data["demand"]["revenue_yoy"]
@@ -1026,6 +1173,9 @@ def judge(data):
     v = m.get("pxq_chg_13w")
     add("수요", "AI 토큰 지출 P×Q 13주 변화 (OpenRouter, 제번스 모니터)", v, "%",
         f"{TH['pxq_chg_13w']:.0f}% 이하 (Q 증가 < P 하락)", v is not None and v <= TH["pxq_chg_13w"])
+    v = m.get("ct_requests_chg_13w")
+    add("수요", "AI 요청 수 13주 변화 (OpenRouter, 작업 수 프록시)", v, "%",
+        f"{TH['ct_requests_chg_13w']:.0f}% 이하 (작업 수 정체)", v is not None and v <= TH["ct_requests_chg_13w"])
 
     v = m.get("bbb_last")
     add("레버리지", "BBB 회사채 OAS 수준 (오라클·브로드컴급)", v, "bp",
@@ -1251,6 +1401,10 @@ TEMPLATE = r"""<!DOCTYPE html>
         <p class="note" id="pxqNote">주간 처리량 Q × 사용량 가중 단가 P(모델별 토큰×정가) = 지출 P×Q.
           단가↓인데 지출↑ = 제번스 국면, 지출↓ = 효율이 수요를 이기는 전환 (OpenRouter 표본·정가 기준, 자동)</p>
         <div id="ch-pxq"></div></div>
+      <div class="card"><h3>Compute/Task 프록시 (OpenRouter·500.farm, 시작=100)</h3>
+        <p class="note" id="ctNote">작업당 계산량의 대리 지표 — 요청당 토큰(작업 무게)·요청 수(작업 수)·프론티어 단가(랩이 매긴
+          compute 원가)·중국계 점유율. 토큰에 안 잡히는 계산은 GPU 가동률(하드웨어 측)로만 확인 — 짝으로 읽을 것</p>
+        <div id="ch-ct"></div></div>
     </div>
   </section>
 
@@ -1580,6 +1734,23 @@ function renderAll(){
       {name:'P×Q 지출',dates:tk.labels,values:idx(tk.spend_m)}],{labels:tk.labels,unit:''});
   } else {
     document.getElementById('ch-pxq').innerHTML='<div class="empty">OpenRouter 수집 대기</div>';
+  }
+  const ct=DATA.demand.compute_task||{};
+  if(ct.labels&&ct.labels.length){
+    const idx=a=>{const b=a.find(v=>v!=null);return b?a.map(v=>v==null?null:+(v/b*100).toFixed(1)):a;};
+    const L=ct.labels.length-1, mm=DATA.metrics||{};
+    document.getElementById('ctNote').textContent=
+      `최근주 ${ct.labels[L]}: 요청당 ${fmt(ct.tok_per_req[L],0)}토큰 · 요청 ${fmt(ct.requests_b[L])}B/주 · `+
+      `프론티어 $${fmt(ct.frontier_price[L],2)}/1M(전체 대비 ${fmt(ct.tier_gap[L])}배) · 중국계 점유율 ${fmt(ct.cn_share[L])}% · `+
+      `GPU 가동률 ${mm.gpu_util_pct!=null?fmt(mm.gpu_util_pct)+'%':'—'} — 작업당 계산량의 대리 지표. `+
+      `토큰에 안 잡히는 계산은 GPU 가동률(하드웨어 측)로만 확인되므로 짝으로 읽을 것`;
+    lineChart('ch-ct',[
+      {name:'요청당 토큰',dates:ct.labels,values:idx(ct.tok_per_req)},
+      {name:'요청 수',dates:ct.labels,values:idx(ct.requests_b)},
+      {name:'프론티어 단가',dates:ct.labels,values:idx(ct.frontier_price)},
+      {name:'중국계 점유율(%)',dates:ct.labels,values:ct.cn_share}],{labels:ct.labels,unit:''});
+  } else {
+    document.getElementById('ch-ct').innerHTML='<div class="empty">OpenRouter 수집 대기</div>';
   }
   const cap=DATA.demand.capex_total||{};
   if(cap.labels&&cap.labels.length){
