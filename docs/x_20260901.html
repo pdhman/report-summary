@@ -198,7 +198,7 @@ function _tgTheme(){
     line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
     box-shadow:0 2px 8px rgba(0,0,0,.12); transition:border-color .15s; padding:0; }
   #theme-toggle:hover { border-color:var(--accent); }
-</style><script>
+</style><script id="embed-hide">(function(){if(window.self!==window.top){var s=document.createElement("style");s.textContent=".bottomnav,#theme-toggle{display:none!important}body{padding-bottom:0!important}";document.head.appendChild(s);}})();</script><script>
 (function(){
   if(!/^https?:$/.test(location.protocol)) return;   // file:// 등에서는 동작 안 함
   var POLL = 5 * 60 * 1000;                          // 5분마다 확인
@@ -413,4 +413,4 @@ function _tgTheme(){
   ov.addEventListener('click', function (e) { if (!box.contains(e.target)) close(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !ov.hidden) close(); });
 })();
-</script><script id="embed-hide">(function(){if(window.self!==window.top){var s=document.createElement("style");s.textContent=".bottomnav,#theme-toggle{display:none!important}body{padding-bottom:0!important}";document.head.appendChild(s);}})();</script></body></html>
+</script></body></html>
