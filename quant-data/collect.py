@@ -37,6 +37,14 @@ import pandas as pd
 import requests
 import FinanceDataReader as fdr
 
+# [2026-09-09] fdr.StockListing 이 GitHub 캐시(9/7 이후 갱신 중단) 404 → 실패 시
+# 네이버 당일 스냅샷/KRX Open API 목록으로 폴백 (krx_listing.install)
+try:
+    import krx_listing
+    krx_listing.install()
+except Exception as _e:  # noqa: BLE001
+    print(f"[collect] 종목 목록 폴백 설치 실패: {_e}")
+
 if os.name == "nt":
     try:
         sys.stdout.reconfigure(encoding="utf-8")
