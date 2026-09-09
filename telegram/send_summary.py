@@ -310,6 +310,16 @@ def mark_sent(date, targets):
     SENT_LOG.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def data_date():
+    """이력 키 — 시장건전성 데이터 기준일. 읽기 실패 시 오늘 날짜."""
+    try:
+        asof = load_js(BASE / "docs" / "market_data.js").get("asof", "")
+        datetime.strptime(asof, "%Y-%m-%d")
+        return asof
+    except Exception:
+        return f"{datetime.now():%Y-%m-%d}"
+
+
 def unsent_targets(date, targets):
     """오늘 아직 안 보낸 대상만 추린다."""
     done = set(load_sent().get(date, []))
@@ -344,20 +354,23 @@ def main():
     cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     targets = resolve_targets(cfg, args.to)
 
-    today = f"{datetime.now():%Y-%m-%d}"
+    # 발송 이력 키는 실행일이 아니라 **데이터 기준일(market_data.js asof)** 이다.
+    # 2026-09-09 실사고: 전날 절전으로 못 보낸 16:50 발송이 이튿날 08:42 따라잡기로
+    # 전날 데이터를 보내며 이력을 '오늘'로 남겨, 정작 오늘 16:50 발송이 건너뛰어졌다.
+    key = data_date()
     if not args.force:
-        pending = unsent_targets(today, targets)
+        pending = unsent_targets(key, targets)
         if not pending:
-            print(f"건너뜀: {today} 이미 발송됨 → {', '.join(map(str, targets))}")
+            print(f"건너뜀: {key} 기준 데이터 이미 발송됨 → {', '.join(map(str, targets))}")
             return
         if len(pending) != len(targets):
             done = [t for t in targets if t not in pending]
-            print(f"일부 건너뜀: {today} 이미 발송 → {', '.join(map(str, done))}")
+            print(f"일부 건너뜀: {key} 기준 이미 발송 → {', '.join(map(str, done))}")
         targets = pending
 
     send(cfg, targets, msg)
-    mark_sent(today, targets)
-    print(f"({datetime.now():%Y-%m-%d %H:%M})")
+    mark_sent(key, targets)
+    print(f"({datetime.now():%Y-%m-%d %H:%M}, 데이터 {key})")
 
 
 if __name__ == "__main__":
