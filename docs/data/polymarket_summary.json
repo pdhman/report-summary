@@ -1,17 +1,17 @@
 {
- "date": "2026-09-10 10:50",
+ "date": "2026-09-10 18:02",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing → / Recession ↑ / Inflation → / Risk →",
+ "arrows": "Easing → / Recession → / Inflation → / Risk →",
  "fomc": {
   "title": "Fed Decision in September?",
   "top": {
    "label": "25 bps increase",
    "prob": 0.535,
-   "d24": 0.0
+   "d24": 0.01
   },
-  "mean": 13.535,
-  "mean_d24": 0.13,
+  "mean": 13.515,
+  "mean_d24": 0.286,
   "url": "https://polymarket.com/event/fed-decision-in-september-762"
  },
  "recession": {
@@ -20,18 +20,18 @@
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "Strait of Hormuz traffic returns to normal by December 31?",
-  "pmss": 64.9,
-  "band": "Interest",
-  "d24": -0.04,
-  "prob": 0.185
+  "q": "October 31 · Bab el-Mandeb Strait effectively closed by October 31?",
+  "pmss": 78.0,
+  "band": "Tactical Signal",
+  "d24": 0.075,
+  "prob": 0.16
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 64.9
+  "top_pmss": 78.0
  },
  "alerts": 2,
- "n_markets": 377,
+ "n_markets": 394,
  "source": "direct"
 }
