@@ -105,15 +105,44 @@ def _streak_chart(today):
 
 
 def _trading_days(start, end):
-    """실제 거래일 목록(KOSPI 지수 기준). 조회 실패 시 None."""
+    """실제 거래일 목록(KOSPI 지수 기준). 조회 실패 시 None.
+
+    소스 순서: 네이버 지수 차트 API → KRX Open API → FinanceDataReader.
+    2026-09-10 실사고: fdr.DataReader('KS11')가 GitHub 캐시(9/7 이후 갱신 중단)를 읽어
+    달력이 9/7 에서 끊기자 9/8·9/9 가 휴장일로 취급됐고, 9/9 선정 종목(심텍 등)이
+    NEW 로, 9/7 종목(삼성전자우)이 '2일 연속'으로 뒤바뀌어 게시됐다.
+    """
+    s, e = pd.Timestamp(start), pd.Timestamp(end)
+    # 1) 네이버 지수 일봉 (당일 포함, 1회 호출)
+    try:
+        import requests
+        url = (f"https://api.stock.naver.com/chart/domestic/index/KOSPI/day"
+               f"?startDateTime={s:%Y%m%d}00&endDateTime={e:%Y%m%d}23")
+        rows = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15).json()
+        days = sorted({pd.Timestamp(str(r["localDate"])).normalize() for r in rows
+                       if r.get("closePrice")})
+        if days and days[-1] >= e - pd.Timedelta(days=4):
+            return days
+        print(f"[보고서] 네이버 거래일 달력이 {days[-1].date() if days else '없음'}까지 — KRX 로 재시도")
+    except Exception as ex:
+        print(f"[보고서] 네이버 거래일 조회 실패({ex}) — KRX 로 재시도")
+    # 2) KRX Open API (당일은 장 마감 뒤 게시 — latest 는 호출부에서 합집합)
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "quant-data"))
+        import krx_api
+        days = sorted(pd.Timestamp(d) for d in krx_api.index_series("코스피", s.date(), e.date()))
+        if days:
+            return days
+    except Exception as ex:
+        print(f"[보고서] KRX 거래일 조회 실패({ex}) — FDR 로 재시도")
+    # 3) FinanceDataReader (캐시가 살아 있을 때만 정확)
     try:
         import FinanceDataReader as fdr
-        idx = fdr.DataReader("KS11", pd.Timestamp(start).strftime("%Y-%m-%d"),
-                             pd.Timestamp(end).strftime("%Y-%m-%d"))
+        idx = fdr.DataReader("KS11", s.strftime("%Y-%m-%d"), e.strftime("%Y-%m-%d"))
         days = sorted(set(pd.to_datetime(idx.index).normalize()))
         return days or None
-    except Exception as e:
-        print(f"[보고서] 거래일 조회 실패({e}) — 리포트 생성일로 대체")
+    except Exception as ex:
+        print(f"[보고서] 거래일 조회 실패({ex}) — 리포트 생성일로 대체")
         return None
 
 
