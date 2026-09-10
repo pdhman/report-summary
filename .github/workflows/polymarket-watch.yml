@@ -56,7 +56,8 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/polymarket.html docs/data/polymarket_summary.json docs/data/polymarket_history.json docs/data/polymarket_state.json docs/index.html
+          # state JSON 은 첫 알림 발송 전까지 없을 수 있어 경로 개별 지정 대신 디렉터리로 추가
+          git add docs/polymarket.html docs/data docs/index.html
           if git diff --staged --quiet; then
             echo "변경 없음 — 커밋 건너뜀"
           else
