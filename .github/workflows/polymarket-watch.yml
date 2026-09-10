@@ -1,0 +1,69 @@
+name: Polymarket Macro Watch
+
+# Polymarket 공개 API 가 국내 IP 에서 HTTP 451(지역 차단)이라 러너에서 수집한다.
+# 러너에서도 451 이면 스크립트가 r.jina.ai 프록시로 자동 전환한다(분당 20회, ~5분 소요).
+# 사이트는 브랜치 서빙(main /docs)이라 push 가 곧 배포.
+
+on:
+  schedule:
+    # 4시간마다 (UTC 23분 — 정각은 러너 지연이 잦음). KST 08:23 / 12:23 / 16:23 / 20:23 / 00:23 / 04:23
+    - cron: "23 */4 * * *"
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "polymarket watch/**"
+      - ".github/workflows/polymarket-watch.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: polymarket-watch
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r "polymarket watch/requirements.txt"
+
+      - name: Run watch (수집 → PMSS → docs/polymarket.html + data JSON)
+        env:
+          PYTHONUTF8: "1"
+          PMW_TG_TOKEN: ${{ secrets.PMW_TG_TOKEN }}
+          PMW_TG_CHAT: ${{ secrets.PMW_TG_CHAT }}
+        run: python "polymarket watch/main.py" run
+
+      # 홈 카드 갱신 — 실패해도 대시보드 커밋은 진행 (다음 daily-insights 가 다시 만든다)
+      - name: Rebuild home (card)
+        continue-on-error: true
+        env:
+          PYTHONUTF8: "1"
+        run: python -c "import make_summary; make_summary.build()"
+
+      - name: Commit dashboard
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/polymarket.html docs/data/polymarket_summary.json docs/data/polymarket_history.json docs/data/polymarket_state.json docs/index.html
+          if git diff --staged --quiet; then
+            echo "변경 없음 — 커밋 건너뜀"
+          else
+            git commit -m "polymarket: $(TZ=Asia/Seoul date +'%Y-%m-%d %H:%M') 매크로 워치 갱신 [skip ci]"
+            for i in 1 2 3; do
+              git push && break
+              git pull --rebase -X theirs origin main || true
+              sleep 5
+            done
+          fi

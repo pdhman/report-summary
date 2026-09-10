@@ -343,6 +343,20 @@ def card_crypto():
     return c
 
 
+def card_polymarket():
+    """Polymarket 매크로 워치: polymarket watch/main.py 가 만든 요약 JSON 읽기.
+
+    대시보드(docs/polymarket.html)는 수집기가 내비까지 넣어 직접 쓰므로
+    여기서는 카드 내용만 만든다. 요약 JSON 은 docs/data/ (저장소 추적 대상).
+    """
+    import json
+    path = os.path.join(OUT_DIR, "data", "polymarket_summary.json")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
 def card_rs():
     """RS 스크리너: 1개월 RS 상위 테마 2개 + ETF 종합 RS 상위 2개.
 
@@ -537,6 +551,38 @@ def build():
             if c.get("etf_last_date"):
                 body += f'<div class="sc-note">ETF는 {esc(c["etf_last_date"])} 기준</div>'
         cards.append(_card("crypto.html", "₿", "크립토", c.get("date", ""), body))
+
+    c = None
+    try:
+        c = card_polymarket()
+    except Exception as e:
+        print(f"[요약] 폴리마켓 카드 실패: {e}")
+    if c and c.get("regime_name"):
+        def _pdiff(d, unit="%p", scale=100.0, dec=0):
+            if d is None:
+                return ""
+            v = d * scale
+            cls = "up" if v > 0 else ("down" if v < 0 else "")
+            return f' <span class="k-diff {cls}">{"+" if v > 0 else ""}{v:.{dec}f}{unit}</span>'
+        body = (f'<div class="krow"><span class="k-name">레짐</span>'
+                f'<span class="k-val">{esc(c["regime_icon"])} {esc(c["regime_name"])}</span></div>')
+        fomc = c.get("fomc")
+        if fomc and fomc.get("top"):
+            body += (f'<div class="krow"><span class="k-name">{esc(fomc["title"].replace("?", ""))}</span>'
+                     f'<span class="k-val">{esc(fomc["top"]["label"])} {fomc["top"]["prob"]*100:.0f}%'
+                     f'{_pdiff(fomc["top"].get("d24"))}</span></div>')
+        rec = c.get("recession")
+        if rec:
+            body += (f'<div class="krow"><span class="k-name">2026 미국 침체</span>'
+                     f'<span class="k-val">{rec["prob"]*100:.0f}%{_pdiff(rec.get("d24"))}</span></div>')
+        ts = c.get("top_signal")
+        if ts:
+            body += (f'<div class="krow"><span class="k-name">최고 PMSS</span>'
+                     f'<span class="k-val">{ts["pmss"]:.0f} <span class="k-diff">{esc(ts["band"])}</span></span></div>'
+                     f'<div class="sc-note">{esc(ts["q"][:60])}</div>')
+        if c.get("alerts"):
+            body += f'<div class="sc-note">🚨 알림 조건 충족 {c["alerts"]}건</div>'
+        cards.append(_card("polymarket.html", "🎯", "폴리마켓 매크로", c.get("date", ""), body))
 
     # 분석 도구(차트·계절성·RS)는 상시 제공되는 정적 도구라 항상 카드 노출
     cards.append(_card(
