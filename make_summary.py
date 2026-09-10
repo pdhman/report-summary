@@ -500,27 +500,24 @@ def build():
         if body:
             cards.append(_card("market.html", "🌡️", "시장 건전성", c["date"], body))
 
+    # 수급 동향 — 시장 건전성 바로 뒤 (2026-09-10 사용자 요청: 레버리지와 자리 교환)
     c = None
     try:
-        c = card_leverage()
+        c = card_flows()
     except Exception as e:
-        print(f"[요약] 레버리지 카드 실패: {e}")
+        print(f"[요약] 수급 카드 실패: {e}")
     if c:
-        def _row(name, val, diff, unit, dec=2):
-            cls = "up" if diff > 0 else ("down" if diff < 0 else "")
-            sign = "+" if diff > 0 else ""
+        def _frow(name, v):
+            cls = "up" if v > 0 else ("down" if v < 0 else "")
+            sign = "+" if v > 0 else ""
             return (f'<div class="krow"><span class="k-name">{name}</span>'
-                    f'<span class="k-val">{val:,.{dec}f}{unit} '
-                    f'<span class="k-diff {cls}">{sign}{diff:,.{dec}f}</span></span></div>')
-        body = (_row("신용거래융자", c["credit"], c["credit_d"], "조원")
-                + _row("투자자예탁금", c["deposit"], c["deposit_d"], "조원")
-                + _row("반대매매비중", c["ratio"], c["ratio_d"], "%"))
-        # 헤더 날짜는 '갱신일'. 금투협이 T 자료를 T+1 에 공표해 수치는 하루 전
-        # 기준이므로, 오해가 없도록 실제 기준일을 아래에 작게 덧붙인다.
-        upd = c.get("updated", c["date"])
-        if upd != c["date"]:
-            body += f'<div class="sc-note">수치는 {esc(c["date"])} 기준</div>'
-        cards.append(_card("leverage.html", "📈", "시장 레버리지", upd, body))
+                    f'<span class="k-val {cls}">{sign}{v:,}억</span></div>')
+        body = (_frow("개인", c["indiv"]) + _frow("외국인", c["forgn"])
+                + _frow("기관", c["inst"]))
+        if c["fut_forgn"] is not None:
+            body += _frow("선물 외국인", c["fut_forgn"])
+        cards.append(_card("flow.html", "💰", "수급 동향",
+                           f'{c["date"]} · 코스피', body))
 
     c = None
     try:
@@ -613,23 +610,28 @@ def build():
                      f'<span class="k-diff up">{e_[5]:.0f}</span></span></div>')
         cards.append(_card("rs.html", "🔥", "RS 스크리너", c["date"], body))
 
+    # 시장 레버리지 — 맨 뒤 (2026-09-10 수급 동향과 자리 교환)
     c = None
     try:
-        c = card_flows()
+        c = card_leverage()
     except Exception as e:
-        print(f"[요약] 수급 카드 실패: {e}")
+        print(f"[요약] 레버리지 카드 실패: {e}")
     if c:
-        def _frow(name, v):
-            cls = "up" if v > 0 else ("down" if v < 0 else "")
-            sign = "+" if v > 0 else ""
+        def _row(name, val, diff, unit, dec=2):
+            cls = "up" if diff > 0 else ("down" if diff < 0 else "")
+            sign = "+" if diff > 0 else ""
             return (f'<div class="krow"><span class="k-name">{name}</span>'
-                    f'<span class="k-val {cls}">{sign}{v:,}억</span></div>')
-        body = (_frow("개인", c["indiv"]) + _frow("외국인", c["forgn"])
-                + _frow("기관", c["inst"]))
-        if c["fut_forgn"] is not None:
-            body += _frow("선물 외국인", c["fut_forgn"])
-        cards.append(_card("flow.html", "💰", "수급 동향",
-                           f'{c["date"]} · 코스피', body))
+                    f'<span class="k-val">{val:,.{dec}f}{unit} '
+                    f'<span class="k-diff {cls}">{sign}{diff:,.{dec}f}</span></span></div>')
+        body = (_row("신용거래융자", c["credit"], c["credit_d"], "조원")
+                + _row("투자자예탁금", c["deposit"], c["deposit_d"], "조원")
+                + _row("반대매매비중", c["ratio"], c["ratio_d"], "%"))
+        # 헤더 날짜는 '갱신일'. 금투협이 T 자료를 T+1 에 공표해 수치는 하루 전
+        # 기준이므로, 오해가 없도록 실제 기준일을 아래에 작게 덧붙인다.
+        upd = c.get("updated", c["date"])
+        if upd != c["date"]:
+            body += f'<div class="sc-note">수치는 {esc(c["date"])} 기준</div>'
+        cards.append(_card("leverage.html", "📈", "시장 레버리지", upd, body))
 
     import pytz
     today = datetime.datetime.now(pytz.timezone("Asia/Seoul"))   # 러너(UTC)에서도 KST 표기
