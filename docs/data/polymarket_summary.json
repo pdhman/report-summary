@@ -1,5 +1,5 @@
 {
- "date": "2026-09-10 10:46",
+ "date": "2026-09-10 10:50",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession ↑ / Inflation → / Risk →",
@@ -32,6 +32,6 @@
   "top_pmss": 64.9
  },
  "alerts": 2,
- "n_markets": 384,
- "source": "proxy(r.jina.ai)"
+ "n_markets": 377,
+ "source": "direct"
 }
