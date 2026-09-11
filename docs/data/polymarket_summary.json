@@ -1,5 +1,5 @@
 {
- "date": "2026-09-11 13:54",
+ "date": "2026-09-11 21:54",
  "regime_icon": "🟠",
  "regime_name": "Reflation (근사)",
  "arrows": "Easing ↓ / Recession → / Inflation ↑ / Risk →",
@@ -7,11 +7,11 @@
   "title": "Fed Decision in September?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.615,
-   "d24": 0.08
+   "prob": 0.795,
+   "d24": 0.27
   },
-  "mean": 15.355,
-  "mean_d24": 1.84,
+  "mean": 20.062,
+  "mean_d24": 6.853,
   "url": "https://polymarket.com/event/fed-decision-in-september-762"
  },
  "recession": {
@@ -21,17 +21,17 @@
  },
  "top_signal": {
   "q": "No change · Will there be no change in Fed interest rates after the December 2026 meeting?",
-  "pmss": 87.5,
-  "band": "Strong Signal",
+  "pmss": 72.5,
+  "band": "Tactical Signal",
   "d24": -0.13,
   "prob": 0.345
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 87.5
+  "top_pmss": 72.5
  },
- "alerts": 5,
- "n_markets": 402,
+ "alerts": 7,
+ "n_markets": 384,
  "source": "direct"
 }
