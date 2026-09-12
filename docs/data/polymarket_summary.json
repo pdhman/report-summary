@@ -1,17 +1,17 @@
 {
- "date": "2026-09-12 07:41",
+ "date": "2026-09-12 13:47",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing ↓ / Recession → / Inflation ↓ / Risk ↓",
+ "arrows": "Easing ↓ / Recession → / Inflation → / Risk ↓",
  "fomc": {
   "title": "Fed Decision in September?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.805,
-   "d24": 0.16
+   "prob": 0.785,
+   "d24": 0.17
   },
-  "mean": 20.126,
-  "mean_d24": 3.998,
+  "mean": 19.858,
+  "mean_d24": 4.503,
   "url": "https://polymarket.com/event/fed-decision-in-september-762"
  },
  "recession": {
@@ -20,18 +20,18 @@
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "December 31 · US announces end of Iranian blockade by December 31, 2026?",
-  "pmss": 75.6,
-  "band": "Tactical Signal",
-  "d24": 0.06,
-  "prob": 0.6435
+  "q": "September 30 · US x Iran Effective Ceasefire by September 30?",
+  "pmss": 83.0,
+  "band": "Strong Signal",
+  "d24": 0.135,
+  "prob": 0.89
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 75.6
+  "top_pmss": 83.0
  },
- "alerts": 4,
- "n_markets": 381,
+ "alerts": 6,
+ "n_markets": 379,
  "source": "direct"
 }
