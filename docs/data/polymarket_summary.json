@@ -1,5 +1,5 @@
 {
- "date": "2026-09-13 14:01",
+ "date": "2026-09-13 22:23",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -7,31 +7,31 @@
   "title": "Fed Decision in September?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.795,
-   "d24": 0.01
+   "prob": 0.775,
+   "d24": -0.01
   },
-  "mean": 19.879,
-  "mean_d24": 0.021,
+  "mean": 19.578,
+  "mean_d24": -0.25,
   "url": "https://polymarket.com/event/fed-decision-in-september-762"
  },
  "recession": {
   "prob": 0.065,
-  "d24": -0.005,
+  "d24": 0.0,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
   "q": "September 30 · Bab el-Mandeb Strait effectively closed by September 30?",
-  "pmss": 65.5,
+  "pmss": 62.2,
   "band": "Interest",
-  "d24": -0.039,
-  "prob": 0.048
+  "d24": -0.0275,
+  "prob": 0.051
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 65.5
+  "top_pmss": 62.2
  },
  "alerts": 0,
- "n_markets": 393,
+ "n_markets": 381,
  "source": "direct"
 }
