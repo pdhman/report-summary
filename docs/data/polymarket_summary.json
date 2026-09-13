@@ -1,5 +1,5 @@
 {
- "date": "2026-09-13 22:23",
+ "date": "2026-09-14 03:51",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -8,10 +8,10 @@
   "top": {
    "label": "25 bps increase",
    "prob": 0.775,
-   "d24": -0.01
+   "d24": -0.02
   },
-  "mean": 19.578,
-  "mean_d24": -0.25,
+  "mean": 19.775,
+  "mean_d24": -0.074,
   "url": "https://polymarket.com/event/fed-decision-in-september-762"
  },
  "recession": {
@@ -20,18 +20,18 @@
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "September 30 · Bab el-Mandeb Strait effectively closed by September 30?",
-  "pmss": 62.2,
-  "band": "Interest",
-  "d24": -0.0275,
-  "prob": 0.051
+  "q": "October 31 · US announces end of Iranian blockade by October 31, 2026?",
+  "pmss": 54.6,
+  "band": "Watch",
+  "d24": -0.105,
+  "prob": 0.35
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 62.2
+  "top_pmss": 54.6
  },
  "alerts": 0,
- "n_markets": 381,
+ "n_markets": 395,
  "source": "direct"
 }
