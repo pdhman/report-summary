@@ -1,37 +1,37 @@
 {
- "date": "2026-09-14 03:51",
- "regime_icon": "⚪",
- "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing → / Recession → / Inflation → / Risk →",
+ "date": "2026-09-14 07:30",
+ "regime_icon": "🔴",
+ "regime_name": "Stagflation (근사)",
+ "arrows": "Easing → / Recession ↑ / Inflation ↑ / Risk →",
  "fomc": {
   "title": "Fed Decision in September?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.775,
-   "d24": -0.02
+   "prob": 0.785,
+   "d24": -0.01
   },
-  "mean": 19.775,
-  "mean_d24": -0.074,
+  "mean": 19.828,
+  "mean_d24": -0.021,
   "url": "https://polymarket.com/event/fed-decision-in-september-762"
  },
  "recession": {
-  "prob": 0.065,
-  "d24": 0.0,
+  "prob": 0.095,
+  "d24": 0.03,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "October 31 · US announces end of Iranian blockade by October 31, 2026?",
-  "pmss": 54.6,
+  "q": "September 21 · US announces end of Iranian blockade by September 21, 2026?",
+  "pmss": 53.0,
   "band": "Watch",
-  "d24": -0.105,
-  "prob": 0.35
+  "d24": -0.06,
+  "prob": 0.055
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 54.6
+  "top_pmss": 53.0
  },
  "alerts": 0,
- "n_markets": 395,
+ "n_markets": 388,
  "source": "direct"
 }
