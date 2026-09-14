@@ -1,5 +1,5 @@
 {
- "date": "2026-09-15 00:07",
+ "date": "2026-09-15 05:22",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -7,31 +7,31 @@
   "title": "Fed Decision in September?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.835,
-   "d24": 0.05
+   "prob": 0.865,
+   "d24": 0.09
   },
-  "mean": 21.123,
-  "mean_d24": 1.295,
+  "mean": 21.93,
+  "mean_d24": 2.352,
   "url": "https://polymarket.com/event/fed-decision-in-september-762"
  },
  "recession": {
-  "prob": 0.085,
-  "d24": 0.02,
+  "prob": 0.095,
+  "d24": 0.0,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "December 31 · US announces end of Iranian blockade by December 31, 2026?",
-  "pmss": 68.3,
+  "q": "25 bps increase · Will the Fed increase interest rates by 25 bps after the September 2026 meeting?",
+  "pmss": 60.9,
   "band": "Interest",
-  "d24": -0.059,
-  "prob": 0.585
+  "d24": 0.09,
+  "prob": 0.865
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 68.3
+  "top_pmss": 60.9
  },
- "alerts": 1,
- "n_markets": 383,
+ "alerts": 0,
+ "n_markets": 388,
  "source": "direct"
 }
