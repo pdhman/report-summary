@@ -285,6 +285,26 @@ def merge_history(fresh: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([old[~old.index.isin(fresh.index)], fresh]).sort_index()
 
 
+EW_ETF = "252650"   # KODEX 200동일가중 — 시총가중 지수 대신 '평균 대형주'의 추세
+
+
+def fetch_ew_mom(start: dt.date) -> tuple[pd.Series, pd.Series]:
+    """동일가중 ETF 종가와 125일선 대비 모멘텀(%).
+
+    125일선이 히스토리 첫날부터 있도록 start 보다 200 달력일 앞에서 받는다
+    (ETF 는 2016년 상장이라 백필 여유 충분). 매 실행 전 구간을 다시 받아
+    apply_series 로 덮으므로 하루 실패해도 기존 값이 유지된다.
+    """
+    import FinanceDataReader as fdr
+    df = fdr.DataReader(EW_ETF, (start - dt.timedelta(days=200)).isoformat())
+    if df is None or df.empty:
+        raise RuntimeError("동일가중 ETF 응답이 비어 있음")
+    close = df["Close"].astype(float)
+    close.index = pd.to_datetime(close.index)
+    mom = (close / close.rolling(125).mean() - 1) * 100
+    return close, mom
+
+
 def apply_series(hist: pd.DataFrame, s: pd.Series, col: str) -> pd.DataFrame:
     """지수/VKOSPI 시계열을 히스토리에 갱신 병합(새 값 우선, 과거값 보존)."""
     hist = hist.copy()
@@ -422,7 +442,20 @@ def build_scores(d: pd.DataFrame, lev: dict | None) -> tuple[dict, pd.DataFrame]
     else:
         comp["lev"] = np.nan
 
-    comp["overall"] = comp[["trend", "spec", "vol", "lev"]].mean(axis=1)   # conc 제외
+    # 종합 체온 (2026-09-15 재설계): 성분을 '높음=뜨거움' 방향으로 정렬(변동성 반전)해
+    # 합산한 뒤 표준화(평균 50·σ16). 백분위 단순평균은 성분이 무상관이라 σ10 으로 압축돼
+    # 50~60 에 갇혔고, 변동성 부호가 반대라 폭락장(2026-07-30)에 '중립'이 나오던 결함 수정.
+    # 쏠림(conc)은 과열이 아니라 취약성이라 여전히 제외.
+    # 모멘텀(동일가중): KODEX 200동일가중 ETF / 125일선. 시총가중 지수 모멘텀은 공포탐욕에
+    # 이미 있고 대형주 쏠림에 끌려가(2026-06-22 지수 +51% vs 동일가중 +4.5%) 제외.
+    parts = [comp["trend"], comp["spec"], comp["lev"], 100 - comp["vol"]]
+    if "ew_mom" in d.columns and d["ew_mom"].notna().any():
+        comp["mom"] = pct_rank(d["ew_mom"])
+        parts.append(comp["mom"])
+    else:
+        comp["mom"] = np.nan
+    raw = pd.concat(parts, axis=1).mean(axis=1)
+    comp["overall"] = (50 + 16 * (raw - raw.mean()) / raw.std()).clip(0, 100)
 
     # ---- 공포탐욕지수 (CNN Fear & Greed 한국판 7요소) ----
     # 각 요소를 전 히스토리 백분위(0~100)로 정규화해 평균. 높음=탐욕, 낮음=공포.
@@ -464,7 +497,7 @@ def build_scores(d: pd.DataFrame, lev: dict | None) -> tuple[dict, pd.DataFrame]
 
     last = comp.dropna(subset=["overall"]).iloc[-1] if comp["overall"].notna().any() else None
     latest = {k: (round(float(last[k]), 1) if last is not None and pd.notna(last[k]) else None)
-              for k in ("overall", "trend", "spec", "conc", "vol", "lev", "fg")}
+              for k in ("overall", "trend", "spec", "conc", "vol", "lev", "fg", "mom")}
     latest["n_days"] = int(comp["overall"].notna().sum())
     # 공포탐욕 요소별 최신값 (p=백분위 0~100, r=원시값, u=원시값 단위)
     if last is not None:
@@ -570,8 +603,247 @@ def _round(x, nd=1):
     return out
 
 
+# ------------------------------------------------------------------ 신호·과거 통계
+# (키, 이름, 규칙 설명) — 화면 자동 해석이 활성 신호를 최우선으로 보여주고
+# "과거 N회 → 이후 20/60일 코스피 평균" 근거를 붙인다.
+SIGNAL_DEFS = [
+    ("bear_div",     "약세 다이버전스", "지수 60일 신고가인데 온도계 40 미만"),
+    ("bull_div",     "강세 다이버전스", "지수 60일 신저가인데 온도계가 20일간 +5 이상 상승"),
+    ("healthy_high", "건전한 신고가",   "지수 60일 신고가 + 온도계 55 이상"),
+    ("cold",         "냉각 구간",       "온도계 20 미만"),
+    ("hot",          "과열 구간",       "온도계 80 이상"),
+]
+
+
+def build_signals(d: pd.DataFrame, comp: pd.DataFrame) -> dict:
+    """신호 플래그(최근 CHART_ROWS일)와 신호별 과거 성과 통계.
+
+    통계는 연속 신호일을 10일 간격으로 묶은 '에피소드 첫날' 기준 — 같은 국면의
+    연속일을 여러 번 세는 중복을 줄인다. 표본이 적으면 화면에서 '참고용' 표기.
+    """
+    def _r(x):
+        return None if x is None or (isinstance(x, float) and not np.isfinite(x)) else round(float(x), 1)
+
+    T = comp["overall"]
+    ks = d["kospi_close"].reindex(T.index)
+    hi60 = ks >= ks.rolling(60).max()
+    lo60 = ks <= ks.rolling(60).min()
+    tchg = T - T.shift(20)
+    flags = pd.DataFrame({
+        "bear_div": hi60 & (T < 40),
+        "bull_div": lo60 & (tchg >= 5),
+        "healthy_high": hi60 & (T >= 55),
+        "cold": T < 20,
+        "hot": T >= 80,
+    }, index=T.index).fillna(False)
+    fwd20 = ks.shift(-20) / ks - 1
+    fwd60 = ks.shift(-60) / ks - 1
+    base20, base60 = fwd20.dropna(), fwd60.dropna()
+    base = {"n": int(len(base20)), "r20": _r(base20.mean() * 100),
+            "win20": _r((base20 > 0).mean() * 100), "r60": _r(base60.mean() * 100)}
+
+    stats = {}
+    for key, name, rule in SIGNAL_DEFS:
+        m = flags[key]
+        starts, prev = [], None
+        for ts in m[m].index:
+            if prev is None or (ts - prev).days > 10:
+                starts.append(ts)
+            prev = ts
+        ep20 = fwd20.reindex(starts).dropna()
+        ep60 = fwd60.reindex(starts).dropna()
+        stats[key] = {
+            "name": name, "rule": rule, "episodes": len(starts), "n_days": int(m.sum()),
+            "n_eval": int(len(ep20)),
+            "r20": _r(ep20.mean() * 100) if len(ep20) else None,
+            "win20": _r((ep20 > 0).mean() * 100) if len(ep20) else None,
+            "r60": _r(ep60.mean() * 100) if len(ep60) else None,
+            "last": f"{starts[-1]:%Y-%m-%d}" if starts else None,
+        }
+    recent = flags.tail(CHART_ROWS)
+    return {"base": base, "stats": stats,
+            "flags": {k: recent[k].astype(int).tolist() for k in flags.columns}}
+
+
+# ------------------------------------------------------------------ 자동 해석(문장 생성)
+# 웹(market.html)과 텔레그램이 같은 문장을 쓰도록 여기서 한 번만 만든다.
+# 규칙 우선순위: 다이버전스 신호 → 극단(과열/냉각) → 건전/뜨거운 상승 → 심리·내부 괴리 → 차가움 → 중립.
+def _f(v, nd=0):
+    return "–" if v is None or (isinstance(v, float) and not np.isfinite(v)) else f"{v:,.{nd}f}"
+
+
+def _sgn(v, nd=1):
+    return ("+" if v > 0 else "") + _f(v, nd)
+
+
+def build_interp(d: pd.DataFrame, comp: pd.DataFrame, signals: dict) -> list:
+    """최근 CHART_ROWS일 각각의 해석 {icon, main, sub, lines[3](HTML), summary, stat}. 값 없으면 None."""
+    recent = d.tail(CHART_ROWS)
+    off = len(d) - len(recent)
+    g = lambda col, frame=d: frame[col].to_numpy(dtype=float) if col in frame.columns else None  # noqa: E731
+    ks, T = g("kospi_close"), comp["overall"].reindex(d.index).to_numpy(dtype=float)
+    FG, TR, SP, LV = (comp[c].reindex(d.index).to_numpy(dtype=float) for c in ("fg", "trend", "spec", "lev"))
+    MO, CONC = g("ew_mom"), g("top10_share")
+    ADV, DEC, NH, NL, MA200, MA50 = (g(c) for c in ("all_adv", "all_dec", "all_nh", "all_nl", "all_ma200", "all_ma50"))
+    flags = signals.get("flags", {})
+    ok = lambda x: x is not None and np.isfinite(x)  # noqa: E731
+    out = []
+    for j in range(len(recent)):
+        i = off + j
+        t = T[i]
+        if not ok(t):
+            out.append(None)
+            continue
+        on = lambda k: bool(flags.get(k) and flags[k][j] == 1)  # noqa: E731
+        fg, tr, sp, lv = FG[i], TR[i], SP[i], LV[i]
+        conc = CONC[i] if CONC is not None else np.nan
+        mo = MO[i] if MO is not None and ok(MO[i]) else None
+        kv = ks[i] if ok(ks[i]) else None
+        hist_hi = np.nanmax(ks[:i + 1]) if kv is not None else None
+        near_high = kv is not None and hist_hi and kv >= hist_hi * 0.97
+        r20 = (ks[i] / ks[i - 20] - 1) * 100 if i >= 20 and ok(ks[i]) and ok(ks[i - 20]) else None
+        tch = t - T[i - 20] if i >= 20 and ok(T[i - 20]) else None
+        chg = lambda arr: arr[i] - arr[i - 20] if i >= 20 and ok(arr[i]) and ok(arr[i - 20]) else None  # noqa: E731
+        win = ks[max(0, i - 59):i + 1]
+        hi60 = np.nanmax(win) if kv is not None else None
+        lo60 = np.nanmin(win) if kv is not None else None
+        off_hi = (kv / hi60 - 1) * 100 if kv is not None and hi60 else None
+        mo_txt = f" 동일가중 200종목은 125일선 대비 {_sgn(mo)}%." if mo is not None else ""
+        tch_txt = f" 온도계는 20일간 {_sgn(tch, 0)}." if tch is not None else ""
+
+        # ---- 헤드라인 규칙 ----
+        stat = None
+        if on("bear_div"):
+            icon, main = "🔻", f"약세 다이버전스: 지수는 60일 신고가인데 온도계는 {t:.0f}입니다."
+            sub = (f"지수를 소수 종목이 끌어올리고(TOP10 집중 {_f(conc)}%) 시장 내부는 따라오지 못하는 상태."
+                   f"{mo_txt}{tch_txt} 폭 분석에서 고점 경고로 쓰는 고전적 신호.")
+            stat = "bear_div"
+        elif on("bull_div"):
+            icon, main = "🔺", f"강세 다이버전스: 지수는 60일 신저가인데 온도계는 오르고 있습니다({t:.0f})."
+            sub = (f"가격은 저점을 낮추지만 내부(폭·투기·레버리지)는 회복 중 — 바닥 다지기의 전형.{tch_txt}"
+                   " 반전 신호(Zweig 스러스트·90% 업데이)로 타이밍 확인.")
+            stat = "bull_div"
+        elif on("healthy_high"):
+            icon, main = "✅", f"건전한 신고가: 지수 신고가에 시장 내부도 함께 뜨겁습니다({t:.0f})."
+            sub = f"폭이 넓은 상승 — 추세를 의심할 근거가 없는 구간.{tch_txt}"
+            stat = "healthy_high"
+        elif near_high and t < 40:
+            icon, main = "⚠️", f"지수는 고점권인데 내부 온도는 차갑습니다({t:.0f})."
+            sub = (f"소수 종목이 지수를 끌어올리는 폭 좁은 상승(TOP10 집중 {_f(conc)}%).{mo_txt}{tch_txt}"
+                   " 역사적으로 폭 붕괴에 앞서 나타나는 패턴 — 경계.")
+            stat = "bear_div"
+        elif t >= 80:
+            icon, main = "🔥", "과열: 폭·투기·레버리지가 동시에 역사적 상단입니다."
+            sub = f"상승 사이클 후반부의 전형 — 신규 진입보다 리스크 관리가 우선인 구간.{tch_txt}"
+            stat = "hot"
+        elif t < 20:
+            icon, main = "🧊", "냉각: 공포와 청산이 극단입니다."
+            sub = f"역사적으로 바닥 탐색 구간 — 반전 신호(Zweig 스러스트·90% 업데이·신저가 감소)를 확인하며 분할 대응.{tch_txt}"
+            stat = "cold"
+        elif t >= 60 and sp < 40 and lv < 60:
+            icon, main = "✅", "건전한 상승: 폭이 넓고 광기·빚이 없는 상승입니다."
+            sub = "사이클 초·중반의 가장 좋은 조합 — 투기·레버리지가 뒤따라 오르는지가 다음 관전 포인트."
+        elif t >= 60:
+            icon, main = "🌡️", f"뜨거운 상승: {'레버리지' if lv >= 80 else '투기 열기'}가 동반 상승 중입니다."
+            sub = "폭은 넓지만 연료가 빚·단타로 바뀌는 중 — 과열(80) 진입 여부 감시."
+        elif ok(fg) and fg - t >= 25:
+            icon, main = "↕️", f"심리(공포탐욕 {fg:.0f})가 내부 온도({t:.0f})보다 크게 앞서 있습니다."
+            sub = "기대가 실체(폭·체력)보다 먼저 달아오른 상태 — 내부가 따라오지 못하면 되돌림 위험."
+        elif ok(fg) and t - fg >= 25:
+            icon, main = "🧱", f"내부는 뜨거운데 심리는 차갑습니다(공포탐욕 {fg:.0f})."
+            sub = "의심 속의 상승(wall of worry) — 역사적으로 지속성이 좋은 편."
+        elif t < 40:
+            icon, main = "❄️", "차가움: 폭이 좁고 열기가 없습니다." + (" 최근 급락의 여파." if r20 is not None and r20 < -8 else "")
+            sub = "지수 방향과 별개로 시장 체력이 약한 상태 — 반등이 와도 폭이 넓어지는지 확인 필요."
+        else:
+            icon, main = "➖", "중립: 뚜렷한 극단 신호가 없습니다."
+            sub = f"추세(폭) {_f(tr)} · 투기 {_f(sp)} · 레버리지 {_f(lv)} — 서브 게이지의 방향 변화를 지켜볼 구간."
+
+        # ---- 현 상황 데이터 3줄 (HTML) ----
+        lines = []
+        if kv is not None:
+            s = f"<b>지수</b>코스피 {_f(kv)}"
+            if r20 is not None:
+                s += f" · 20일 {_sgn(r20)}%"
+            if hi60:
+                s += f" · 60일 고점 대비 {_f(off_hi, 1)}%, 저점 대비 +{_f((kv / lo60 - 1) * 100, 1)}%"
+            lines.append(s)
+        ma, nhv, nlv = MA200[i], NH[i], NL[i]
+        if ok(ma):
+            s = (f"<b>내부</b>200일선 위 {_f(ma, 1)}%, 50일선 위 {_f(MA50[i], 1)}% · 등락 "
+                 f'<span style="color:var(--up)">+{_f(ADV[i])}</span>/<span style="color:var(--dn)">-{_f(DEC[i])}</span>')
+            if (ok(nhv) and nhv) or (ok(nlv) and nlv):
+                s += f" · 52주 신고 {_f(nhv)} / 신저 {_f(nlv)}"
+            s += " → 폭 " + ("넓음" if tr >= 60 else "보통" if tr >= 40 else "좁음")
+            lines.append(s)
+        s = (f"<b>심리·자금</b>공포탐욕 {_f(fg)} · 레버리지 {_f(lv)} · 투기 열기 {_f(sp)} · TOP10 쏠림 {_f(conc)}%")
+        if mo is not None:
+            s += f" · 동일가중 모멘텀 {_sgn(mo)}%"
+        lines.append(s)
+
+        # ---- 요약(완결 문장 2줄) ----
+        move = ("" if r20 is None else f"한 달간 {_f(r20, 1)}% 올라" if r20 >= 3
+                else f"한 달간 {_f(abs(r20), 1)}% 내려" if r20 <= -3 else "한 달째 횡보하며")
+        pos = ("" if off_hi is None else "60일 고점 부근에" if off_hi >= -2
+               else f"60일 고점보다 {_f(abs(off_hi))}% 낮은 자리에")
+        idx_txt = f"지수는 {move} {pos} 있고"
+        fg_ch, fg_up, fg_dn = chg(FG), False, False
+        if fg_ch is not None:
+            fg_up, fg_dn = fg_ch >= 3, fg_ch <= -3
+        t_up, t_dn = tch is not None and tch >= 3, tch is not None and tch <= -3
+        fg_name = f"심리(공포탐욕 {_f(fg)})"
+        fg_txt = ("" if not ok(fg) else
+                  f"{fg_name}도 함께 회복되고 있고 " if fg_up and t_up else
+                  f"{fg_name}는 회복되는 중이지만 " if fg_up else
+                  f"{fg_name}도 함께 식고 있고 " if fg_dn and t_dn else
+                  f"{fg_name}는 식고 있지만 " if fg_dn else f"{fg_name}는 제자리이고 ")
+        tch_txt2 = ("" if tch is None else
+                    f"온도계는 20일 전보다 {_f(abs(tch))}점 더 내려온 상태" if t_dn else
+                    f"온도계는 20일 전보다 {_f(tch)}점 올라온 상태" if t_up else "온도계는 한 달째 제자리")
+        if on("bear_div") or (near_high and t < 40):
+            summ = (f"{idx_txt}, 200일선 위 종목은 {_f(ma)}%에 그치고 신저가({_f(nlv)})가 신고가({_f(nhv)})보다 많아 "
+                    "소수 종목이 지수를 끌어올리는 상승입니다. 이런 괴리는 대개 폭이 무너지며 해소되므로 200일선 위 비율과 "
+                    "신고가 종목수가 더 줄어드는지 확인하고, 신규 진입은 보수적으로 가져가는 것이 정석입니다.")
+        elif on("bull_div"):
+            summ = (f"지수는 60일 저점을 다시 낮췄지만 {tch_txt2}로, 내부(폭·투기·레버리지)가 가격보다 먼저 회복되는 "
+                    f"바닥 다지기의 모습입니다. 이 패턴은 몇 주씩 이어질 수 있으니 신저가 종목수({_f(nlv)})가 줄어드는지와 "
+                    "반전 신호(Zweig 스러스트·90% 업데이)로 진입 시점을 확인하는 것이 안전합니다.")
+        elif t >= 80:
+            summ = (f"{idx_txt}, 폭·투기·레버리지가 동시에 역사적 상단이라 상승 사이클 후반부의 전형적인 과열 상태입니다. "
+                    "이 구간에서는 신규 진입보다 이익 실현과 비중 관리가 우선이며, 온도계가 75 아래로 내려오면 과열 해제로 봅니다.")
+        elif t < 20:
+            summ = (f"{idx_txt}, 온도계가 {t:.0f}까지 내려와 공포와 청산이 극단에 달한 냉각 국면입니다. "
+                    "이번 표본에서는 냉각 진입 뒤에도 하락이 더 이어진 경우가 많았으므로 냉각 자체를 매수 신호로 보지 말고, "
+                    "반전 신호(Zweig 스러스트·90% 업데이·신저가 감소)를 기다려 분할로 대응하는 것이 맞습니다.")
+        elif t >= 60 and sp < 40 and lv < 60:
+            summ = (f"{idx_txt}, 200일선 위 종목이 {_f(ma)}%로 상승이 넓게 퍼져 있는데 투기 열기({_f(sp)})와 "
+                    f"레버리지({_f(lv)})는 아직 낮아 광기 없는 건전한 상승입니다. 다음 국면은 투기와 레버리지가 뒤따라 "
+                    "오르는지로 판단하며, 세 지표가 함께 80을 넘기 전까지는 추세를 의심할 이유가 없습니다.")
+        elif t >= 60:
+            hot = f"레버리지({_f(lv)})" if lv >= 80 else f"투기 열기({_f(sp)})"
+            summ = (f"{idx_txt}, 폭은 넓지만 {hot}가 함께 달아오르며 상승의 연료가 빚·단타로 바뀌는 중입니다. "
+                    "아직 과열(80)은 아니지만 온도계·투기·레버리지가 동시에 80을 넘으면 후반부 신호로 보고 리스크 관리로 "
+                    "전환할 준비를 하는 구간입니다.")
+        elif t < 40 and t_dn:
+            summ = (f"{idx_txt}, 200일선 위 종목이 {_f(ma)}%뿐이라 시장 내부는 아직 차갑습니다. {fg_txt}{tch_txt2}라, "
+                    f"온도계가 저점을 찍고 올라서고 신저가 종목수({_f(nlv)})가 줄어드는 것이 확인되기 전까지는 반등이 와도 "
+                    "폭 좁은 반등에 그칠 가능성이 큽니다.")
+        elif t < 40:
+            summ = (f"{idx_txt}, 200일선 위 종목이 {_f(ma)}%로 내부는 아직 차갑지만 {tch_txt2}로 회복이 시작되는 초기 "
+                    "신호입니다. 200일선 위 비율이 30%대로 올라서고 신저가 종목수가 줄어들면 회복 국면으로 볼 수 있고, "
+                    "그 전까지는 확인 단계로 봅니다.")
+        else:
+            nxt = ("내부가 회복되는 흐름이 이어져 온도계가 60을 넘어서면 회복 국면으로 격상됩니다." if t_up and not fg_dn else
+                   "식는 흐름이 이어져 온도계가 40 아래로 내려가면 경계 쪽으로 기울어집니다." if t_dn and not fg_up else
+                   "온도계와 공포탐욕이 같은 방향으로 움직이기 시작하는 쪽이 다음 국면의 단서가 됩니다.")
+            summ = f"{idx_txt}, 온도계 {t:.0f}의 중립 구간이라 뚜렷한 극단 신호는 없습니다. {fg_txt}{tch_txt2}라, {nxt}"
+        out.append({"icon": icon, "main": main, "sub": sub, "lines": lines, "summary": summ, "stat": stat})
+    return out
+
+
 def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
-                  lev: dict | None, flows: dict | None, macro: dict | None = None):
+                  lev: dict | None, flows: dict | None, macro: dict | None = None,
+                  signals: dict | None = None, interp: list | None = None):
     recent = d.tail(CHART_ROWS)
     comp_recent = comp.reindex(recent.index)
 
@@ -601,7 +873,7 @@ def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
         "dates": [f"{ts:%Y-%m-%d}" for ts in recent.index],
         "scores": {**scores,
                    "series": {k: _round(comp_recent[k], 1)
-                              for k in ("overall", "trend", "spec", "conc", "vol", "lev", "fg")}},
+                              for k in ("overall", "trend", "spec", "conc", "vol", "lev", "fg", "mom")}},
         "markets": {k: series(k) for k in ("all", "kospi", "kosdaq")},
         "spec": {
             "top10_share": _round(recent["top10_share"], 1),
@@ -618,6 +890,10 @@ def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
         },
         "vkospi": _round(recent.get("vkospi", pd.Series(index=recent.index)), 2),
         "putcall": _round(recent.get("putcall", pd.Series(index=recent.index)), 3),
+        "ew": {"close": _round(recent.get("ew_close", pd.Series(index=recent.index)), 0),
+               "mom": _round(recent.get("ew_mom", pd.Series(index=recent.index)), 2)},
+        "signals": signals or {},
+        "interp": interp or [],
         "leverage": lev,
         "flows": flows,
         "macro": macro or {},
@@ -645,6 +921,13 @@ def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
         "vol": scores.get("vol"),
         "lev": scores.get("lev"),
         "fg": scores.get("fg"),
+        "mom": scores.get("mom"),
+        # 카톡 알림용: 오늘 활성 신호 + 신호별 과거 성과
+        "signals": ({"active": [k for k, arr in signals["flags"].items() if arr and arr[-1] == 1],
+                     "stats": signals["stats"], "base": signals["base"]} if signals else {}),
+        # 텔레그램·카톡 공용 해석 문장(최신일): icon·main·summary
+        "interp": ({k: v for k, v in next((x for x in reversed(interp) if x), {}).items()
+                    if k in ("icon", "main", "summary")} if interp else {}),
         "ma200": None if pd.isna(last["all_ma200"]) else round(float(last["all_ma200"]), 1),
         "nh": None if pd.isna(last["all_nh"]) else int(last["all_nh"]),
         "nl": None if pd.isna(last["all_nl"]) else int(last["all_nl"]),
@@ -682,6 +965,15 @@ def main():
             hist = apply_series(hist, fetch_index(symbol, start), col)
         except Exception as e:
             log.warning("%s 지수 수집 실패: %s", symbol, e)
+
+    try:
+        ew_close, ew_mom = fetch_ew_mom(start)
+        hist = apply_series(hist, ew_close, "ew_close")
+        hist = apply_series(hist, ew_mom, "ew_mom")
+        log.info("동일가중 ETF(%s) %d일 (최근 %s 125일선 대비 %+.1f%%)",
+                 EW_ETF, len(ew_close), ew_mom.index[-1].date(), ew_mom.iloc[-1])
+    except Exception as e:
+        log.warning("동일가중 ETF 수집 실패(기존 값 유지): %s", e)
 
     try:
         hist = apply_series(hist, fetch_usdkrw(start), "usdkrw")
@@ -725,7 +1017,13 @@ def main():
     scores, comp = build_scores(d, lev)
     log.info("스코어: %s", scores)
     macro = fetch_macro(d)
-    write_outputs(d, comp, scores, lev, flows, macro)
+    signals = build_signals(d, comp)
+    log.info("신호 통계: %s", {k: (v["episodes"], v["r20"], v["r60"]) for k, v in signals["stats"].items()})
+    interp = build_interp(d, comp, signals)
+    latest_interp = next((x for x in reversed(interp) if x), None)
+    if latest_interp:
+        log.info("해석: %s %s", latest_interp["icon"], latest_interp["main"])
+    write_outputs(d, comp, scores, lev, flows, macro, signals, interp)
     log.info("완료")
 
 
