@@ -6,14 +6,14 @@
  "conc": 76.5,
  "vol": 66.9,
  "lev": 44.5,
- "fg": 57.8,
+ "fg": 57.9,
  "mom": 8.1,
  "signals": {
   "active": [],
   "stats": {
    "bear_div": {
     "name": "약세 다이버전스",
-    "rule": "지수 60일 신고가인데 온도계 40 미만",
+    "rule": "지수 60일 신고가(1년 고점의 90% 이내)인데 온도계 40 미만",
     "episodes": 2,
     "n_days": 4,
     "n_eval": 2,
@@ -21,6 +21,17 @@
     "win20": 0.0,
     "r60": -23.8,
     "last": "2026-06-18"
+   },
+   "narrow_rebound": {
+    "name": "폭 좁은 반등",
+    "rule": "지수 60일 신고가지만 1년 고점보다 10% 이상 아래 + 온도계 40 미만",
+    "episodes": 0,
+    "n_days": 0,
+    "n_eval": 0,
+    "r20": null,
+    "win20": null,
+    "r60": null,
+    "last": null
    },
    "bull_div": {
     "name": "강세 다이버전스",
