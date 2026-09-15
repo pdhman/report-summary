@@ -34,8 +34,8 @@
     <div class="fn keyfigs" id="key-figs"></div>
     <div class="chart-block">
       <div class="ct">코스피 · 스코어 추이 <span class="cd">위 = 코스피, 아래 = 스코어(0~100) · 범례 클릭으로 표시/숨김</span></div>
-      <div id="ch-score-idx"></div>
       <div class="legend" id="lg-score"></div>
+      <div id="ch-score-idx"></div>
       <div id="ch-score"></div>
     </div>
     <details class="fn-more"><summary>지표 계산 방식 보기</summary>
@@ -292,7 +292,7 @@ var state = { m:'all', n:126, d:null, date:null };   // d = 선택일 인덱스(
           h, yfmt, refs:[{y,label}], zero(0 기준 대칭 여부), markers:[{i,color}], endLabels } */
 function drawChart(container, cfg){
   var W = container.clientWidth || 500, H = cfg.h || 190;
-  var padL = 8, padR = 44, padT = 10, padB = 20;
+  var padL = 8, padR = 44, padT = 10, padB = cfg.noX ? 6 : 20;   // noX: 위아래 쌍 차트의 위쪽(날짜 축은 아래 차트가 공유)
   var pw = W - padL - padR, ph = H - padT - padB;
   var dates = cfg.dates, n = dates.length;
 
@@ -321,7 +321,7 @@ function drawChart(container, cfg){
   }
   // x라벨 (4~5개)
   var xstep = Math.max(1, Math.round(n / 4));
-  for(var i = 0; i < n; i += xstep){
+  for(var i = 0; i < n && !cfg.noX; i += xstep){
     if(i > n - xstep * 0.4 && i < n - 1) continue;
     var anchor = i === 0 ? 'start' : 'middle', lx = i === 0 ? padL : X(i);
     svg += '<text x="' + lx + '" y="' + (H-5) + '" text-anchor="' + anchor + '" font-size="10" style="fill:var(--muted)">' +
@@ -615,7 +615,7 @@ function renderScoreChart(){
     b.onclick = function(){ st[+b.dataset.i] = !st[+b.dataset.i]; renderScoreChart(); };
   });
   // 코스피를 같은 x축의 미니 차트로 위에 둔다 (이중 축 대신 A/D·지수 쌍과 같은 방식)
-  drawChart(el('ch-score-idx'), { dates:dates, h:240, series:[
+  drawChart(el('ch-score-idx'), { dates:dates, h:240, noX:true, series:[
     { data:sl(D.index.kospi), label:'코스피', color:'var(--ink)', nd:0 }] });
   drawChart(el('ch-score'), { dates:dates, h:170, refs:[{y:50}], series:
     defs.filter(function(d, i){ return st[i]; }).map(function(d){
