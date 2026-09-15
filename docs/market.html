@@ -194,6 +194,11 @@
     padding:9px 12px; margin:6px 0 8px; font-size:13.5px; line-height:1.5; }
   .interp .ii { font-size:18px; line-height:1.2; flex:0 0 auto; }
   .interp .isub { color:var(--muted); font-size:12.5px; margin-top:2px; }
+  .interp .istat { font-size:12px; margin-top:4px; padding-top:4px; border-top:1px dashed var(--line); color:var(--ink); }
+  .interp .istat b.neg { color:var(--dn); } .interp .istat b.pos { color:var(--up); }
+  .sc-chg { display:inline-block; margin-left:6px; font-size:11.5px; font-weight:700; color:var(--muted); vertical-align:middle; }
+  .sc-chg.up { color:var(--up); } .sc-chg.dn { color:var(--dn); }
+  .sc-chg small { font-weight:500; opacity:.75; }
   .fn-more { margin:6px 2px 0; }
   .fn-more summary { cursor:pointer; color:var(--muted); font-size:12px; font-weight:600; list-style:none; }
   .fn-more summary::before { content:'▸ '; }
@@ -464,8 +469,13 @@ function gauge(id, key){
   var cls = zi == null ? null : (def.bandCls ? def.bandCls[zi] : ZONES[zi].cls);
   var color = zi == null ? 'var(--muted)' : 'var(' + cls + ')';
   var txt = v == null ? '–' : (def.bands ? fmt(v, 0) : v.toFixed(0));
+  // 20일 변화 화살표(방향) — 백분위 게이지만. ±3 미만은 보합(▶)
+  var Sk = D.scores.series[key], ch = (!def.bands && Sk && state.d >= 20 && Sk[state.d] != null && Sk[state.d-20] != null)
+    ? Sk[state.d] - Sk[state.d-20] : null;
+  var chTxt = ch == null ? '' : '<span class="sc-chg ' + (ch >= 3 ? 'up' : ch <= -3 ? 'dn' : '') + '">' +
+    (ch >= 3 ? '▲' : ch <= -3 ? '▼' : '▶') + (ch > 0 ? '+' : '') + ch.toFixed(0) + '<small> /20일</small></span>';
   var el_ = el(id);
-  el_.innerHTML = '<div class="sc-name">' + def.name + '</div>' +
+  el_.innerHTML = '<div class="sc-name">' + def.name + chTxt + '</div>' +
     '<div><span class="sc-val" style="color:' + color + '">' + txt + '</span>' +
     (zi == null ? '' : '<span class="sc-label" style="color:' + color + '">' + def.labels[zi] + '</span>') + '</div>' +
     '<div class="meter"><i style="width:' + Math.min(v||0, 100) + '%;background:' + color + '"></i>' +
@@ -615,8 +625,18 @@ function renderScoreChart(){
     b.onclick = function(){ st[+b.dataset.i] = !st[+b.dataset.i]; renderScoreChart(); };
   });
   // 코스피를 같은 x축의 미니 차트로 위에 둔다 (이중 축 대신 A/D·지수 쌍과 같은 방식)
-  drawChart(el('ch-score-idx'), { dates:dates, h:240, noX:true, series:[
-    { data:sl(D.index.kospi), label:'코스피', color:'var(--ink)', nd:0 }] });
+  // 다이버전스 발생일 마커: ▼ 약세(빨강) / ▲ 강세(파랑)
+  var kq = sl(D.index.kospi), mk = [];
+  if(D.signals && D.signals.flags){
+    var fb = sl(D.signals.flags.bear_div), fu = sl(D.signals.flags.bull_div);
+    kq.forEach(function(v, j){
+      if(v == null) return;
+      if(fb[j] === 1) mk.push({ i:j, y:v, color:'var(--up)' });
+      if(fu[j] === 1) mk.push({ i:j, y:v, color:'var(--dn)' });
+    });
+  }
+  drawChart(el('ch-score-idx'), { dates:dates, h:240, noX:true, markers:mk, series:[
+    { data:kq, label:'코스피', color:'var(--ink)', nd:0 }] });
   drawChart(el('ch-score'), { dates:dates, h:170, refs:[{y:50}], series:
     defs.filter(function(d, i){ return st[i]; }).map(function(d){
       return { data:sl(S[d.key]), label:SCORE_DEFS[d.key].name, color:d.color, width:d.width, nd:0 };
@@ -686,6 +706,18 @@ function renderGauges(){
   if(D.scores.series.mom) gauge('g-mom', 'mom'); else el('g-mom').hidden = true;
   renderInterp();
 }
+/* 신호별 과거 성과 문구 — "과거 N회 → 이후 20/60일 코스피 평균" (빌더가 계산해 D.signals.stats 에 실음) */
+function sigStat(key){
+  var st = D.signals && D.signals.stats && D.signals.stats[key], base = D.signals && D.signals.base;
+  if(!st) return '';
+  if(!st.n_eval) return '📊 과거 사례: ' + (st.episodes ? '발생 ' + st.episodes + '회이지만 이후 성과를 아직 확인할 수 없음(최근 발생)' : '이 표본에서는 발생한 적 없음') + '.';
+  var pos = function(v){ return v == null ? '–' : '<b class="' + (v >= 0 ? 'pos' : 'neg') + '">' + (v > 0 ? '+' : '') + fmt(v,1) + '%</b>'; };
+  var s = '📊 과거 ' + st.n_eval + '회(' + st.name + ') → 이후 20일 코스피 평균 ' + pos(st.r20) +
+          (st.win20 != null ? ' (상승 확률 ' + fmt(st.win20,0) + '%)' : '') + ', 60일 ' + pos(st.r60);
+  if(base && base.r20 != null) s += ' · 같은 기간 전체 평균 ' + (base.r20 > 0 ? '+' : '') + fmt(base.r20,1) + '% / ' + (base.r60 > 0 ? '+' : '') + fmt(base.r60,1) + '%';
+  if(st.n_eval < 5) s += ' · <span class="muted">표본 ' + st.n_eval + '회로 적어 참고용</span>';
+  return s;
+}
 /* 자동 해석: 게이지 조합을 소비자용 한 줄로. 우선순위대로 첫 매칭 규칙 1개.
    체온은 내부 온도라 지수와 따로 움직일 수 있어, 그 괴리를 문장으로 풀어준다. */
 function renderInterp(){
@@ -700,16 +732,35 @@ function renderInterp(){
   for(var k = 0; k <= i; k++){ if(ks[k] != null && (hi == null || ks[k] > hi)) hi = ks[k]; }
   var nearHigh = ks[i] != null && hi != null && ks[i] >= hi * 0.97;
   var r20 = (i >= 20 && ks[i] != null && ks[i-20] != null) ? (ks[i] / ks[i-20] - 1) * 100 : null;
-  var icon, main, sub;
-  if(nearHigh && t < 40){
+  var icon, main, sub, stat = '';
+  var F = (D.signals && D.signals.flags) || {};
+  var on = function(k){ return F[k] && F[k][i] === 1; };
+  var tch = (i >= 20 && S.overall[i-20] != null) ? t - S.overall[i-20] : null;
+  var tchTxt = tch == null ? '' : ' 온도계는 20일간 ' + (tch > 0 ? '+' : '') + tch.toFixed(0) + '.';
+  if(on('bear_div')){
+    icon = '🔻'; main = '약세 다이버전스: 지수는 60일 신고가인데 온도계는 ' + t.toFixed(0) + '입니다.';
+    sub = '지수를 소수 종목이 끌어올리고(TOP10 집중 ' + fmt(conc,0) + '%) 시장 내부는 따라오지 못하는 상태.' + moTxt + tchTxt + ' 폭 분석에서 고점 경고로 쓰는 고전적 신호.';
+    stat = sigStat('bear_div');
+  } else if(on('bull_div')){
+    icon = '🔺'; main = '강세 다이버전스: 지수는 60일 신저가인데 온도계는 오르고 있습니다(' + t.toFixed(0) + ').';
+    sub = '가격은 저점을 낮추지만 내부(폭·투기·레버리지)는 회복 중 — 바닥 다지기의 전형.' + tchTxt + ' 반전 신호(Zweig 스러스트·90% 업데이)로 타이밍 확인.';
+    stat = sigStat('bull_div');
+  } else if(on('healthy_high')){
+    icon = '✅'; main = '건전한 신고가: 지수 신고가에 시장 내부도 함께 뜨겁습니다(' + t.toFixed(0) + ').';
+    sub = '폭이 넓은 상승 — 추세를 의심할 근거가 없는 구간.' + tchTxt;
+    stat = sigStat('healthy_high');
+  } else if(nearHigh && t < 40){
     icon = '⚠️'; main = '지수는 고점권인데 내부 온도는 차갑습니다(' + t.toFixed(0) + ').';
-    sub = '소수 종목이 지수를 끌어올리는 폭 좁은 상승(TOP10 집중 ' + fmt(conc,0) + '%).' + moTxt + ' 역사적으로 폭 붕괴에 앞서 나타나는 패턴 — 경계.';
+    sub = '소수 종목이 지수를 끌어올리는 폭 좁은 상승(TOP10 집중 ' + fmt(conc,0) + '%).' + moTxt + tchTxt + ' 역사적으로 폭 붕괴에 앞서 나타나는 패턴 — 경계.';
+    stat = sigStat('bear_div');
   } else if(t >= 80){
     icon = '🔥'; main = '과열: 폭·투기·레버리지가 동시에 역사적 상단입니다.';
-    sub = '상승 사이클 후반부의 전형 — 신규 진입보다 리스크 관리가 우선인 구간.';
+    sub = '상승 사이클 후반부의 전형 — 신규 진입보다 리스크 관리가 우선인 구간.' + tchTxt;
+    stat = sigStat('hot');
   } else if(t < 20){
     icon = '🧊'; main = '냉각: 공포와 청산이 극단입니다.';
-    sub = '역사적으로 바닥 탐색 구간 — 반전 신호(Zweig 스러스트·90% 업데이·신저가 감소)를 확인하며 분할 대응.';
+    sub = '역사적으로 바닥 탐색 구간 — 반전 신호(Zweig 스러스트·90% 업데이·신저가 감소)를 확인하며 분할 대응.' + tchTxt;
+    stat = sigStat('cold');
   } else if(t >= 60 && sp < 40 && lv < 60){
     icon = '✅'; main = '건전한 상승: 폭이 넓고 광기·빚이 없는 상승입니다.';
     sub = '사이클 초·중반의 가장 좋은 조합 — 투기·레버리지가 뒤따라 오르는지가 다음 관전 포인트.';
@@ -729,7 +780,8 @@ function renderInterp(){
     icon = '➖'; main = '중립: 뚜렷한 극단 신호가 없습니다.';
     sub = '추세(폭) ' + fmt(tr,0) + ' · 투기 ' + fmt(sp,0) + ' · 레버리지 ' + fmt(lv,0) + ' — 서브 게이지의 방향 변화를 지켜볼 구간.';
   }
-  box.innerHTML = '<span class="ii">' + icon + '</span><div><b>' + main + '</b><div class="isub">' + sub + '</div></div>';
+  box.innerHTML = '<span class="ii">' + icon + '</span><div><b>' + main + '</b><div class="isub">' + sub + '</div>' +
+    (stat ? '<div class="istat">' + stat + '</div>' : '') + '</div>';
 }
 function updateDaySum(){
   var i = state.d, A = D.markets.all, parts = [];
