@@ -473,9 +473,11 @@ function gauge(id, key){
   var cls = zi == null ? null : (def.bandCls ? def.bandCls[zi] : ZONES[zi].cls);
   var color = zi == null ? 'var(--muted)' : 'var(' + cls + ')';
   var txt = v == null ? '–' : (def.bands ? fmt(v, 0) : v.toFixed(0));
-  // 20일 변화 화살표(방향) — 백분위 게이지만. ±3 미만은 보합(▶)
-  var Sk = D.scores.series[key], ch = (!def.bands && Sk && state.d >= 20 && Sk[state.d] != null && Sk[state.d-20] != null)
-    ? Sk[state.d] - Sk[state.d-20] : null;
+  // 20일 변화 화살표(방향). 원값 게이지(쏠림)는 원값 %p 차이, 나머지는 백분위 차이. ±3 미만은 보합(▶)
+  var Sk = D.scores.series[key];
+  var cur = def.bands ? def.raw(state.d) : (Sk ? Sk[state.d] : null);
+  var prv = state.d >= 20 ? (def.bands ? def.raw(state.d - 20) : (Sk ? Sk[state.d - 20] : null)) : null;
+  var ch = (cur != null && prv != null) ? cur - prv : null;
   var chTxt = ch == null ? '' : '<span class="sc-chg ' + (ch >= 3 ? 'up' : ch <= -3 ? 'dn' : '') + '">' +
     (ch >= 3 ? '▲' : ch <= -3 ? '▼' : '▶') + (ch > 0 ? '+' : '') + ch.toFixed(0) + '<small> /20일</small></span>';
   var el_ = el(id);
@@ -722,9 +724,19 @@ function sigStat(key){
   if(st.n_eval < 5) s += ' · <span class="muted">표본 ' + st.n_eval + '회로 적어 참고용</span>';
   return s;
 }
-/* 자동 해석: 게이지 조합을 소비자용 한 줄로. 우선순위대로 첫 매칭 규칙 1개.
-   체온은 내부 온도라 지수와 따로 움직일 수 있어, 그 괴리를 문장으로 풀어준다. */
+/* 자동 해석: 문장은 빌더(breadth_build.build_interp)가 날짜별로 미리 만들어 D.interp 에 싣는다
+   (웹·텔레그램이 같은 문장을 쓰기 위해). 아래 Legacy 는 D.interp 가 없는 구형 데이터용 폴백. */
 function renderInterp(){
+  var box = el('interp'); if(!box) return;
+  var it = D.interp && D.interp[state.d];
+  if(!it){ if(D.interp && D.interp.length){ box.innerHTML = ''; return; } return renderInterpLegacy(); }
+  var stat = it.stat ? sigStat(it.stat) : '';
+  var lines = (it.lines || []).concat(['<b>요약</b>' + it.summary]);
+  box.innerHTML = '<span class="ii">' + it.icon + '</span><div><b>' + it.main + '</b><div class="isub">' + it.sub + '</div>' +
+    '<ul class="inow">' + lines.map(function(s){ return '<li>' + s + '</li>'; }).join('') + '</ul>' +
+    (stat ? '<div class="istat">' + stat + '</div>' : '') + '</div>';
+}
+function renderInterpLegacy(){
   var box = el('interp'); if(!box) return;
   var i = state.d, S = D.scores.series;
   var t = S.overall[i], fg = S.fg ? S.fg[i] : null, tr = S.trend[i], sp = S.spec[i], lv = S.lev[i];

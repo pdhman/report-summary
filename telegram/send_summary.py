@@ -179,6 +179,18 @@ def section_etf(lines, top=5):
         lines.append(f"   {html.escape(e[1])} {' · '.join(bits)}")
 
 
+def section_interp(m, lines):
+    """시장 온도계 자동 해석(헤드라인 + 요약) — 빌더가 만든 문장을 그대로 쓴다(웹과 동일)."""
+    items = m.get("interp") or []
+    it = next((x for x in reversed(items) if x), None)
+    if not it:
+        return
+    lines.append("")
+    lines.append(f"{it.get('icon', '')} <b>{html.escape(it.get('main', ''))}</b>")
+    if it.get("summary"):
+        lines.append(html.escape(it["summary"]))
+
+
 def build_message():
     m = load_js(BASE / "docs" / "market_data.js")
     asof = m.get("asof", "")
@@ -189,6 +201,7 @@ def build_message():
 
     lines = [f"📌 <b>알파노트 요약</b> · {title_date}", ""]
     section_score(m, lines)
+    section_interp(m, lines)
     section_index(m, lines)
     section_breadth(m, lines)
     section_flows(lines)
