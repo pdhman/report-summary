@@ -33,7 +33,7 @@
     <div class="fn" id="day-sum"></div>
     <div class="fn keyfigs" id="key-figs"></div>
     <div class="chart-block">
-      <div class="ct">코스피 · 스코어 추이 <span class="cd">위 = 코스피, 아래 = 스코어(0~100) · 범례 클릭으로 표시/숨김</span></div>
+      <div class="ct">코스피 · 스코어 추이 <span class="cd">위 = 코스피, 아래 = 스코어(0~100) · <span style="color:var(--up)">▼</span> 약세 다이버전스 <span style="color:var(--dn)">▲</span> 강세 다이버전스 · 범례 클릭으로 표시/숨김</span></div>
       <div class="legend" id="lg-score"></div>
       <div id="ch-score-idx"></div>
       <div id="ch-score"></div>
@@ -391,8 +391,17 @@ function drawChart(container, cfg){
   }
   // 마커(90% 데이 등)
   (cfg.markers||[]).forEach(function(mk){
-    svg += '<circle cx="' + X(mk.i) + '" cy="' + Y(mk.y) + '" r="3.5" style="fill:' + mk.color +
-           ';stroke:var(--panel);stroke-width:1.5"/>';
+    var mx = X(mk.i), my = Y(mk.y), s = 6;
+    if(mk.shape === 'down'){        // ▼ 점 위에 (약세 다이버전스)
+      svg += '<path d="M' + (mx-s) + ' ' + (my-s-9) + 'L' + (mx+s) + ' ' + (my-s-9) + 'L' + mx + ' ' + (my-4) +
+             'Z" style="fill:' + mk.color + ';stroke:var(--panel);stroke-width:1"/>';
+    } else if(mk.shape === 'up'){   // ▲ 점 아래에 (강세 다이버전스)
+      svg += '<path d="M' + (mx-s) + ' ' + (my+s+9) + 'L' + (mx+s) + ' ' + (my+s+9) + 'L' + mx + ' ' + (my+4) +
+             'Z" style="fill:' + mk.color + ';stroke:var(--panel);stroke-width:1"/>';
+    } else {
+      svg += '<circle cx="' + mx + '" cy="' + my + '" r="3.5" style="fill:' + mk.color +
+             ';stroke:var(--panel);stroke-width:1.5"/>';
+    }
   });
   // 라인 끝 직접 라벨
   if(cfg.endLabels !== false){
@@ -637,8 +646,8 @@ function renderScoreChart(){
     var fb = sl(D.signals.flags.bear_div), fu = sl(D.signals.flags.bull_div);
     kq.forEach(function(v, j){
       if(v == null) return;
-      if(fb[j] === 1) mk.push({ i:j, y:v, color:'var(--up)' });
-      if(fu[j] === 1) mk.push({ i:j, y:v, color:'var(--dn)' });
+      if(fb[j] === 1) mk.push({ i:j, y:v, color:'var(--up)', shape:'down' });
+      if(fu[j] === 1) mk.push({ i:j, y:v, color:'var(--dn)', shape:'up' });
     });
   }
   drawChart(el('ch-score-idx'), { dates:dates, h:240, noX:true, markers:mk, series:[
