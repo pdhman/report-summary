@@ -28,14 +28,18 @@
         <div class="score-sub" id="g-fg"></div>
       </div>
     </div>
+    <div class="interp" id="interp"></div>
     <div class="fn" id="day-sum"></div>
     <div class="fn keyfigs" id="key-figs"></div>
     <div class="chart-block">
-      <div class="ct">스코어 추이 <span class="cd">범례 클릭으로 표시/숨김 · 전 기간 백분위(0~100)</span></div>
+      <div class="ct">스코어 추이 <span class="cd">범례 클릭으로 표시/숨김 · 0~100 스코어</span></div>
       <div class="legend" id="lg-score"></div>
       <div id="ch-score"></div>
     </div>
     <p class="fn">각 스코어는 수집된 전체 기간(현재 <span id="fn-days"></span>거래일) 대비 백분위.
+      <b>종합 체온</b>은 추세(폭)·투기 열기·레버리지·변동성(역방향)을 같은 방향(높음=뜨거움)으로 정렬해 합산한 뒤
+      표준화(평균 50·σ16)한 값 — 공포탐욕과 같은 변동폭으로 읽히도록 2026-09-15 재설계. 지수와 따로 움직일 수 있으며
+      그 괴리(지수 고점 vs 내부 냉각 등)가 핵심 신호다.
       추세(폭)=이평선 위 비율·ADR·신고가율·McClellan / 투기 열기=저가주 비중·상한가·회전율(개인 투기) /
       쏠림=TOP10 거래대금 집중도(종합 체온 미반영) / 변동성=VKOSPI·실현변동성 / 레버리지=신용융자 증가율·예탁금 대비 신용·반대매매비중 /
       공포탐욕=CNN 방식 한국판 7요소(지수/125일MA·신고-신저 폭·상승 거래대금 비중·변동성 역·원달러 역·신용잔고 증가·풋콜비율 5일 역) 평균, 종합 체온과 별도.
@@ -181,6 +185,11 @@
   .dp-btn:hover:not(:disabled) { color:var(--accent); border-color:var(--accent); }
   .dp-btn:disabled { opacity:.3; cursor:default; }
   #day-sum { font-size:12.5px; margin:2px 2px 4px; }
+  .interp { display:flex; gap:10px; align-items:flex-start; border-left:3px solid var(--accent);
+    background:color-mix(in srgb,var(--accent) 6%,transparent); border-radius:0 10px 10px 0;
+    padding:9px 12px; margin:6px 0 8px; font-size:13.5px; line-height:1.5; }
+  .interp .ii { font-size:18px; line-height:1.2; flex:0 0 auto; }
+  .interp .isub { color:var(--muted); font-size:12.5px; margin-top:2px; }
   .keyfigs { font-size:12px; line-height:1.9; margin:0 2px 10px; color:var(--muted); }
   .keyfigs b { color:var(--ink); font-variant-numeric:tabular-nums; }
   .keyfigs .kf-raw { font-size:11px; opacity:.8; }
@@ -660,6 +669,50 @@ function renderGauges(){
   gauge('g-overall', 'overall'); gauge('g-trend', 'trend'); gauge('g-spec', 'spec');
   gauge('g-conc', 'conc'); gauge('g-vol', 'vol'); gauge('g-lev', 'lev');
   gauge('g-fg', 'fg');
+  renderInterp();
+}
+/* 자동 해석: 게이지 조합을 소비자용 한 줄로. 우선순위대로 첫 매칭 규칙 1개.
+   체온은 내부 온도라 지수와 따로 움직일 수 있어, 그 괴리를 문장으로 풀어준다. */
+function renderInterp(){
+  var box = el('interp'); if(!box) return;
+  var i = state.d, S = D.scores.series;
+  var t = S.overall[i], fg = S.fg ? S.fg[i] : null, tr = S.trend[i], sp = S.spec[i], lv = S.lev[i];
+  var conc = D.spec.top10_share[i];
+  if(t == null){ box.innerHTML = ''; return; }
+  var ks = D.index.kospi, hi = null;
+  for(var k = 0; k <= i; k++){ if(ks[k] != null && (hi == null || ks[k] > hi)) hi = ks[k]; }
+  var nearHigh = ks[i] != null && hi != null && ks[i] >= hi * 0.97;
+  var r20 = (i >= 20 && ks[i] != null && ks[i-20] != null) ? (ks[i] / ks[i-20] - 1) * 100 : null;
+  var icon, main, sub;
+  if(nearHigh && t < 40){
+    icon = '⚠️'; main = '지수는 고점권인데 내부 온도는 차갑습니다(' + t.toFixed(0) + ').';
+    sub = '소수 종목이 지수를 끌어올리는 폭 좁은 상승(TOP10 집중 ' + fmt(conc,0) + '%). 역사적으로 폭 붕괴에 앞서 나타나는 패턴 — 경계.';
+  } else if(t >= 80){
+    icon = '🔥'; main = '과열: 폭·투기·레버리지가 동시에 역사적 상단입니다.';
+    sub = '상승 사이클 후반부의 전형 — 신규 진입보다 리스크 관리가 우선인 구간.';
+  } else if(t < 20){
+    icon = '🧊'; main = '냉각: 공포와 청산이 극단입니다.';
+    sub = '역사적으로 바닥 탐색 구간 — 반전 신호(Zweig 스러스트·90% 업데이·신저가 감소)를 확인하며 분할 대응.';
+  } else if(t >= 60 && sp < 40 && lv < 60){
+    icon = '✅'; main = '건전한 상승: 폭이 넓고 광기·빚이 없는 상승입니다.';
+    sub = '사이클 초·중반의 가장 좋은 조합 — 투기·레버리지가 뒤따라 오르는지가 다음 관전 포인트.';
+  } else if(t >= 60){
+    icon = '🌡️'; main = '뜨거운 상승: ' + (lv >= 80 ? '레버리지' : '투기 열기') + '가 동반 상승 중입니다.';
+    sub = '폭은 넓지만 연료가 빚·단타로 바뀌는 중 — 과열(80) 진입 여부 감시.';
+  } else if(fg != null && fg - t >= 25){
+    icon = '↕️'; main = '심리(공포탐욕 ' + fg.toFixed(0) + ')가 내부 온도(' + t.toFixed(0) + ')보다 크게 앞서 있습니다.';
+    sub = '기대가 실체(폭·체력)보다 먼저 달아오른 상태 — 내부가 따라오지 못하면 되돌림 위험.';
+  } else if(fg != null && t - fg >= 25){
+    icon = '🧱'; main = '내부는 뜨거운데 심리는 차갑습니다(공포탐욕 ' + fg.toFixed(0) + ').';
+    sub = '의심 속의 상승(wall of worry) — 역사적으로 지속성이 좋은 편.';
+  } else if(t < 40){
+    icon = '❄️'; main = '차가움: 폭이 좁고 열기가 없습니다.' + (r20 != null && r20 < -8 ? ' 최근 급락의 여파.' : '');
+    sub = '지수 방향과 별개로 시장 체력이 약한 상태 — 반등이 와도 폭이 넓어지는지 확인 필요.';
+  } else {
+    icon = '➖'; main = '중립: 뚜렷한 극단 신호가 없습니다.';
+    sub = '추세(폭) ' + fmt(tr,0) + ' · 투기 ' + fmt(sp,0) + ' · 레버리지 ' + fmt(lv,0) + ' — 서브 게이지의 방향 변화를 지켜볼 구간.';
+  }
+  box.innerHTML = '<span class="ii">' + icon + '</span><div><b>' + main + '</b><div class="isub">' + sub + '</div></div>';
 }
 function updateDaySum(){
   var i = state.d, A = D.markets.all, parts = [];

@@ -1,17 +1,17 @@
 {
  "date": "2026-09-14",
- "overall": 42.9,
+ "overall": 25.0,
  "trend": 46.2,
  "spec": 23.5,
  "conc": 85.1,
- "vol": 66.9,
+ "vol": 67.1,
  "lev": 35.1,
- "fg": 57.7,
+ "fg": 57.8,
  "ma200": 20.7,
  "nh": 58,
  "nl": 122,
  "adv": 1061,
  "dec": 1412,
- "vkospi": null,
- "putcall": null
+ "vkospi": 46.85,
+ "putcall": 0.56
 }
