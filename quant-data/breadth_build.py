@@ -607,7 +607,8 @@ def _round(x, nd=1):
 # (키, 이름, 규칙 설명) — 화면 자동 해석이 활성 신호를 최우선으로 보여주고
 # "과거 N회 → 이후 20/60일 코스피 평균" 근거를 붙인다.
 SIGNAL_DEFS = [
-    ("bear_div",     "약세 다이버전스", "지수 60일 신고가인데 온도계 40 미만"),
+    ("bear_div",     "약세 다이버전스", "지수 60일 신고가(1년 고점의 90% 이내)인데 온도계 40 미만"),
+    ("narrow_rebound", "폭 좁은 반등",  "지수 60일 신고가지만 1년 고점보다 10% 이상 아래 + 온도계 40 미만"),
     ("bull_div",     "강세 다이버전스", "지수 60일 신저가인데 온도계가 20일간 +5 이상 상승"),
     ("healthy_high", "건전한 신고가",   "지수 60일 신고가 + 온도계 55 이상"),
     ("cold",         "냉각 구간",       "온도계 20 미만"),
@@ -628,9 +629,13 @@ def build_signals(d: pd.DataFrame, comp: pd.DataFrame) -> dict:
     ks = d["kospi_close"].reindex(T.index)
     hi60 = ks >= ks.rolling(60).max()
     lo60 = ks <= ks.rolling(60).min()
+    # 고점권 조건(1년 고점의 90% 이내): 폭락 뒤 60일 창이 낮아지며 낮은 고점 반등이
+    # '신고가'로 잡혀 고점 경고로 오인되는 것을 막는다 (2026-09-15 사용자 결정, 90%).
+    near_long = ks >= ks.rolling(250, min_periods=120).max() * 0.90
     tchg = T - T.shift(20)
     flags = pd.DataFrame({
-        "bear_div": hi60 & (T < 40),
+        "bear_div": hi60 & near_long & (T < 40),
+        "narrow_rebound": hi60 & ~near_long & (T < 40),
         "bull_div": lo60 & (tchg >= 5),
         "healthy_high": hi60 & (T >= 55),
         "cold": T < 20,
@@ -727,6 +732,14 @@ def build_interp(d: pd.DataFrame, comp: pd.DataFrame, signals: dict) -> list:
             icon, main = "✅", f"건전한 신고가: 지수 신고가에 시장 내부도 함께 뜨겁습니다({t:.0f})."
             sub = f"폭이 넓은 상승 — 추세를 의심할 근거가 없는 구간.{tch_txt}"
             stat = "healthy_high"
+        elif on("narrow_rebound"):
+            win250 = ks[max(0, i - 249):i + 1]
+            off250 = (kv / np.nanmax(win250) - 1) * 100 if kv is not None else None
+            icon, main = "↗️", (f"폭 좁은 반등: 지수는 60일 신고가지만 1년 고점보다 {_f(abs(off250)) if off250 is not None else '–'}% 아래이고 "
+                                f"온도계는 {t:.0f}입니다.")
+            sub = (f"폭락 뒤 소수 종목이 이끄는 반등(TOP10 집중 {_f(conc)}%). 고점 경고는 아니지만 폭이 넓어지지 않으면 "
+                   f"저항에 막히기 쉬운 구간.{mo_txt}{tch_txt}")
+            stat = "narrow_rebound"
         elif near_high and t < 40:
             icon, main = "⚠️", f"지수는 고점권인데 내부 온도는 차갑습니다({t:.0f})."
             sub = (f"소수 종목이 지수를 끌어올리는 폭 좁은 상승(TOP10 집중 {_f(conc)}%).{mo_txt}{tch_txt}"
@@ -804,6 +817,10 @@ def build_interp(d: pd.DataFrame, comp: pd.DataFrame, signals: dict) -> list:
             summ = (f"{idx_txt}, 200일선 위 종목은 {_f(ma)}%에 그치고 신저가({_f(nlv)})가 신고가({_f(nhv)})보다 많아 "
                     "소수 종목이 지수를 끌어올리는 상승입니다. 이런 괴리는 대개 폭이 무너지며 해소되므로 200일선 위 비율과 "
                     "신고가 종목수가 더 줄어드는지 확인하고, 신규 진입은 보수적으로 가져가는 것이 정석입니다.")
+        elif on("narrow_rebound"):
+            summ = (f"{idx_txt}, 60일 기준으로는 신고가지만 1년 고점에서는 아직 멀고 200일선 위 종목이 {_f(ma)}%뿐이라 "
+                    "소수 종목이 끌어올리는 폭 좁은 반등입니다. 6월 같은 고점 경고와는 다른 국면이지만, 온도계가 40을 넘어서며 "
+                    "200일선 위 비율이 늘어나지 않으면 반등이 저항에서 멈추기 쉬우니 추격 매수보다 폭 확장 확인이 먼저입니다.")
         elif on("bull_div"):
             summ = (f"지수는 60일 저점을 다시 낮췄지만 {tch_txt2}로, 내부(폭·투기·레버리지)가 가격보다 먼저 회복되는 "
                     f"바닥 다지기의 모습입니다. 이 패턴은 몇 주씩 이어질 수 있으니 신저가 종목수({_f(nlv)})가 줄어드는지와 "

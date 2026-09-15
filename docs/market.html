@@ -33,7 +33,7 @@
     <div class="fn" id="day-sum"></div>
     <div class="fn keyfigs" id="key-figs"></div>
     <div class="chart-block">
-      <div class="ct">코스피 · 스코어 추이 <span class="cd">위 = 코스피, 아래 = 스코어(0~100) · <span style="color:var(--up)">▼</span> 약세 다이버전스 <span style="color:var(--dn)">▲</span> 강세 다이버전스 · 범례 클릭으로 표시/숨김</span></div>
+      <div class="ct">코스피 · 스코어 추이 <span class="cd">위 = 코스피, 아래 = 스코어(0~100) · <span style="color:var(--up)">▼</span> 약세 다이버전스 <span style="color:var(--amber)">▼</span> 폭 좁은 반등 <span style="color:var(--dn)">▲</span> 강세 다이버전스 · 범례 클릭으로 표시/숨김</span></div>
       <div class="legend" id="lg-score"></div>
       <div id="ch-score-idx"></div>
       <div id="ch-score"></div>
@@ -659,10 +659,11 @@ function renderScoreChart(){
   // 다이버전스 발생일 마커: ▼ 약세(빨강) / ▲ 강세(파랑)
   var kq = sl(D.index.kospi), mk = [];
   if(D.signals && D.signals.flags){
-    var fb = sl(D.signals.flags.bear_div), fu = sl(D.signals.flags.bull_div);
+    var fb = sl(D.signals.flags.bear_div), fu = sl(D.signals.flags.bull_div), fn = sl(D.signals.flags.narrow_rebound || []);
     kq.forEach(function(v, j){
       if(v == null) return;
-      if(fb[j] === 1) mk.push({ i:j, y:v, color:'var(--up)', shape:'down', label:'▼ 약세 다이버전스 — 60일 신고가 + 온도계 40 미만' });
+      if(fb[j] === 1) mk.push({ i:j, y:v, color:'var(--up)', shape:'down', label:'▼ 약세 다이버전스 — 60일 신고가(1년 고점 90% 이내) + 온도계 40 미만' });
+      if(fn[j] === 1) mk.push({ i:j, y:v, color:'var(--amber)', shape:'down', label:'▼ 폭 좁은 반등 — 60일 신고가지만 1년 고점에서 멀고 온도계 40 미만' });
       if(fu[j] === 1) mk.push({ i:j, y:v, color:'var(--dn)', shape:'up', label:'▲ 강세 다이버전스 — 60일 신저가 + 온도계 상승' });
     });
   }
