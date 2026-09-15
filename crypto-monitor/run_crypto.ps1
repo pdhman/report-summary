@@ -22,11 +22,17 @@ $repo = Split-Path $here -Parent
 Set-Location $repo
 
 # --- 브랜치 가드: 자동화는 항상 main 기준 ---
+# -f 금지: `checkout -f main` 은 이미 main 이어도 미커밋 수정을 전부 버린다
+# (2026-09-15 docs/market.html 유실 실사고). 전환이 막히면 건드리지 않고 중단한다.
 if (Test-Path (Join-Path $repo '.git/rebase-merge')) { git rebase --quit 2>$null }
 $branch = (git rev-parse --abbrev-ref HEAD 2>$null)
 if ($branch -ne 'main') {
-    git checkout -f main 2>$null | Out-Null
-    if ((git rev-parse --abbrev-ref HEAD 2>$null) -ne 'main') { exit 1 }
+    git checkout main 2>$null | Out-Null
+    if ((git rev-parse --abbrev-ref HEAD 2>$null) -ne 'main') {
+        "$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) [crypto] branch '$branch' -> main FAILED (uncommitted edits in the way?) - abort, nothing discarded" |
+            Add-Content -Path (Join-Path $repo 'logs\branch_guard.log') -Encoding UTF8 -ErrorAction SilentlyContinue
+        exit 1
+    }
 }
 
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -83,6 +89,9 @@ try {
                 # add -A 금지: 추적 외 개인 파일까지 스테이징해 공개 저장소로
                 # 유출될 수 있다 (2026-08-03 run_flows 실사고). 충돌은 추적
                 # 파일에서만 발생하므로 add -u 로 충분하다.
+                # `--theirs -- .` 의 실제 영향은 충돌 난 추적 파일뿐이다: 리베이스 중엔
+                # 사람의 미커밋 변경이 작업 트리에 없고(--autostash 로 치워져 있음),
+                # 미추적 파일은 checkout 이 건드리지 않는다.
                 git checkout --theirs -- . 2>&1 | Add-Content -Path $log -Encoding UTF8
                 git add -u 2>&1 | Add-Content -Path $log -Encoding UTF8
                 git -c core.editor=true rebase --continue 2>&1 | Add-Content -Path $log -Encoding UTF8

@@ -12,11 +12,17 @@ $proj = $PSScriptRoot
 Set-Location $proj
 
 # --- 브랜치 가드: 자동화는 항상 main 기준 (실습 브랜치에 있으면 전환) ---
+# -f 금지: `checkout -f main` 은 이미 main 이어도 미커밋 수정을 전부 버린다
+# (2026-09-15 docs/market.html 유실 실사고). 전환이 막히면 건드리지 않고 중단한다.
 if (Test-Path (Join-Path $proj '.git/rebase-merge')) { git rebase --quit 2>$null }
 $branch = (git rev-parse --abbrev-ref HEAD 2>$null)
 if ($branch -ne 'main') {
-    git checkout -f main 2>$null | Out-Null
-    if ((git rev-parse --abbrev-ref HEAD 2>$null) -ne 'main') { exit 1 }
+    git checkout main 2>$null | Out-Null
+    if ((git rev-parse --abbrev-ref HEAD 2>$null) -ne 'main') {
+        "$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) [blog] branch '$branch' -> main FAILED (uncommitted edits in the way?) - abort, nothing discarded" |
+            Add-Content -Path (Join-Path $proj 'logs\branch_guard.log') -Encoding UTF8 -ErrorAction SilentlyContinue
+        exit 1
+    }
 }
 
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -48,6 +54,9 @@ try {
                 # rebase stopped on generated-file conflict: adopt local build.
                 # add -u only (tracked files) - add -A would stage untracked
                 # personal files into this public repo (run_flows incident 2026-08-03)
+                # `--theirs -- .` only really touches the conflicted tracked files:
+                # during a rebase the tree holds no uncommitted edits (pull refuses
+                # to start with any) and checkout never touches untracked files.
                 git checkout --theirs -- . 2>&1 | Add-Content -Path $log -Encoding UTF8
                 git add -u 2>&1 | Add-Content -Path $log -Encoding UTF8
                 git -c core.editor=true rebase --continue 2>&1 | Add-Content -Path $log -Encoding UTF8

@@ -47,17 +47,29 @@ $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $out = Join-Path $logDir "screener_$stamp.log"
 
 # --- 브랜치 가드: 자동화는 항상 main 기준 (실습 브랜치에 있으면 전환) ---
+# -f 금지: `checkout -f main` 은 이미 main 에 있어도 추적 파일의 미커밋 수정을 전부
+# 버린다 (2026-09-15 15:35 실사고: 스케줄러 작업 액션의 무조건 `checkout -f main` 이
+# 편집 중이던 docs/market.html 변경 13건을 지움). 전환이 막히면(사람의 수정과 충돌)
+# 작업 트리를 건드리지 않고 중단해 로그로 넘긴다.
 if (Test-Path (Join-Path $proj '.git/rebase-merge')) { & git -C $proj rebase --quit 2>$null }
 $branch = (& git -C $proj rev-parse --abbrev-ref HEAD 2>$null)
 if ($branch -ne 'main') {
     "[guard] branch '$branch' -> main" | Out-File $out -Append -Encoding utf8
-    & git -C $proj checkout -f main 2>&1 | Out-File $out -Append -Encoding utf8
+    & git -C $proj checkout main 2>&1 | Out-File $out -Append -Encoding utf8
     if ((& git -C $proj rev-parse --abbrev-ref HEAD 2>$null) -ne 'main') {
-        "[guard] FAILED to switch to main - abort" | Out-File $out -Append -Encoding utf8
+        "[guard] FAILED to switch to main (uncommitted edits in the way?) - abort, nothing discarded" | Out-File $out -Append -Encoding utf8
         exit 1
     }
 }
 $err = Join-Path $logDir "screener_$stamp.err.log"
+
+# --- 실행 전 이미 수정돼 있던 docs/ 추적 파일(= 사람이 편집 중) 기록 ---
+# 아래 파이프라인(make_report → make_summary.build)은 자기 산출물 외에도 docs/ 의
+# 다른 페이지(leverage.html, flow.html, flow_data.js, x.html, x_*.html, crypto.html)를
+# 부수적으로 재생성한다. 예전엔 이를 치우려고 `git checkout -- docs/` 로 docs/ 전체를
+# 되돌렸고, 편집 중이던 docs/market.html 변경까지 함께 날렸다(2026-09-15 실사고).
+# 지금은 이 목록에 없는, 즉 이 실행이 새로 건드린 파일만 되돌린다(아래 [git] 단계).
+$preEdited = @(& git -C $proj -c core.quotepath=false diff --name-only HEAD -- docs 2>$null | Where-Object { $_ })
 
 # 실행 (자식 프로세스가 UTF-8 바이트를 그대로 파일에 기록)
 $p = Start-Process -FilePath $py -ArgumentList "-u `"$script`"" `
@@ -86,14 +98,30 @@ if ($report) { Start-Process $report.FullName }
 & git -C $proj add -A -- "종목탐색_TOP30.pending.xlsx" 2>&1 | Out-File $out -Append -Encoding utf8
 & git -C $proj diff --staged --quiet
 if ($LASTEXITCODE -ne 0) {
-    & git -C $proj checkout -- docs/ 2>&1 | Out-File $out -Append -Encoding utf8
+    # 부수 재생성물 정리: 이 실행이 새로 바꿨지만 커밋 대상이 아닌 docs/ 추적 파일만
+    # 되돌린다. 실행 전부터 수정돼 있던 파일($preEdited)은 사람의 편집이므로 보존하고,
+    # 미추적 파일은 checkout 이 원래 건드리지 않는다. (docs/ 전체 되돌리기 금지)
+    $nowEdited = @(& git -C $proj -c core.quotepath=false diff --name-only -- docs 2>$null | Where-Object { $_ })
+    $revert = @($nowEdited | Where-Object { $preEdited -notcontains $_ })
+    if ($revert.Count -gt 0) {
+        "[git] revert side-generated: $($revert -join ', ')" | Out-File $out -Append -Encoding utf8
+        & git -C $proj checkout -- $revert 2>&1 | Out-File $out -Append -Encoding utf8
+    }
+    if ($preEdited.Count -gt 0) {
+        "[git] keep pre-existing edits: $($preEdited -join ', ')" | Out-File $out -Append -Encoding utf8
+    }
     & git -C $proj commit -m "screener: report $(Get-Date -Format 'yyyy-MM-dd')" 2>&1 | Out-File $out -Append -Encoding utf8
-    & git -C $proj pull --rebase -X theirs origin main 2>&1 | Out-File $out -Append -Encoding utf8
+    # --autostash: 보존한 사람의 미커밋 변경이 있어도 잠시 치웠다가 리베이스 후 복원
+    # (없으면 "unstaged changes" 로 pull 이 시작조차 못 한다)
+    & git -C $proj pull --rebase --autostash -X theirs origin main 2>&1 | Out-File $out -Append -Encoding utf8
     if ($LASTEXITCODE -ne 0) {
         if (Test-Path (Join-Path $proj '.git/rebase-merge')) {
             # 생성물 충돌로 리베이스가 멈춘 경우에만 로컬 본을 채택해 무인 복구.
             # add -A 금지: 추적 외 개인 파일까지 스테이징해 공개 저장소로
             # 유출될 수 있다 (2026-08-03 run_flows 실사고). add -u 로 충분하다.
+            # `--theirs -- .` 의 실제 영향은 충돌 난 추적 파일뿐이다: 리베이스 중엔
+            # 사람의 미커밋 변경이 작업 트리에 없고(--autostash 로 치워져 있음),
+            # 미추적 파일은 checkout 이 건드리지 않는다.
             & git -C $proj checkout --theirs -- . 2>&1 | Out-File $out -Append -Encoding utf8
             & git -C $proj add -u 2>&1 | Out-File $out -Append -Encoding utf8
             & git -C $proj -c core.editor=true rebase --continue 2>&1 | Out-File $out -Append -Encoding utf8
@@ -112,7 +140,7 @@ if ($LASTEXITCODE -ne 0) {
         if ($LASTEXITCODE -eq 0) { $pushed = $true; break }
         "[git] push rejected (attempt $try/3) - retrying" | Out-File $out -Append -Encoding utf8
         Start-Sleep -Seconds 5
-        & git -C $proj pull --rebase -X theirs origin main 2>&1 | Out-File $out -Append -Encoding utf8
+        & git -C $proj pull --rebase --autostash -X theirs origin main 2>&1 | Out-File $out -Append -Encoding utf8
     }
     if ($pushed) {
         "[git] GitHub push OK" | Out-File $out -Append -Encoding utf8

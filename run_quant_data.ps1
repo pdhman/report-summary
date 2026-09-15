@@ -26,11 +26,18 @@ if ((git config gc.auto) -ne '400') {
 }
 
 # --- branch guard: automation always runs on main ---
+# never -f: `checkout -f main` discards every uncommitted edit even when already
+# on main (2026-09-15 docs/market.html loss). If the switch is blocked, abort
+# without touching the tree.
 if (Test-Path (Join-Path $proj '.git/rebase-merge')) { git rebase --quit 2>$null }
 $branch = (git rev-parse --abbrev-ref HEAD 2>$null)
 if ($branch -ne 'main') {
-    git checkout -f main 2>$null | Out-Null
-    if ((git rev-parse --abbrev-ref HEAD 2>$null) -ne 'main') { exit 1 }
+    git checkout main 2>$null | Out-Null
+    if ((git rev-parse --abbrev-ref HEAD 2>$null) -ne 'main') {
+        "$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) [quantdata] branch '$branch' -> main FAILED (uncommitted edits in the way?) - abort, nothing discarded" |
+            Add-Content -Path (Join-Path $proj 'logs\branch_guard.log') -Encoding UTF8 -ErrorAction SilentlyContinue
+        exit 1
+    }
 }
 
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -81,6 +88,9 @@ try {
             if (Test-Path (Join-Path $proj '.git/rebase-merge')) {
                 # generated-file conflict stopped the rebase: take local side.
                 # never add -A here (risk of leaking untracked private files).
+                # `--theirs -- .` only really touches the conflicted tracked files:
+                # during a rebase the tree holds no uncommitted edits (pull refuses
+                # to start with any) and checkout never touches untracked files.
                 git checkout --theirs -- . 2>&1 | Add-Content -Path $log -Encoding UTF8
                 git add -u 2>&1 | Add-Content -Path $log -Encoding UTF8
                 git -c core.editor=true rebase --continue 2>&1 | Add-Content -Path $log -Encoding UTF8

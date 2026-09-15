@@ -9,13 +9,15 @@ $proj = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $proj
 
 # --- 브랜치 가드: 게시는 항상 main 기준 (실습 브랜치에 있으면 전환) ---
+# -f 금지: `checkout -f main` 은 이미 main 이어도 미커밋 수정을 전부 버린다
+# (2026-09-15 docs/market.html 유실 실사고). 전환이 막히면 건드리지 않고 중단한다.
 if (Test-Path (Join-Path $proj '.git/rebase-merge')) { git rebase --quit 2>$null }
 $branch = (git rev-parse --abbrev-ref HEAD 2>$null)
 if ($branch -ne 'main') {
     Write-Host ("현재 브랜치 '{0}' -> main 으로 전환합니다." -f $branch) -ForegroundColor Yellow
-    git checkout -f main 2>$null | Out-Null
+    git checkout main 2>$null | Out-Null
     if ((git rev-parse --abbrev-ref HEAD 2>$null) -ne 'main') {
-        Write-Host "main 전환 실패 - 게시를 중단합니다." -ForegroundColor Red
+        Write-Host "main 전환 실패(미커밋 수정이 걸림?) - 아무것도 버리지 않고 게시를 중단합니다." -ForegroundColor Red
         Read-Host "엔터를 누르면 종료"; exit 1
     }
 }
@@ -92,6 +94,8 @@ if ($LASTEXITCODE -eq 0) {
             $conf = (git diff --name-only --diff-filter=U) -split "`n" | Where-Object { $_ }
             $gen = @($conf | Where-Object { $_ -like 'docs/*' })
             if ($conf.Count -gt 0 -and $gen.Count -eq $conf.Count) {
+                # docs/ 전체 경로지만 리베이스 중(사람 편집은 --autostash 로 치워진 상태)
+                # 이라 실제 영향은 충돌 난 추적 파일뿐이다. 미추적 파일은 건드리지 않는다.
                 git checkout --ours -- docs/ 2>$null
                 git add docs/ 2>$null
                 $env:GIT_EDITOR = 'true'; git rebase --continue | Out-Null
