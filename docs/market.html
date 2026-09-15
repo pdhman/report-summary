@@ -422,15 +422,26 @@ function drawChart(container, cfg){
   // ---- 호버(크로스헤어 + 툴팁) ----
   var tip = el('tip'), node = container.querySelector('svg');
   var vline = document.createElementNS('http://www.w3.org/2000/svg','line');
-  vline.setAttribute('style','stroke:var(--muted);stroke-width:1;opacity:0;pointer-events:none');
+  vline.setAttribute('style','stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;pointer-events:none');
+  vline.style.opacity = 0;
   vline.setAttribute('y1', padT); vline.setAttribute('y2', padT + ph);
   node.appendChild(vline);
+  // 연결 크로스헤어: 같은 link 그룹(위·아래 쌍 차트)이 같은 날짜에 세로 점선을 함께 표시
+  var grp = null;
+  if(cfg.link){
+    window.__cross = window.__cross || {};
+    grp = window.__cross[cfg.link] = (window.__cross[cfg.link] || []).filter(function(e){ return document.body.contains(e.node); });
+    grp.push({ node:node,
+      show:function(k){ vline.setAttribute('x1', X(k)); vline.setAttribute('x2', X(k)); vline.style.opacity = .9; },
+      hide:function(){ vline.style.opacity = 0; } });
+  }
   function onmove(ev){
     var r = node.getBoundingClientRect();
     var x = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
     var i = Math.round((x - padL) / (pw || 1) * (n - 1));
     if(i < 0 || i > n - 1){ onout(); return; }
-    vline.setAttribute('x1', X(i)); vline.setAttribute('x2', X(i)); vline.setAttribute('opacity', .8);
+    vline.setAttribute('x1', X(i)); vline.setAttribute('x2', X(i)); vline.style.opacity = .9;
+    if(grp) grp.forEach(function(e){ if(e.node !== node) e.show(i); });
     var html = '<div class="td">' + dates[i] + '</div>';
     cfg.series.forEach(function(s){
       if(s.noTip) return;
@@ -449,7 +460,7 @@ function drawChart(container, cfg){
     tip.style.left = Math.min(cx + 14, vw - tw - 8) + 'px';
     tip.style.top = (cy + 16) + 'px';
   }
-  function onout(){ tip.style.display = 'none'; vline.setAttribute('opacity', 0); }
+  function onout(){ tip.style.display = 'none'; vline.style.opacity = 0; if(grp) grp.forEach(function(e){ e.hide(); }); }
   node.addEventListener('mousemove', onmove);
   node.addEventListener('touchmove', onmove, {passive:true});
   node.addEventListener('mouseleave', onout);
@@ -519,9 +530,9 @@ function renderBreadth(){
       fmt:function(v){ return fmt(Math.abs(v),0); } }],
     yfmt:function(v){ return fmt(Math.abs(v),0); } });
 
-  drawChart(el('ch-index'), { dates:dates, h:110, series:[
+  drawChart(el('ch-index'), { dates:dates, h:110, link:'ad', series:[
     { data:sl(idxData), label:idxLabel, color:'var(--ink)', nd:1 }] });
-  drawChart(el('ch-ad'), { dates:dates, h:110, series:[
+  drawChart(el('ch-ad'), { dates:dates, h:110, link:'ad', series:[
     { data:sl(M.ad), label:'A/D', color:'var(--accent)', type:'area', nd:0 }] });
 
   drawChart(el('ch-ma'), { dates:dates, h:190, refs:[{y:50}], series:[
@@ -530,20 +541,20 @@ function renderBreadth(){
     { data:sl(M.ma200), label:'200일', color:'var(--accent)', width:2.2 }],
     yfmt:function(v){ return fmt(v,0) + '%'; } });
 
-  drawChart(el('ch-nhnl'), { dates:dates, h:110, series:[
+  drawChart(el('ch-nhnl'), { dates:dates, h:110, link:'nhnl', series:[
     { data:sl(M.nh), label:'신고가', color:'var(--up)', type:'bar', nd:0 },
     { data:sl(M.nl).map(function(v){ return v == null ? null : -v; }), label:'신저가', color:'var(--dn)', type:'bar', nd:0,
       fmt:function(v){ return fmt(Math.abs(v),0); } }],
     yfmt:function(v){ return fmt(Math.abs(v),0); } });
-  drawChart(el('ch-nhnlcum'), { dates:dates, h:110, series:[
+  drawChart(el('ch-nhnlcum'), { dates:dates, h:110, link:'nhnl', series:[
     { data:sl(M.nhnl), label:'신고−신저 누적', color:'var(--ink)', width:1.8, nd:0 }] });
 
-  drawChart(el('ch-mc'), { dates:dates, h:110, series:[
+  drawChart(el('ch-mc'), { dates:dates, h:110, link:'mc', series:[
     { data:sl(M.mco), label:'오실레이터', color:'var(--up)', negColor:'var(--dn)', type:'bar', nd:1 }] });
-  drawChart(el('ch-mcs'), { dates:dates, h:110, series:[
+  drawChart(el('ch-mcs'), { dates:dates, h:110, link:'mc', series:[
     { data:sl(M.mcs), label:'Summation', color:'var(--ink)', width:1.8, nd:0 }] });
 
-  drawChart(el('ch-adr'), { dates:dates, h:110, refs:[{y:100},{y:120,label:'과열 120'},{y:70,label:'침체 70'}], series:[
+  drawChart(el('ch-adr'), { dates:dates, h:110, link:'adr', refs:[{y:100},{y:120,label:'과열 120'},{y:70,label:'침체 70'}], series:[
     { data:sl(M.adr20), label:'ADR', color:'var(--accent)', nd:0 }] });
 
   var up = sl(M.upshare), markers = [];
@@ -552,7 +563,7 @@ function renderBreadth(){
     if(v >= 90) markers.push({ i:i, y:v, color:'var(--up)', label:'● 90% 업데이 — 상승 거래대금 90% 이상' });
     if(v <= 10) markers.push({ i:i, y:v, color:'var(--dn)', label:'● 90% 다운데이 — 하락 거래대금 90% 이상' });
   });
-  drawChart(el('ch-upshare'), { dates:dates, h:110, refs:[{y:90},{y:10}], markers:markers, series:[
+  drawChart(el('ch-upshare'), { dates:dates, h:110, link:'adr', refs:[{y:90},{y:10}], markers:markers, series:[
     { data:up, label:'상승 거래대금%', color:'var(--teal)', nd:0, fmt:function(v){ return fmt(v,0) + '%'; } }] });
 
   // ZBT 히스토리 차트: 0.615 상향 돌파 시점 중 직전 10일 내 0.40 미만이 있으면 스러스트(점)
@@ -655,9 +666,9 @@ function renderScoreChart(){
       if(fu[j] === 1) mk.push({ i:j, y:v, color:'var(--dn)', shape:'up', label:'▲ 강세 다이버전스 — 60일 신저가 + 온도계 상승' });
     });
   }
-  drawChart(el('ch-score-idx'), { dates:dates, h:240, noX:true, markers:mk, series:[
+  drawChart(el('ch-score-idx'), { dates:dates, h:240, noX:true, markers:mk, link:'score', series:[
     { data:kq, label:'코스피', color:'var(--ink)', nd:0 }] });
-  drawChart(el('ch-score'), { dates:dates, h:170, refs:[{y:50}], series:
+  drawChart(el('ch-score'), { dates:dates, h:170, refs:[{y:50}], link:'score', series:
     defs.filter(function(d, i){ return st[i]; }).map(function(d){
       return { data:sl(S[d.key]), label:SCORE_DEFS[d.key].name, color:d.color, width:d.width, nd:0 };
     }), yfmt:function(v){ return fmt(v,0); } });
