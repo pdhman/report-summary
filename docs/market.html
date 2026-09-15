@@ -194,6 +194,10 @@
     padding:9px 12px; margin:6px 0 8px; font-size:13.5px; line-height:1.5; }
   .interp .ii { font-size:18px; line-height:1.2; flex:0 0 auto; }
   .interp .isub { color:var(--muted); font-size:12.5px; margin-top:2px; }
+  .interp .inow { margin:7px 0 0; padding:6px 0 0; list-style:none; font-size:12.5px; color:var(--ink); border-top:1px dashed var(--line); }
+  .interp .inow li { position:relative; padding-left:12px; margin-top:2px; line-height:1.5; }
+  .interp .inow li::before { content:'·'; position:absolute; left:2px; color:var(--muted); font-weight:700; }
+  .interp .inow b { color:var(--accent); font-weight:700; margin-right:2px; }
   .interp .istat { font-size:12px; margin-top:4px; padding-top:4px; border-top:1px dashed var(--line); color:var(--ink); }
   .interp .istat b.neg { color:var(--dn); } .interp .istat b.pos { color:var(--up); }
   .sc-chg { display:inline-block; margin-left:6px; font-size:11.5px; font-weight:700; color:var(--muted); vertical-align:middle; }
@@ -780,7 +784,42 @@ function renderInterp(){
     icon = '➖'; main = '중립: 뚜렷한 극단 신호가 없습니다.';
     sub = '추세(폭) ' + fmt(tr,0) + ' · 투기 ' + fmt(sp,0) + ' · 레버리지 ' + fmt(lv,0) + ' — 서브 게이지의 방향 변화를 지켜볼 구간.';
   }
+  // ---- 현 상황 요약: 선택일 데이터로 지수 위치 / 내부 / 심리·자금 / 주목할 것 ----
+  var A = D.markets.all, now = [];
+  var dir = function(c){ return c == null ? '' : (c >= 3 ? ' ▲' : c <= -3 ? ' ▼' : ' ▶'); };
+  var chg20 = function(arr){ return (arr && i >= 20 && arr[i] != null && arr[i-20] != null) ? arr[i] - arr[i-20] : null; };
+  var kv = ks[i];
+  if(kv != null){
+    var hi60 = null, lo60 = null;
+    for(var k = Math.max(0, i - 59); k <= i; k++){
+      if(ks[k] == null) continue;
+      if(hi60 == null || ks[k] > hi60) hi60 = ks[k];
+      if(lo60 == null || ks[k] < lo60) lo60 = ks[k];
+    }
+    now.push('<b>지수</b>코스피 ' + fmt(kv,0) + (r20 != null ? ' · 20일 ' + (r20 > 0 ? '+' : '') + fmt(r20,1) + '%' : '') +
+      (hi60 ? ' · 60일 고점 대비 ' + fmt((kv / hi60 - 1) * 100,1) + '%, 저점 대비 +' + fmt((kv / lo60 - 1) * 100,1) + '%' : ''));
+  }
+  if(A.ma200[i] != null){
+    var trCh = chg20(S.trend);
+    now.push('<b>내부</b>200일선 위 ' + fmt(A.ma200[i],1) + '%, 50일선 위 ' + fmt(A.ma50[i],1) + '% · 등락 ' +
+      '<span style="color:var(--up)">+' + fmt(A.adv[i],0) + '</span>/<span style="color:var(--dn)">-' + fmt(A.dec[i],0) + '</span>' +
+      ' · 52주 신고 ' + fmt(A.nh[i],0) + ' / 신저 ' + fmt(A.nl[i],0) +
+      ' → 폭 ' + (tr >= 60 ? '넓음' : tr >= 40 ? '보통' : '좁음') + dir(trCh));
+  }
+  now.push('<b>심리·자금</b>공포탐욕 ' + (fg == null ? '–' : fmt(fg,0) + dir(chg20(S.fg))) +
+    ' · 레버리지 ' + fmt(lv,0) + dir(chg20(S.lev)) + ' · 투기 열기 ' + fmt(sp,0) + dir(chg20(S.spec)) +
+    ' · TOP10 쏠림 ' + fmt(conc,0) + '%' + (mo != null ? ' · 동일가중 모멘텀 ' + (mo > 0 ? '+' : '') + fmt(mo,1) + '%' : ''));
+  var watch;
+  if(on('bear_div') || (nearHigh && t < 40)) watch = '폭이 더 좁아지는지(200일선 위 비율·신고가 종목수 감소). 좁아지면 경고 강화, 넓어지면 해소.';
+  else if(on('bull_div')) watch = '온도계 상승이 이어지며 신저가 종목수가 줄어드는지, 그리고 반전 신호(Zweig 스러스트·90% 업데이)가 나오는지.';
+  else if(t < 40 && tch != null && tch < 0) watch = '온도계가 저점을 찍고 ▲로 돌아서는지, 신저가 종목수가 줄어드는지. 그 전까지는 반등이 와도 폭이 좁을 가능성.';
+  else if(t < 40) watch = '온도계 상승이 이어져 200일선 위 비율이 30%대로 올라서는지. 확인되면 회복 국면으로 격상.';
+  else if(t >= 60) watch = '투기 열기·레버리지가 뒤따라 오르는지. 셋이 함께 80을 넘으면 과열 콤보.';
+  else watch = '온도계와 공포탐욕이 같은 방향으로 움직이기 시작하는지. 갈라진 상태가 해소되는 쪽이 다음 국면.';
+  now.push('<b>주목</b>' + watch);
+
   box.innerHTML = '<span class="ii">' + icon + '</span><div><b>' + main + '</b><div class="isub">' + sub + '</div>' +
+    '<ul class="inow">' + now.map(function(s){ return '<li>' + s + '</li>'; }).join('') + '</ul>' +
     (stat ? '<div class="istat">' + stat + '</div>' : '') + '</div>';
 }
 function updateDaySum(){
