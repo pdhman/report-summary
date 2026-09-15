@@ -615,7 +615,7 @@ function renderScoreChart(){
     b.onclick = function(){ st[+b.dataset.i] = !st[+b.dataset.i]; renderScoreChart(); };
   });
   // 코스피를 같은 x축의 미니 차트로 위에 둔다 (이중 축 대신 A/D·지수 쌍과 같은 방식)
-  drawChart(el('ch-score-idx'), { dates:dates, h:120, series:[
+  drawChart(el('ch-score-idx'), { dates:dates, h:240, series:[
     { data:sl(D.index.kospi), label:'코스피', color:'var(--ink)', nd:0 }] });
   drawChart(el('ch-score'), { dates:dates, h:170, refs:[{y:50}], series:
     defs.filter(function(d, i){ return st[i]; }).map(function(d){
