@@ -33,10 +33,12 @@
     <div class="fn" id="day-sum"></div>
     <div class="fn keyfigs" id="key-figs"></div>
     <div class="chart-block">
-      <div class="ct">스코어 추이 <span class="cd">범례 클릭으로 표시/숨김 · 0~100 스코어</span></div>
+      <div class="ct">코스피 · 스코어 추이 <span class="cd">위 = 코스피, 아래 = 스코어(0~100) · 범례 클릭으로 표시/숨김</span></div>
+      <div id="ch-score-idx"></div>
       <div class="legend" id="lg-score"></div>
       <div id="ch-score"></div>
     </div>
+    <details class="fn-more"><summary>지표 계산 방식 보기</summary>
     <p class="fn">각 스코어는 수집된 전체 기간(현재 <span id="fn-days"></span>거래일) 대비 백분위.
       <b>종합 체온</b>은 추세(폭)·투기 열기·레버리지·변동성(역방향)·모멘텀(동일가중)을 같은 방향(높음=뜨거움)으로 정렬해 합산한 뒤
       표준화(평균 50·σ16)한 값 — 공포탐욕과 같은 변동폭으로 읽히도록 2026-09-15 재설계. 지수와 따로 움직일 수 있으며
@@ -47,6 +49,7 @@
       <br>단, <b>쏠림만 백분위가 아니라 TOP10 비중 원값(%)을 그대로 표시</b>하고 고정 기준으로 판정한다
       (30% 미만 분산 · 30~45 보통 · 45~55 쏠림 · 55% 이상 극단 쏠림).
       수집 기간이 짧아 백분위가 최근 국면에서 포화되기 때문이다.</p>
+    </details>
   </section>
 
   <!-- ============ 시장 폭 ============ -->
@@ -191,6 +194,11 @@
     padding:9px 12px; margin:6px 0 8px; font-size:13.5px; line-height:1.5; }
   .interp .ii { font-size:18px; line-height:1.2; flex:0 0 auto; }
   .interp .isub { color:var(--muted); font-size:12.5px; margin-top:2px; }
+  .fn-more { margin:6px 2px 0; }
+  .fn-more summary { cursor:pointer; color:var(--muted); font-size:12px; font-weight:600; list-style:none; }
+  .fn-more summary::before { content:'▸ '; }
+  .fn-more[open] summary::before { content:'▾ '; }
+  .fn-more[open] summary { margin-bottom:4px; }
   .keyfigs { font-size:12px; line-height:1.9; margin:0 2px 10px; color:var(--muted); }
   .keyfigs b { color:var(--ink); font-variant-numeric:tabular-nums; }
   .keyfigs .kf-raw { font-size:11px; opacity:.8; }
@@ -606,6 +614,9 @@ function renderScoreChart(){
   lg.querySelectorAll('.lg').forEach(function(b){
     b.onclick = function(){ st[+b.dataset.i] = !st[+b.dataset.i]; renderScoreChart(); };
   });
+  // 코스피를 같은 x축의 미니 차트로 위에 둔다 (이중 축 대신 A/D·지수 쌍과 같은 방식)
+  drawChart(el('ch-score-idx'), { dates:dates, h:120, series:[
+    { data:sl(D.index.kospi), label:'코스피', color:'var(--ink)', nd:0 }] });
   drawChart(el('ch-score'), { dates:dates, h:170, refs:[{y:50}], series:
     defs.filter(function(d, i){ return st[i]; }).map(function(d){
       return { data:sl(S[d.key]), label:SCORE_DEFS[d.key].name, color:d.color, width:d.width, nd:0 };
@@ -802,7 +813,7 @@ function buildDatebar(){
 
 if (D) {
   state.d = D.dates.length - 1; state.date = D.dates[state.d];
-  el('fn-days').textContent = fmt(D.scores.n_days, 0);
+  if(el('fn-days')) el('fn-days').textContent = fmt(D.scores.n_days, 0);
   el('ft-note').textContent = '지표 정의: ' + D.meta.notes +
     ' A/D·신고저·이평 비율은 스팩 제외 전 상장종목 기준. VKOSPI 는 인베스팅닷컴 수집값.';
   buildDatebar();
