@@ -26,6 +26,7 @@
         <div class="score-sub" id="g-vol"></div>
         <div class="score-sub" id="g-lev"></div>
         <div class="score-sub" id="g-fg"></div>
+        <div class="score-sub" id="g-mom"></div>
       </div>
     </div>
     <div class="interp" id="interp"></div>
@@ -37,11 +38,11 @@
       <div id="ch-score"></div>
     </div>
     <p class="fn">각 스코어는 수집된 전체 기간(현재 <span id="fn-days"></span>거래일) 대비 백분위.
-      <b>종합 체온</b>은 추세(폭)·투기 열기·레버리지·변동성(역방향)을 같은 방향(높음=뜨거움)으로 정렬해 합산한 뒤
+      <b>종합 체온</b>은 추세(폭)·투기 열기·레버리지·변동성(역방향)·모멘텀(동일가중)을 같은 방향(높음=뜨거움)으로 정렬해 합산한 뒤
       표준화(평균 50·σ16)한 값 — 공포탐욕과 같은 변동폭으로 읽히도록 2026-09-15 재설계. 지수와 따로 움직일 수 있으며
       그 괴리(지수 고점 vs 내부 냉각 등)가 핵심 신호다.
       추세(폭)=이평선 위 비율·ADR·신고가율·McClellan / 투기 열기=저가주 비중·상한가·회전율(개인 투기) /
-      쏠림=TOP10 거래대금 집중도(종합 체온 미반영) / 변동성=VKOSPI·실현변동성 / 레버리지=신용융자 증가율·예탁금 대비 신용·반대매매비중 /
+      쏠림=TOP10 거래대금 집중도(종합 체온 미반영) / 모멘텀=KODEX 200동일가중 ETF(252650)/125일선 — 시총가중 지수 대신 평균 대형주의 추세 / 변동성=VKOSPI·실현변동성 / 레버리지=신용융자 증가율·예탁금 대비 신용·반대매매비중 /
       공포탐욕=CNN 방식 한국판 7요소(지수/125일MA·신고-신저 폭·상승 거래대금 비중·변동성 역·원달러 역·신용잔고 증가·풋콜비율 5일 역) 평균, 종합 체온과 별도.
       <br>단, <b>쏠림만 백분위가 아니라 TOP10 비중 원값(%)을 그대로 표시</b>하고 고정 기준으로 판정한다
       (30% 미만 분산 · 30~45 보통 · 45~55 쏠림 · 55% 이상 극단 쏠림).
@@ -137,22 +138,22 @@
   :root {
     --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d21; --muted:#6b7280;
     --line:#e6e8eb; --accent:#3b5bdb; --up:#e03131; --dn:#1971c2;
-    --amber:#e8590c; --teal:#0ca678; --gray:#868e96; --violet:#7048e8;
+    --amber:#e8590c; --teal:#0ca678; --gray:#868e96; --violet:#7048e8; --pink:#d6336c;
     --z-cold:#1971c2; --z-cool:#339af0; --z-mid:#868e96; --z-warm:#f08c00; --z-hot:#e03131;
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg:#0f1216; --panel:#171b21; --ink:#e8eaed; --muted:#9aa2ad;
       --line:#252b33; --accent:#748ffc; --up:#ff6b6b; --dn:#4dabf7;
-      --amber:#ff922b; --teal:#38d9a9; --gray:#adb5bd; --violet:#9775fa;
+      --amber:#ff922b; --teal:#38d9a9; --gray:#adb5bd; --violet:#9775fa; --pink:#f06595;
       --z-cold:#4dabf7; --z-cool:#74c0fc; --z-mid:#adb5bd; --z-warm:#fab005; --z-hot:#ff6b6b; }
   }
   :root[data-theme="dark"] { --bg:#0f1216; --panel:#171b21; --ink:#e8eaed; --muted:#9aa2ad;
     --line:#252b33; --accent:#748ffc; --up:#ff6b6b; --dn:#4dabf7;
-    --amber:#ff922b; --teal:#38d9a9; --gray:#adb5bd; --violet:#9775fa;
+    --amber:#ff922b; --teal:#38d9a9; --gray:#adb5bd; --violet:#9775fa; --pink:#f06595;
     --z-cold:#4dabf7; --z-cool:#74c0fc; --z-mid:#adb5bd; --z-warm:#fab005; --z-hot:#ff6b6b; }
   :root[data-theme="light"] { --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d21; --muted:#6b7280;
     --line:#e6e8eb; --accent:#3b5bdb; --up:#e03131; --dn:#1971c2;
-    --amber:#e8590c; --teal:#0ca678; --gray:#868e96; --violet:#7048e8;
+    --amber:#e8590c; --teal:#0ca678; --gray:#868e96; --violet:#7048e8; --pink:#d6336c;
     --z-cold:#1971c2; --z-cool:#339af0; --z-mid:#868e96; --z-warm:#f08c00; --z-hot:#e03131; }
 
   * { box-sizing:border-box; }
@@ -441,7 +442,8 @@ var SCORE_DEFS = {
              bands:[30, 45, 55] },
   vol:     { name:'변동성', labels:['매우 낮음','낮음','보통','높음','매우 높음'] },
   lev:     { name:'레버리지', labels:['매우 가벼움','가벼움','보통','무거움','과중'] },
-  fg:      { name:'공포탐욕', labels:['극단 공포','공포','중립','탐욕','극단 탐욕'] }};
+  fg:      { name:'공포탐욕', labels:['극단 공포','공포','중립','탐욕','극단 탐욕'] },
+  mom:     { name:'모멘텀(동일가중)', labels:['매우 약함','약함','보통','강함','매우 강함'] }};
 function zone(v){ for(var i=0;i<ZONES.length;i++){ if(v < ZONES[i].max) return i; } return 4; }
 // 경계 n개 → 구간 n+1개. v<bands[0]:0 … 마지막 경계 이상:bands.length
 function bandZone(v, bands){ for(var i=0;i<bands.length;i++){ if(v < bands[i]) return i; } return bands.length; }
@@ -592,7 +594,8 @@ function renderScoreChart(){
     { key:'conc', color:'var(--violet)', width:1.5, on:false },
     { key:'vol', color:'var(--amber)', width:1.5, on:false },
     { key:'lev', color:'var(--dn)', width:1.5, on:false },
-    { key:'fg', color:'var(--accent)', width:1.8, on:true }];
+    { key:'fg', color:'var(--accent)', width:1.8, on:true },
+    { key:'mom', color:'var(--pink)', width:1.5, on:false }];
   if(!renderScoreChart.state) renderScoreChart.state = defs.map(function(d){ return d.on; });
   var st = renderScoreChart.state;
   var lg = el('lg-score');
@@ -669,6 +672,7 @@ function renderGauges(){
   gauge('g-overall', 'overall'); gauge('g-trend', 'trend'); gauge('g-spec', 'spec');
   gauge('g-conc', 'conc'); gauge('g-vol', 'vol'); gauge('g-lev', 'lev');
   gauge('g-fg', 'fg');
+  if(D.scores.series.mom) gauge('g-mom', 'mom'); else el('g-mom').hidden = true;
   renderInterp();
 }
 /* 자동 해석: 게이지 조합을 소비자용 한 줄로. 우선순위대로 첫 매칭 규칙 1개.
@@ -678,6 +682,8 @@ function renderInterp(){
   var i = state.d, S = D.scores.series;
   var t = S.overall[i], fg = S.fg ? S.fg[i] : null, tr = S.trend[i], sp = S.spec[i], lv = S.lev[i];
   var conc = D.spec.top10_share[i];
+  var mo = (D.ew && D.ew.mom) ? D.ew.mom[i] : null;
+  var moTxt = mo == null ? '' : ' 동일가중 200종목은 125일선 대비 ' + (mo > 0 ? '+' : '') + fmt(mo,1) + '%.';
   if(t == null){ box.innerHTML = ''; return; }
   var ks = D.index.kospi, hi = null;
   for(var k = 0; k <= i; k++){ if(ks[k] != null && (hi == null || ks[k] > hi)) hi = ks[k]; }
@@ -686,7 +692,7 @@ function renderInterp(){
   var icon, main, sub;
   if(nearHigh && t < 40){
     icon = '⚠️'; main = '지수는 고점권인데 내부 온도는 차갑습니다(' + t.toFixed(0) + ').';
-    sub = '소수 종목이 지수를 끌어올리는 폭 좁은 상승(TOP10 집중 ' + fmt(conc,0) + '%). 역사적으로 폭 붕괴에 앞서 나타나는 패턴 — 경계.';
+    sub = '소수 종목이 지수를 끌어올리는 폭 좁은 상승(TOP10 집중 ' + fmt(conc,0) + '%).' + moTxt + ' 역사적으로 폭 붕괴에 앞서 나타나는 패턴 — 경계.';
   } else if(t >= 80){
     icon = '🔥'; main = '과열: 폭·투기·레버리지가 동시에 역사적 상단입니다.';
     sub = '상승 사이클 후반부의 전형 — 신규 진입보다 리스크 관리가 우선인 구간.';
@@ -723,6 +729,7 @@ function updateDaySum(){
   if(A.ma200[i] != null) parts.push('200일선 위 ' + fmt(A.ma200[i],1) + '%');
   if(D.vkospi[i] != null) parts.push('VKOSPI ' + fmt(D.vkospi[i],2));
   if(D.putcall && D.putcall[i] != null) parts.push('풋콜 ' + fmt(D.putcall[i],2));
+  if(D.ew && D.ew.mom && D.ew.mom[i] != null) parts.push('동일가중 모멘텀 ' + (D.ew.mom[i] > 0 ? '+' : '') + fmt(D.ew.mom[i],1) + '%');
   el('day-sum').innerHTML = '<b>' + state.date + '</b>' + (parts.length ? ' · ' + parts.join(' · ') : '');
 }
 /* 핵심 수치 행: 공포탐욕 구성요소 + 매크로(NFCI·美10Y·VIX·환율).
