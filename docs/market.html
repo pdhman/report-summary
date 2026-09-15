@@ -438,6 +438,11 @@ function drawChart(container, cfg){
       html += '<div class="tr"><i style="background:' + s.color + '"></i>' + s.label +
               '<b>' + (v == null ? '–' : (s.fmt ? s.fmt(v) : fmt(v, s.nd != null ? s.nd : 1))) + '</b></div>';
     });
+    // 해당 날짜의 마커(다이버전스·90% 데이·스러스트) 이름
+    (cfg.markers||[]).forEach(function(mk){
+      if(mk.i !== i || !mk.label) return;
+      html += '<div class="tr" style="margin-top:3px;color:' + mk.color + ';font-weight:700">' + mk.label + '</div>';
+    });
     tip.innerHTML = html; tip.style.display = 'block';
     var cx = (ev.touches ? ev.touches[0].clientX : ev.clientX), cy = (ev.touches ? ev.touches[0].clientY : ev.clientY);
     var tw = tip.offsetWidth, vw = window.innerWidth;
@@ -544,8 +549,8 @@ function renderBreadth(){
   var up = sl(M.upshare), markers = [];
   up.forEach(function(v, i){
     if(v == null) return;
-    if(v >= 90) markers.push({ i:i, y:v, color:'var(--up)' });
-    if(v <= 10) markers.push({ i:i, y:v, color:'var(--dn)' });
+    if(v >= 90) markers.push({ i:i, y:v, color:'var(--up)', label:'● 90% 업데이 — 상승 거래대금 90% 이상' });
+    if(v <= 10) markers.push({ i:i, y:v, color:'var(--dn)', label:'● 90% 다운데이 — 하락 거래대금 90% 이상' });
   });
   drawChart(el('ch-upshare'), { dates:dates, h:110, refs:[{y:90},{y:10}], markers:markers, series:[
     { data:up, label:'상승 거래대금%', color:'var(--teal)', nd:0, fmt:function(v){ return fmt(v,0) + '%'; } }] });
@@ -555,7 +560,7 @@ function renderBreadth(){
   for(var zi = 1; zi < zb.length; zi++){
     if(zb[zi] != null && zb[zi] > 0.615 && (zb[zi-1] == null || zb[zi-1] <= 0.615)){
       for(var zj = Math.max(0, zi - 10); zj < zi; zj++){
-        if(zb[zj] != null && zb[zj] < 0.40){ zmarkers.push({ i:zi, y:zb[zi], color:'var(--up)' }); break; }
+        if(zb[zj] != null && zb[zj] < 0.40){ zmarkers.push({ i:zi, y:zb[zi], color:'var(--up)', label:'● Zweig Breadth Thrust 발동' }); break; }
       }
     }
   }
@@ -646,8 +651,8 @@ function renderScoreChart(){
     var fb = sl(D.signals.flags.bear_div), fu = sl(D.signals.flags.bull_div);
     kq.forEach(function(v, j){
       if(v == null) return;
-      if(fb[j] === 1) mk.push({ i:j, y:v, color:'var(--up)', shape:'down' });
-      if(fu[j] === 1) mk.push({ i:j, y:v, color:'var(--dn)', shape:'up' });
+      if(fb[j] === 1) mk.push({ i:j, y:v, color:'var(--up)', shape:'down', label:'▼ 약세 다이버전스 — 60일 신고가 + 온도계 40 미만' });
+      if(fu[j] === 1) mk.push({ i:j, y:v, color:'var(--dn)', shape:'up', label:'▲ 강세 다이버전스 — 60일 신저가 + 온도계 상승' });
     });
   }
   drawChart(el('ch-score-idx'), { dates:dates, h:240, noX:true, markers:mk, series:[
