@@ -498,7 +498,7 @@ def build():
             body += (f'<div class="krow"><span class="k-name">VKOSPI</span>'
                      f'<span class="k-val">{c["vkospi"]:.2f}</span></div>')
         if body:
-            cards.append(_card("market.html", "🌡️", "시장 건전성", c["date"], body))
+            cards.append(_card("market.html", "🌡️", "시장 온도계", c["date"], body))
 
     # 수급 동향 — 시장 건전성 바로 뒤 (2026-09-10 사용자 요청: 레버리지와 자리 교환)
     c = None

@@ -78,7 +78,7 @@ try {
     git add docs 2>&1 | Add-Content -Path $log -Encoding UTF8
     git diff --staged --quiet
     if ($LASTEXITCODE -ne 0) {
-        git commit -m ("market: {0:yyyy-MM-dd} 시장 건전성 갱신" -f (Get-Date)) 2>&1 | Add-Content -Path $log -Encoding UTF8
+        git commit -m ("market: {0:yyyy-MM-dd} 시장 온도계 갱신" -f (Get-Date)) 2>&1 | Add-Content -Path $log -Encoding UTF8
         # --autostash: 다른 작업(예: aicyclemonitor)이 남긴 미커밋 변경이 있어도
         # 잠시 치웠다가 리베이스 후 복원 — unstaged changes 로 매일 실패하는 것 방지
         git pull --rebase --autostash -X theirs origin main 2>&1 | Add-Content -Path $log -Encoding UTF8
