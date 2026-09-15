@@ -1,10 +1,13 @@
 {
- "date": "2026-09-14",
- "btc_price": 77119.0,
- "btc_chg_24h": -0.26,
- "rsi14": 54.29,
- "mvrv": 1.4519,
- "etf_last_date": "2026-09-11",
- "etf_last_flow": -13.2,
- "etf_5d_sum": -288.1
+ "date": "2026-09-15",
+ "btc_price": 77951.0,
+ "btc_chg_24h": 1.45,
+ "rsi14": 56.77,
+ "mvrv": 1.4426,
+ "etf_last_date": "2026-09-14",
+ "etf_last_flow": 9.7,
+ "etf_5d_sum": -453.0,
+ "eth_etf_last_date": "2026-09-11",
+ "eth_etf_last_flow": 216.4,
+ "eth_etf_5d_sum": 222.8
 }

@@ -8,7 +8,7 @@
 |---|---|---|
 | 가격·모멘텀 | BTC 가격 + MA50/MA200, RSI(14), ETH/BTC 상대강도 | Binance 현물 API |
 | 밸류에이션 | MVRV 비율 (CryptoQuant와 동일 지표) | CoinMetrics 커뮤니티 API (무료·무키) |
-| ETF 자금흐름 | 미국 현물 ETF 일별/누적 순유입 (2024-01~) | Farside Investors (HTML 파싱) |
+| ETF 자금흐름 | 미국 현물 ETF 일별/누적 순유입 — BTC(2024-01~)·ETH(2024-07~) 각각 | Farside Investors (HTML 파싱) |
 | 파생상품 | 펀딩비(일평균), 미결제약정 OI | Binance 선물 API |
 
 ## 사용법
@@ -20,7 +20,8 @@ python crypto_monitor.py     # 수집 → crypto.html 생성
 
 - 모든 날짜는 UTC 일봉 기준.
 - **OI**는 바이낸스가 최근 30일만 제공 → 실행할 때마다 `oi_history.csv`에 누적 저장.
-- **ETF 흐름**은 `etf_flow_history.csv`에 누적 캐시 — Farside 장애 시 캐시로 렌더.
+- **ETF 흐름**은 `etf_flow_history.csv`(BTC)·`etf_eth_flow_history.csv`(ETH)에 누적 캐시 — Farside 장애 시 캐시로 렌더.
+  두 자산의 표 구조가 같아 파서 하나(`_parse_farside_page`)를 공유한다(`ETF_SOURCES`).
 - 신호 임계값은 `crypto_monitor.py`의 `build_signals()`에서 조정.
 
 ## 자동 실행

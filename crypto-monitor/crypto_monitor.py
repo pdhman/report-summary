@@ -8,7 +8,7 @@
 
   [가격·모멘텀]  BTC 가격 + MA50/MA200, RSI(14), ETH/BTC 상대강도  — Binance
   [밸류에이션]   MVRV 비율                                        — CoinMetrics 커뮤니티 API
-  [ETF 흐름]     미국 현물 ETF 일별/누적 순유입                    — Farside Investors
+  [ETF 흐름]     미국 현물 BTC·ETH ETF 일별/누적 순유입             — Farside Investors
   [파생상품]     펀딩비(일평균), 미결제약정(OI)                    — Binance Futures
 
 사용법
@@ -17,7 +17,8 @@
   python crypto_monitor.py          # 수집 → crypto.html 생성
 
   * OI는 바이낸스가 최근 30일만 제공 → 실행할 때마다 oi_history.csv 에 누적 저장.
-  * ETF 흐름도 etf_flow_history.csv 에 누적 캐시(사이트 장애 시 캐시로 렌더).
+  * ETF 흐름도 etf_flow_history.csv(BTC)·etf_eth_flow_history.csv(ETH) 에 누적 캐시
+    (사이트 장애 시 캐시로 렌더).
   * 청산량(liquidation)은 무료 공개 API가 없어(Coinglass 유료) 미포함.
 
 출력: crypto.html (단일 파일, 모든 날짜는 UTC 기준)
@@ -46,7 +47,16 @@ OUTPUT_HTML = os.path.join(BASE_DIR, "crypto.html")
 # 홈을 재생성해도 카드가 살아남는다(시장 건전성 market_summary.json 과 같은 자리).
 SUMMARY_JSON = os.path.join(os.path.dirname(BASE_DIR), "docs", "data", "crypto_summary.json")
 OI_CSV = os.path.join(BASE_DIR, "oi_history.csv")
-ETF_CSV = os.path.join(BASE_DIR, "etf_flow_history.csv")
+# Farside 는 자산별로 [전체 이력 페이지, 최근 페이지] 두 장을 준다. 전체 페이지가 며칠
+# 늦을 때가 있어 최근 페이지로 덮어쓴다. 표 구조는 BTC·ETH 동일(날짜 | 종목… | Total).
+ETF_SOURCES = {
+    "btc": {"csv": os.path.join(BASE_DIR, "etf_flow_history.csv"),
+            "urls": ("https://farside.co.uk/bitcoin-etf-flow-all-data/",
+                     "https://farside.co.uk/btc/")},
+    "eth": {"csv": os.path.join(BASE_DIR, "etf_eth_flow_history.csv"),
+            "urls": ("https://farside.co.uk/ethereum-etf-flow-all-data/",
+                     "https://farside.co.uk/eth/")},
+}
 
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     "(KHTML, like Gecko) Chrome/126 Safari/537.36"}
@@ -221,14 +231,15 @@ def _parse_farside_page(url):
     return out
 
 
-def fetch_etf_flows():
+def fetch_etf_flows(asset):
+    """asset: 'btc' | 'eth'. 반환: (dates, 일별 $M, 누적 $B)."""
+    src = ETF_SOURCES[asset]
     hist = {}
-    if os.path.exists(ETF_CSV):
-        with open(ETF_CSV, newline="", encoding="utf-8") as f:
+    if os.path.exists(src["csv"]):
+        with open(src["csv"], newline="", encoding="utf-8") as f:
             for row in csv.DictReader(f):
                 hist[row["date"]] = float(row["flow_musd"])
-    for url in ("https://farside.co.uk/bitcoin-etf-flow-all-data/",
-                "https://farside.co.uk/btc/"):
+    for url in src["urls"]:
         try:
             page = _parse_farside_page(url)
             hist.update(page)
@@ -236,7 +247,7 @@ def fetch_etf_flows():
         except Exception as e:
             log(f"Farside 수집 실패({url}): {e}")
     if hist:
-        with open(ETF_CSV, "w", newline="", encoding="utf-8") as f:
+        with open(src["csv"], "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             w.writerow(["date", "flow_musd"])
             for d in sorted(hist):
@@ -288,7 +299,13 @@ def build_signals(m):
     if v is not None:
         st, lb = ("serious", "대규모 유출") if v <= -1000 else \
                  ("warning", "유출 우위") if v < 0 else ("good", "유입 지속")
-        add("ETF 5일 순유입", f"{v:+,.0f}M$", "5일 합 음수=유출 · ≤-1,000M 경계", st, lb)
+        add("BTC ETF 5일 순유입", f"{v:+,.0f}M$", "5일 합 음수=유출 · ≤-1,000M 경계", st, lb)
+
+    v = m.get("eth_etf_5d_sum")
+    if v is not None:
+        st, lb = ("serious", "대규모 유출") if v <= -500 else \
+                 ("warning", "유출 우위") if v < 0 else ("good", "유입 지속")
+        add("ETH ETF 5일 순유입", f"{v:+,.0f}M$", "5일 합 음수=유출 · ≤-500M 경계", st, lb)
 
     v = m.get("oi_chg_7d")
     if v is not None:
@@ -307,7 +324,7 @@ def main():
             "metrics": {}, "signals": []}
     m = data["metrics"]
 
-    print("[1/5] Binance 현물 (BTC·ETH 일봉)")
+    print("[1/6] Binance 현물 (BTC·ETH 일봉)")
     try:
         b_dates, b_close = fetch_klines("BTCUSDT")
         e_dates, e_close = fetch_klines("ETHUSDT")
@@ -332,7 +349,7 @@ def main():
     except Exception as e:
         log(f"실패: {e}")
 
-    print("[2/5] CoinMetrics MVRV")
+    print("[2/6] CoinMetrics MVRV")
     try:
         mv_dates, mv_vals = fetch_mvrv()
         data["mvrv"] = {"dates": mv_dates, "values": mv_vals}
@@ -343,7 +360,7 @@ def main():
     except Exception as e:
         log(f"실패: {e}")
 
-    print("[3/5] Binance 선물 펀딩비")
+    print("[3/6] Binance 선물 펀딩비")
     try:
         f_dates, f_vals = fetch_funding()
         data["funding"] = {"dates": f_dates, "values": f_vals}
@@ -355,7 +372,7 @@ def main():
     except Exception as e:
         log(f"실패: {e}")
 
-    print("[4/5] Binance 미결제약정(OI)")
+    print("[4/6] Binance 미결제약정(OI)")
     try:
         oi_dates, oi_usd, oi_btc = fetch_oi()
         data["oi"] = {"dates": oi_dates, "usd_b": oi_usd}
@@ -366,9 +383,9 @@ def main():
     except Exception as e:
         log(f"실패: {e}")
 
-    print("[5/5] Farside ETF 순유입")
+    print("[5/6] Farside BTC ETF 순유입")
     try:
-        etf_dates, etf_flow, etf_cum = fetch_etf_flows()
+        etf_dates, etf_flow, etf_cum = fetch_etf_flows("btc")
         data["etf"] = {"dates": etf_dates, "flow": etf_flow, "cum": etf_cum}
         if etf_flow:
             m["etf_last_flow"] = etf_flow[-1]
@@ -376,6 +393,19 @@ def main():
             m["etf_5d_sum"] = round(sum(etf_flow[-5:]), 1)
             m["etf_cum_total"] = etf_cum[-1]
         log(f"최근일 {m.get('etf_last_flow')}M$ · 누적 {m.get('etf_cum_total')}B$")
+    except Exception as e:
+        log(f"실패: {e}")
+
+    print("[6/6] Farside ETH ETF 순유입")
+    try:
+        e_dates, e_flow, e_cum = fetch_etf_flows("eth")
+        data["etf_eth"] = {"dates": e_dates, "flow": e_flow, "cum": e_cum}
+        if e_flow:
+            m["eth_etf_last_flow"] = e_flow[-1]
+            m["eth_etf_last_date"] = e_dates[-1]
+            m["eth_etf_5d_sum"] = round(sum(e_flow[-5:]), 1)
+            m["eth_etf_cum_total"] = e_cum[-1]
+        log(f"최근일 {m.get('eth_etf_last_flow')}M$ · 누적 {m.get('eth_etf_cum_total')}B$")
     except Exception as e:
         log(f"실패: {e}")
 
@@ -398,6 +428,9 @@ def main():
         "etf_last_date": m.get("etf_last_date"),
         "etf_last_flow": m.get("etf_last_flow"),
         "etf_5d_sum": m.get("etf_5d_sum"),
+        "eth_etf_last_date": m.get("eth_etf_last_date"),
+        "eth_etf_last_flow": m.get("eth_etf_last_flow"),
+        "eth_etf_5d_sum": m.get("eth_etf_5d_sum"),
     }
     os.makedirs(os.path.dirname(SUMMARY_JSON), exist_ok=True)
     with open(SUMMARY_JSON, "w", encoding="utf-8") as f:

@@ -168,14 +168,20 @@
 
   <section>
     <h2>③ ETF 자금 흐름</h2>
-    <p class="desc">미국 현물 비트코인 ETF 11종 합산 순유입 — 기관·리테일 수급의 핵심 창구 (Farside, 거래일만)</p>
+    <p class="desc">미국 현물 ETF 합산 순유입 — 비트코인 11종(2024-01 상장) · 이더리움 10종(2024-07 상장). 기관·리테일 수급의 핵심 창구 (Farside, 거래일만)</p>
     <div class="cards">
-      <div class="card"><h3>일별 순유입 ($M)</h3>
+      <div class="card"><h3>BTC ETF 일별 순유입 ($M)</h3>
         <p class="note">파랑 = 유입 · 빨강 = 유출</p>
         <div id="ch-etf"></div></div>
-      <div class="card"><h3>누적 순유입 ($B)</h3>
+      <div class="card"><h3>BTC ETF 누적 순유입 ($B)</h3>
         <p class="note">2024-01 상장 이후 누적</p>
         <div id="ch-etfcum"></div></div>
+      <div class="card"><h3>ETH ETF 일별 순유입 ($M)</h3>
+        <p class="note">파랑 = 유입 · 빨강 = 유출</p>
+        <div id="ch-etf-eth"></div></div>
+      <div class="card"><h3>ETH ETF 누적 순유입 ($B)</h3>
+        <p class="note">2024-07 상장 이후 누적 — BTC 차트와 세로축 배율이 다르니 절대 규모는 누적값 숫자로 비교</p>
+        <div id="ch-etfcum-eth"></div></div>
     </div>
   </section>
 
@@ -194,7 +200,7 @@
 
   <footer>
     데이터: Binance 현물·선물 API(가격·RSI·펀딩비·OI) · CoinMetrics 커뮤니티 API(MVRV) ·
-    Farside Investors(미국 현물 ETF 순유입, $M) — 모두 무료 소스, UTC 일봉 기준<br>
+    Farside Investors(미국 현물 BTC·ETH ETF 순유입, $M) — 모두 무료 소스, UTC 일봉 기준<br>
     청산량(liquidation)·거래소 보유량 등은 무료 공개 API가 없어 미포함(Coinglass·CryptoQuant 유료 영역).
     펀딩비는 8시간 펀딩의 일평균이며 연환산 ≈ 일평균×3×365.
   </footer>
@@ -469,8 +475,10 @@ function renderAll(){
      delta:m.rsi14==null?'':m.rsi14>=70?'과매수 구간':m.rsi14<=30?'과매도 구간':'중립 구간 (30–70)'},
     {label:'MVRV 비율', value:m.mvrv!=null?fmt(m.mvrv,2):'—',
      delta:m.mvrv_chg_30d!=null?`<span class="${dcls(m.mvrv_chg_30d)}">${sign(m.mvrv_chg_30d)}${fmt(m.mvrv_chg_30d,2)}</span> · 30일`:''},
-    {label:'ETF 순유입 (최근 거래일)', value:m.etf_last_flow!=null?`${sign(m.etf_last_flow)}${fmt(m.etf_last_flow,0)}M$`:'—',
+    {label:'BTC ETF 순유입 (최근 거래일)', value:m.etf_last_flow!=null?`${sign(m.etf_last_flow)}${fmt(m.etf_last_flow,0)}M$`:'—',
      delta:m.etf_5d_sum!=null?`5일 합 <span class="${dcls(m.etf_5d_sum)}">${sign(m.etf_5d_sum)}${fmt(m.etf_5d_sum,0)}M$</span> · 누적 ${fmt(m.etf_cum_total,1)}B$`:''},
+    {label:'ETH ETF 순유입 (최근 거래일)', value:m.eth_etf_last_flow!=null?`${sign(m.eth_etf_last_flow)}${fmt(m.eth_etf_last_flow,0)}M$`:'—',
+     delta:m.eth_etf_5d_sum!=null?`5일 합 <span class="${dcls(m.eth_etf_5d_sum)}">${sign(m.eth_etf_5d_sum)}${fmt(m.eth_etf_5d_sum,0)}M$</span> · 누적 ${fmt(m.eth_etf_cum_total,1)}B$`:''},
     {label:'펀딩비 (일평균)', value:m.funding_last!=null?fmt(m.funding_last,4)+'%':'—',
      delta:m.funding_apr!=null?`연환산 ≈ ${fmt(m.funding_apr,1)}% · 7일 평균 ${fmt(m.funding_avg7,4)}%`:''},
     {label:'미결제약정 OI', value:m.oi_usd_b!=null?'$'+fmt(m.oi_usd_b,1)+'B':'—',
@@ -527,6 +535,13 @@ function renderAll(){
     const [cd,cv]=slice2(et.dates,et.cum);
     lineChart('ch-etfcum',[{name:'누적',dates:cd,values:cv}],{unit:'B$',dec:0,tdec:1,h:190});
   } else {barChart('ch-etf');lineChart('ch-etfcum',[]);}
+  const ee=DATA.etf_eth;
+  if(ee){
+    const [fd2,fv2]=slice2(ee.dates,ee.flow);
+    barChart('ch-etf-eth',fd2,fv2,{unit:'M$',dec:0,tblHead:'순유입(M$)'});
+    const [cd2,cv2]=slice2(ee.dates,ee.cum);
+    lineChart('ch-etfcum-eth',[{name:'누적',dates:cd2,values:cv2}],{unit:'B$',dec:0,tdec:1,h:190});
+  } else {barChart('ch-etf-eth');lineChart('ch-etfcum-eth',[]);}
 
   /* ④ 파생 */
   const fu=DATA.funding;
