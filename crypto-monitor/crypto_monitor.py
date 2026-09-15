@@ -200,18 +200,31 @@ def _parse_farside_cell(txt):
     return -v if neg else v
 
 
-def _parse_farside_page(url):
-    """date(ISO) → 일별 총 순유입($M). 표의 마지막 열(Total)만 사용.
+# 행 인정 기준: 종목 칸의 3/4 이상이 숫자이고 첫 칸(블랙록 IBIT/ETHA — 유입의 대부분)도
+# 숫자여야 한다. Farside 는 발행사가 보고하는 대로 칸을 하나씩 채우므로 집계 중인 날은
+# 일부 종목만 숫자다 — 2026-09-14 는 11시에 12종목 중 MSBT 하나만 있어 Total 이 9.7 로
+# 보였고, 9/2 는 -14.3 으로 잡혔다가 최종 +101.1 로 부호까지 바뀌었다(9번 중 5번 부분집계).
+# 전체 이력 1,207행이 모두 3/4 이상이라 정상 거래일은 하나도 안 걸린다(2026-09-15 검증).
+FARSIDE_MIN_FILL = 0.75
 
-    주의: Farside는 아직 집계되지 않은 날(당일)과 증시 휴장일도 행으로 게시하는데,
-    개별 종목 칸은 모두 '-'인 반면 Total 칸만 '0.0'으로 찍힌다. 그대로 읽으면
-    '순유입 0인 거래일'로 오인되어 최근일 타일·5일 합·차트에 가짜 0이 섞인다.
-    → 개별 종목 칸 중 최소 하나가 숫자인 행만 실제 거래일로 인정한다.
+
+def _parse_farside_page(url):
+    """Farside 표 한 장 파싱.
+
+    반환: (accepted, span, skipped)
+      accepted: date(ISO) → 일별 총 순유입($M) — 집계가 끝난 거래일만
+      span:     (최소일, 최대일) — 표에 날짜 행으로 존재하는 범위(거른 행 포함).
+                호출부가 이 범위 안의 캐시 중 accepted 에 없는 날을 지우는 데 쓴다.
+      skipped:  [(date, 숫자칸수, 종목수)] — 거른 행(휴장일·미집계·부분집계)
+
+    Farside 는 휴장일과 아직 집계 중인 날도 행으로 게시한다. 휴장일·미집계는 종목 칸이
+    전부 '-'이고 Total 만 '0.0', 부분집계는 먼저 보고한 발행사 칸만 숫자다. 어느 쪽이든
+    Total 을 그대로 읽으면 가짜 값이 최근일 타일·5일 합·차트에 섞인다.
     """
     r = requests.get(url, headers=UA, timeout=30)
     r.raise_for_status()
     rows = re.findall(r"<tr[^>]*>(.*?)</tr>", r.text, re.S)
-    out = {}
+    out, skipped, dated = {}, [], []
     for row in rows:
         cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row, re.S)
         cells = [re.sub(r"<[^>]+>", "", c).strip() for c in cells]
@@ -221,14 +234,17 @@ def _parse_farside_page(url):
             day = datetime.strptime(cells[0], "%d %b %Y").strftime("%Y-%m-%d")
         except ValueError:
             continue
+        dated.append(day)
         total = _parse_farside_cell(cells[-1])
-        if total is None:
-            continue
         funds = [_parse_farside_cell(c) for c in cells[1:-1]]
-        if not any(v is not None for v in funds):
-            continue  # 전 종목 '-' = 미집계·휴장일 → 데이터 없음
+        n_num = sum(v is not None for v in funds)
+        if (total is None or not funds or funds[0] is None
+                or n_num < len(funds) * FARSIDE_MIN_FILL):
+            skipped.append((day, n_num, len(funds)))
+            continue
         out[day] = total
-    return out
+    span = (min(dated), max(dated)) if dated else None
+    return out, span, skipped
 
 
 def fetch_etf_flows(asset):
@@ -241,9 +257,19 @@ def fetch_etf_flows(asset):
                 hist[row["date"]] = float(row["flow_musd"])
     for url in src["urls"]:
         try:
-            page = _parse_farside_page(url)
+            page, span, skipped = _parse_farside_page(url)
+            # 표가 보여주는 범위 안에서 표가 인정하지 않는 날은 캐시에서도 지운다 —
+            # 이전 실행이 부분집계로 저장한 값이 남지 않도록. 캐시를 먼저 읽고 덮어쓰는
+            # 구조라 이게 없으면 한번 잘못 들어간 값이 저절로 빠지지 않는다(8/31·9/15).
+            if span:
+                for d in [d for d in hist if span[0] <= d <= span[1] and d not in page]:
+                    del hist[d]
             hist.update(page)
             log(f"Farside {url.split('/')[-2]}: {len(page)}일")
+            newest = max(page, default="")
+            for d, n, m in skipped:
+                if d > newest:
+                    log(f"  미집계 행 건너뜀: {d} ({n}/{m} 종목 보고)")
         except Exception as e:
             log(f"Farside 수집 실패({url}): {e}")
     if hist:
