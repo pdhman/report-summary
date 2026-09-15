@@ -1,5 +1,5 @@
 {
- "date": "2026-09-15 22:43",
+ "date": "2026-09-16 04:44",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession ↑ / Inflation → / Risk →",
@@ -7,31 +7,31 @@
   "title": "Fed Decision in September?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.865,
-   "d24": 0.07
+   "prob": 0.905,
+   "d24": 0.05
   },
-  "mean": 21.986,
-  "mean_d24": 1.863,
+  "mean": 23.03,
+  "mean_d24": 1.564,
   "url": "https://polymarket.com/event/fed-decision-in-september-762"
  },
  "recession": {
-  "prob": 0.085,
+  "prob": 0.095,
   "d24": null,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "September 15 · Israel x Lebanon diplomatic meeting by September 15, 2026?",
-  "pmss": 53.0,
-  "band": "Watch",
-  "d24": 0.72,
-  "prob": 0.915
+  "q": "October 31 · NATO x Russia military clash by October 31, 2026?",
+  "pmss": 65.0,
+  "band": "Interest",
+  "d24": 0.03,
+  "prob": 0.125
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 53.0
+  "top_pmss": 65.0
  },
  "alerts": 0,
- "n_markets": 396,
+ "n_markets": 405,
  "source": "direct"
 }
