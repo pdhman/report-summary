@@ -536,17 +536,28 @@ def build():
         body = _crow("BTC", c["btc_price"], c.get("btc_chg_24h"), 0, "$")
         if c.get("rsi14") is not None:
             body += _crow("RSI(14)", c["rsi14"], None, 1)
-        if c.get("mvrv") is not None:
-            body += _crow("MVRV", c["mvrv"], None, 2)
+        # ETF 순유입은 BTC·ETH 를 나란히 (MVRV 는 대시보드에서만 — 카드는 4줄 유지)
+        def _frow(name, v):
+            cls = "up" if v > 0 else ("down" if v < 0 else "")
+            return (f'<div class="krow"><span class="k-name">{name}</span>'
+                    f'<span class="k-val {cls}">{"+" if v > 0 else ""}{v:,.0f}M$</span></div>')
+        asof = []
         if c.get("etf_last_flow") is not None:
-            f_ = c["etf_last_flow"]
-            cls = "up" if f_ > 0 else ("down" if f_ < 0 else "")
-            body += (f'<div class="krow"><span class="k-name">ETF 순유입</span>'
-                     f'<span class="k-val {cls}">{"+" if f_ > 0 else ""}{f_:,.0f}M$</span></div>')
-            # 헤더 날짜는 갱신일(KST). ETF 는 미국 세션 기준이라 하루 이상 차이가
-            # 나므로 실제 기준일을 작게 덧붙인다(시장 레버리지 카드와 같은 이유).
-            if c.get("etf_last_date"):
-                body += f'<div class="sc-note">ETF는 {esc(c["etf_last_date"])} 기준</div>'
+            body += _frow("BTC ETF 순유입", c["etf_last_flow"])
+            asof.append(("BTC", c.get("etf_last_date")))
+        if c.get("eth_etf_last_flow") is not None:
+            body += _frow("ETH ETF 순유입", c["eth_etf_last_flow"])
+            asof.append(("ETH", c.get("eth_etf_last_date")))
+        # 헤더 날짜는 갱신일(KST). ETF 는 미국 세션 기준이라 하루 이상 차이가 나고,
+        # Farside 가 BTC·ETH 표를 다른 시각에 올려 둘의 기준일이 서로 어긋나기도
+        # 한다(2026-09-15: BTC 09-14, ETH 09-11). 실제 기준일을 작게 덧붙인다.
+        asof = [(a, d) for a, d in asof if d]
+        if asof:
+            if len({d for _, d in asof}) == 1:
+                body += f'<div class="sc-note">ETF는 {esc(asof[0][1])} 기준</div>'
+            else:
+                body += ('<div class="sc-note">'
+                         + " · ".join(f"{a} ETF {esc(d)}" for a, d in asof) + " 기준</div>")
         cards.append(_card("crypto.html", "₿", "크립토", c.get("date", ""), body))
 
     c = None
