@@ -224,6 +224,55 @@ def build_empty(date_str):
     _write_report(pd.DataFrame(columns=cols), date_str)
 
 
+WATCH_PATH = os.path.join(OUT_DIR, "data", "screener_watch.json")
+
+
+def _watch_section(date_str):
+    """'거래량 대기' 참고 목록 — 추세 조건은 전부 통과했으나 거래량 > 5일 평균만 미달.
+
+    스크리너(주도섹터 필터링.py)가 docs/data/screener_watch.json 에 남긴다. 파일 날짜가
+    리포트 날짜와 다르면(과거 리포트 재생성) 섹션을 생략한다. 2026-09-16 추가.
+    """
+    try:
+        import json
+        with open(WATCH_PATH, encoding="utf-8") as f:
+            w = json.load(f)
+    except Exception:
+        return ""
+    if str(w.get("date", "")).replace("-", "") != str(date_str).replace("-", "")[:8]:
+        return ""
+    items = w.get("items") or []
+    ratio = w.get("high_52w_ratio")
+    note = (f" · 52주 고가 대비 -{round((1 - ratio) * 100)}% 이내 기준" if ratio else "")
+    if not items:
+        body = '<p class="muted">추세 조건을 통과하고 거래량만 미달인 종목이 없습니다.</p>'
+    else:
+        rows = []
+        for r in items:
+            code = str(r.get("ticker", "")).zfill(6)
+            chg = r.get("change_ratio")
+            cls = "up" if (chg or 0) > 0 else ("down" if (chg or 0) < 0 else "flat")
+            rows.append(f"""
+      <tr>
+        <td class="name"><span class="nm">{esc(r.get('name', '-'))}</span><span class="code">{code}</span></td>
+        <td class="num">{fmt_int(r.get('close'))}</td>
+        <td class="num {cls}">{(f"{chg:+.2f}%" if chg is not None else '-')}</td>
+        <td class="num">{r.get('rs_score', '-')}</td>
+        <td class="num">{(f"{r['vol_ratio']:.0f}%" if r.get('vol_ratio') is not None else '-')}</td>
+        <td class="num">{(f"{r['from_high']:+.1f}%" if r.get('from_high') is not None else '-')}</td>
+      </tr>""")
+        body = f"""<div class="tablewrap"><table>
+        <thead><tr><th>종목</th><th class="num">종가</th><th class="num">등락률</th>
+          <th class="num">RS</th><th class="num">거래량/5일평균</th><th class="num">52주 고가 대비</th></tr></thead>
+        <tbody>{''.join(rows)}</tbody></table></div>"""
+    return f"""
+  <section>
+    <h2>거래량 대기 종목 <span class="h2sub">(추세 조건 통과 · 거래량만 미달{esc(note)})</span></h2>
+    {body}
+    <p class="muted">참고 목록입니다. 거래량이 5일 평균을 넘는 날 선정 종목으로 올라옵니다.</p>
+  </section>"""
+
+
 def _write_report(today, date_str):
     """today(DataFrame; 비어 있을 수 있음) → docs/report_YYYYMMDD.html 생성."""
     # 요약 통계 (0종목이어도 안전하게)
@@ -289,6 +338,8 @@ def _write_report(today, date_str):
       </table>
     </div>
   </section>
+
+  {_watch_section(date_str)}
 
   <section>
     <h2>산업 분포</h2>
