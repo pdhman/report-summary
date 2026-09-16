@@ -707,6 +707,13 @@ def build_interp(d: pd.DataFrame, comp: pd.DataFrame, signals: dict) -> list:
         hist_hi = np.nanmax(ks[:i + 1]) if kv is not None else None
         near_high = kv is not None and hist_hi and kv >= hist_hi * 0.97
         r20 = (ks[i] / ks[i - 20] - 1) * 100 if i >= 20 and ok(ks[i]) and ok(ks[i - 20]) else None
+        # 달력 기준 한 달(30일) 수익률 — 20거래일 수익률은 기준일이 급락 저점에 걸리면
+        # 방향이 뒤집힌다(2026-09-16: 20거래일 +3.8% vs 달력 1개월 -3.7%). 문장에서 병기.
+        r1m = None
+        if kv is not None:
+            j1 = d.index.searchsorted(d.index[i] - pd.Timedelta(days=30), side="right") - 1
+            if 0 <= j1 < i and ok(ks[j1]):
+                r1m = (kv / ks[j1] - 1) * 100
         tch = t - T[i - 20] if i >= 20 and ok(T[i - 20]) else None
         chg = lambda arr: arr[i] - arr[i - 20] if i >= 20 and ok(arr[i]) and ok(arr[i - 20]) else None  # noqa: E731
         win = ks[max(0, i - 59):i + 1]
@@ -795,8 +802,12 @@ def build_interp(d: pd.DataFrame, comp: pd.DataFrame, signals: dict) -> list:
         lines.append(s)
 
         # ---- 요약(완결 문장 2줄) ----
-        move = ("" if r20 is None else f"한 달간 {_f(r20, 1)}% 올라" if r20 >= 3
-                else f"한 달간 {_f(abs(r20), 1)}% 내려" if r20 <= -3 else "한 달째 횡보하며")
+        move = ("" if r20 is None else f"20거래일 전보다 {_f(r20, 1)}% 올라" if r20 >= 3
+                else f"20거래일 전보다 {_f(abs(r20), 1)}% 내려" if r20 <= -3 else "20거래일째 횡보하며")
+        # 20거래일과 달력 한 달의 방향이 다르면(예: 기준일이 급락 저점) 달력 기준을 병기해 오해를 막는다
+        if move and r1m is not None and (r20 is None or (r20 >= 3) != (r1m >= 3) or (r20 <= -3) != (r1m <= -3)):
+            move += (f"(달력 한 달 전보다는 {_f(abs(r1m), 1)}% {'높은' if r1m > 0 else '낮은'} 수준)"
+                     if abs(r1m) >= 1 else "(달력 한 달 전과는 비슷한 수준)")
         pos = ("" if off_hi is None else "60일 고점 부근에" if off_hi >= -2
                else f"60일 고점보다 {_f(abs(off_hi))}% 낮은 자리에")
         idx_txt = f"지수는 {move} {pos} 있고"
@@ -812,7 +823,7 @@ def build_interp(d: pd.DataFrame, comp: pd.DataFrame, signals: dict) -> list:
                   f"{fg_name}는 식고 있지만 " if fg_dn else f"{fg_name}는 제자리이고 ")
         tch_txt2 = ("" if tch is None else
                     f"온도계는 20일 전보다 {_f(abs(tch))}점 더 내려온 상태" if t_dn else
-                    f"온도계는 20일 전보다 {_f(tch)}점 올라온 상태" if t_up else "온도계는 한 달째 제자리")
+                    f"온도계는 20일 전보다 {_f(tch)}점 올라온 상태" if t_up else "온도계는 20일째 제자리")
         if on("bear_div") or (near_high and t < 40):
             summ = (f"{idx_txt}, 200일선 위 종목은 {_f(ma)}%에 그치고 신저가({_f(nlv)})가 신고가({_f(nhv)})보다 많아 "
                     "소수 종목이 지수를 끌어올리는 상승입니다. 이런 괴리는 대개 폭이 무너지며 해소되므로 200일선 위 비율과 "
