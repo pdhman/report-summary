@@ -16,7 +16,9 @@ FinanceDataReader.StockListing 대체/폴백 — KRX Open API 기반 전종목 �
       (KOSPI + KOSDAQ. KONEX 는 KRX 서비스 미승인이라 없음. 'KOSDAQ GLOBAL' 구분 없음)
   stock_listing_desc()      → FDR 'KRX-DESC' 스키마: Code, Name, Market, Sector, Industry
       (quant-data/output/퀀트데이터_latest.csv 의 섹터·업종 — 주 1회 갱신)
-  install()                 → fdr.StockListing 을 감싸 원본 실패 시 위 함수로 폴백
+  install()                 → fdr.StockListing 을 감싼다. 'KRX'/'KOSPI'/'KOSDAQ' 는
+      네이버 당일 스냅샷 → KRX → (마지막) fdr 원본 순. FDR 캐시는 장중 스냅샷이라
+      거래대금이 불완전할 수 있어 신뢰하지 않는다. 'KRX-DESC' 는 fdr → 퀀트데이터.
 
 날짜: 기본은 오늘. KRX 는 당일 시세를 장 마감 뒤 게시하므로 아직 없으면 직전
 거래일로 내려간다(어느 날짜를 썼는지 로그). 유니버스 1차 필터(시총·거래대금)에는
@@ -177,16 +179,23 @@ def install():
 
     def patched(market, *a, **k):
         m = str(market).upper()
+        # 시세 목록은 FDR 보다 네이버 당일 스냅샷을 먼저 쓴다 (2026-09-16 실사고):
+        # 되살아난 FDR 캐시가 장중 이른 시각 스냅샷이라 거래대금이 반토막(삼성전자
+        # 12,275억 vs 실제 28,234억) → 1차 필터 103→53종목, 9/11·9/15·9/16 선정 0~1개.
+        # FDR 은 네이버·KRX 모두 실패했을 때만.
+        if m in ("KRX", "KOSPI", "KOSDAQ"):
+            try:
+                df = stock_listing()
+                return df if m == "KRX" else df[df["Market"] == m].reset_index(drop=True)
+            except Exception as e:
+                log.warning("네이버/KRX 종목 목록 실패(%s) → fdr 원본 시도", str(e)[:60])
+                return orig(market, *a, **k)
         try:
             df = orig(market, *a, **k)
             if df is not None and not df.empty:
                 return df
             raise RuntimeError("빈 응답")
         except Exception as e:
-            if m in ("KRX", "KOSPI", "KOSDAQ"):
-                log.warning("fdr.StockListing(%s) 실패(%s) → KRX Open API 폴백", market, str(e)[:60])
-                df = stock_listing()
-                return df if m == "KRX" else df[df["Market"] == m].reset_index(drop=True)
             if m == "KRX-DESC":
                 log.warning("fdr.StockListing(KRX-DESC) 실패(%s) → 퀀트데이터 섹터·업종 폴백", str(e)[:60])
                 return stock_listing_desc()
