@@ -1,5 +1,5 @@
 {
- "date": "2026-09-16 07:59",
+ "date": "2026-09-16 14:00",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession ↑ / Inflation → / Risk →",
@@ -10,18 +10,18 @@
    "prob": 0.875,
    "d24": 0.0
   },
-  "mean": 22.254,
-  "mean_d24": 0.275,
+  "mean": 22.226,
+  "mean_d24": -0.069,
   "url": "https://polymarket.com/event/fed-decision-in-september-762"
  },
  "recession": {
-  "prob": 0.225,
-  "d24": 0.13,
+  "prob": 0.175,
+  "d24": 0.08,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
   "q": "September 30 · Israel x Iran ceasefire continues through September 30?",
-  "pmss": 58.3,
+  "pmss": 63.1,
   "band": "Interest",
   "d24": -0.05,
   "prob": 0.865
@@ -29,9 +29,9 @@
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 58.3
+  "top_pmss": 63.1
  },
  "alerts": 0,
- "n_markets": 395,
+ "n_markets": 383,
  "source": "direct"
 }
