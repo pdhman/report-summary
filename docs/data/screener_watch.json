@@ -1,0 +1,69 @@
+{
+ "date": "2026-09-16",
+ "high_52w_ratio": 0.65,
+ "items": [
+  {
+   "name": "주성엔지니어링",
+   "ticker": "036930",
+   "close": 200500.0,
+   "change_ratio": 1.73,
+   "rs_score": 95.0,
+   "vol_ratio": 51.6,
+   "from_high": -29.2
+  },
+  {
+   "name": "심텍",
+   "ticker": "222800",
+   "close": 129400.0,
+   "change_ratio": 2.05,
+   "rs_score": 88.1,
+   "vol_ratio": 54.0,
+   "from_high": -21.2
+  },
+  {
+   "name": "삼화콘덴서",
+   "ticker": "001820",
+   "close": 143200.0,
+   "change_ratio": -0.56,
+   "rs_score": 86.1,
+   "vol_ratio": 41.0,
+   "from_high": -27.2
+  },
+  {
+   "name": "GS",
+   "ticker": "078930",
+   "close": 111400.0,
+   "change_ratio": -2.96,
+   "rs_score": 63.4,
+   "vol_ratio": 97.7,
+   "from_high": -16.4
+  },
+  {
+   "name": "S-Oil",
+   "ticker": "010950",
+   "close": 143700.0,
+   "change_ratio": -2.44,
+   "rs_score": 62.4,
+   "vol_ratio": 53.4,
+   "from_high": -18.9
+  },
+  {
+   "name": "한국콜마",
+   "ticker": "161890",
+   "close": 150600.0,
+   "change_ratio": 4.08,
+   "rs_score": 53.5,
+   "vol_ratio": 77.0,
+   "from_high": -9.2
+  },
+  {
+   "name": "GS건설",
+   "ticker": "006360",
+   "close": 36700.0,
+   "change_ratio": -3.8,
+   "rs_score": 51.5,
+   "vol_ratio": 46.9,
+   "from_high": -18.2
+  }
+ ]
+}
