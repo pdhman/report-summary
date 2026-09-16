@@ -1,37 +1,37 @@
 {
- "date": "2026-09-16 22:36",
+ "date": "2026-09-17 04:38",
  "regime_icon": "⚪",
- "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing → / Recession ↑ / Inflation ↓ / Risk →",
+ "regime_name": "Neutral / Mixed",
+ "arrows": "Easing ↓ / Recession ↑ / Inflation ↓ / Risk →",
  "fomc": {
   "title": "Fed Decision in September?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.885,
-   "d24": 0.01
+   "prob": 0.9995,
+   "d24": 0.1145
   },
-  "mean": 22.449,
-  "mean_d24": 0.214,
+  "mean": 24.938,
+  "mean_d24": 1.948,
   "url": "https://polymarket.com/event/fed-decision-in-september-762"
  },
  "recession": {
-  "prob": 0.135,
-  "d24": 0.05,
+  "prob": 0.12,
+  "d24": 0.035,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "Sloviansk · Will Russia enter Sloviansk by December 31, 2026?",
-  "pmss": 51.8,
-  "band": "Watch",
-  "d24": -0.065,
-  "prob": 0.155
+  "q": "↑ $110 · Will WTI Crude Oil (WTI) hit (HIGH) $110 in September?",
+  "pmss": 63.9,
+  "band": "Interest",
+  "d24": -0.22,
+  "prob": 0.295
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 51.8
+  "top_pmss": 63.9
  },
- "alerts": 0,
- "n_markets": 408,
+ "alerts": 1,
+ "n_markets": 403,
  "source": "direct"
 }
