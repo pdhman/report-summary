@@ -53,25 +53,28 @@ DOM 스크롤보다 **압도적으로 빠르고, 잘린 글의 전문까지 한 
 (2026-08-18 폴백으로 도입 → 2026-08-24 실측 후 기본 절차로 승격.)
 
 1. **queryId 추출** — 번들 교체 시 바뀌므로 매번 재추출한다.
+   **webpack 청크 레지스트리를 훑는 방식이 정답이다**(2026-09-18 확인). 예전의 "DOM의
+   script/link를 fetch해서 정규식" 방식은 이제 실패한다 — 타임라인 모듈이 든 청크는
+   webpack이 로드 후 script 태그를 지워서 DOM에도 없고, X가 `performance.clearResourceTimings()`
+   를 호출해 resource timing에도 안 남는다. `fetch` 후킹·`read_network_requests` 도 페이지네이션
+   요청이 안 뜨면 아무것도 못 잡는다. 반면 `window.webpackChunk_twitter_responsive_web` 에는
+   **로드된 모든 청크의 모듈 함수가 그대로 남아 있다.**
    ```js
-   const links=[...document.querySelectorAll('link[rel=prefetch],link[rel=preload],script[src]')]
-     .map(l=>l.href||l.src).filter(u=>/client-web|responsive-web/.test(u));
-   let found=null;
-   for (const u of [...new Set(links)]) {
-     try { const t = await fetch(u).then(r=>r.text());
-       const m = t.match(/queryId:"([\w-]+)",operationName:"ListLatestTweetsTimeline"/);
-       if (m) { found=m[1]; window.__src=t; break; }
-     } catch(e){}
-   }
-   found   // 2026-08 기준 "1LE3u14FJjPZUHKFGzos2g"
+   const arr=window.webpackChunk_twitter_responsive_web;   // 2026-09 기준 111개 청크
+   let src=null;
+   outer: for(const ch of arr){ const mods=ch&&ch[1]; if(!mods) continue;
+     for(const id in mods){ let t=''; try{t=mods[id].toString()}catch(e){continue}
+       if(t.includes('operationName:"ListLatestTweetsTimeline"')){ src=t; break outer; } } }
+   window.__QID = src.match(/queryId:"([\w-]+)"/)[1];   // 2026-09-18 "qIrerw_1oakhehcLoFbaOw"
    ```
-2. **features 구성** — 같은 위치의 `featureSwitches` 를 전부 true 로.
+2. **features·fieldToggles 구성** — 같은 모듈 소스에서 뽑는다. featureSwitches는 전부 true,
+   fieldToggles는 전부 false 로 넣고 쿼리스트링에 `fieldToggles` 도 함께 실어야 한다.
    ```js
-   const t=window.__src, i=t.indexOf('operationName:"ListLatestTweetsTimeline"');
-   const fs=t.slice(i,i+6000).match(/featureSwitches:\[([^\]]+)\]/);
-   window.__FEAT={};
-   fs[1].split(',').map(s=>s.replace(/['"]/g,'').trim()).filter(Boolean).forEach(k=>window.__FEAT[k]=true);
-   Object.keys(window.__FEAT).length   // 2026-08 기준 38개
+   const fs=src.match(/featureSwitches:\[([^\]]*)\]/), ft=src.match(/fieldToggles:\[([^\]]*)\]/);
+   window.__FEAT={}; fs[1].split(',').map(s=>s.replace(/['"]/g,'').trim()).filter(Boolean)
+     .forEach(k=>window.__FEAT[k]=true);     // 2026-09 기준 40개
+   window.__FT={}; (ft?ft[1]:'').split(',').map(s=>s.replace(/['"]/g,'').trim()).filter(Boolean)
+     .forEach(k=>window.__FT[k]=false);      // withPayments 등 8개
    ```
 3. **페이지 fetch** — 공개 웹 Bearer + ct0 쿠키. `credentials:"include"` 필수.
    ```js
@@ -79,9 +82,10 @@ DOM 스크롤보다 **압도적으로 빠르고, 잘린 글의 전문까지 한 
    window.__ct0=document.cookie.match(/ct0=([^;]+)/)[1];
    window.__fetchPage = async (cursor) => {
      const variables = {listId:"<리스트ID>", count:40, ...(cursor?{cursor}:{})};
-     const url = "https://x.com/i/api/graphql/<qid>/ListLatestTweetsTimeline?variables="
+     const url = "https://x.com/i/api/graphql/"+window.__QID+"/ListLatestTweetsTimeline?variables="
        + encodeURIComponent(JSON.stringify(variables))
-       + "&features=" + encodeURIComponent(JSON.stringify(window.__FEAT));
+       + "&features=" + encodeURIComponent(JSON.stringify(window.__FEAT))
+       + "&fieldToggles=" + encodeURIComponent(JSON.stringify(window.__FT));
      const r = await fetch(url,{headers:{authorization:window.__BEARER,
        "x-csrf-token":window.__ct0,"x-twitter-auth-type":"OAuth2Session",
        "x-twitter-active-user":"yes","content-type":"application/json"},credentials:"include"});
