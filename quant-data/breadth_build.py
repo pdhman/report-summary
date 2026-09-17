@@ -944,7 +944,17 @@ def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
         "vkospi": _round(recent.get("vkospi", pd.Series(index=recent.index)), 2),
         "putcall": _round(recent.get("putcall", pd.Series(index=recent.index)), 3),
         "ew": {"close": _round(recent.get("ew_close", pd.Series(index=recent.index)), 0),
-               "mom": _round(recent.get("ew_mom", pd.Series(index=recent.index)), 2)},
+               "mom": _round(recent.get("ew_mom", pd.Series(index=recent.index)), 2),
+               # 125일선: 종가 ÷ (1 + 모멘텀%) — ew_mom 은 더 긴 이력으로 계산돼 있어 역산이
+               # 차트 앞쪽 125일 공백 없이 수치와 정확히 일치한다 (2026-09-17 차트 추가)
+               "ma125": _round(recent["ew_close"] / (1 + recent["ew_mom"] / 100)
+                               if {"ew_close", "ew_mom"} <= set(recent.columns)
+                               else pd.Series(index=recent.index), 0),
+               # 비교용 시총가중(코스피) 125일선 대비 % — 쏠림 여부를 한눈에
+               "kospi_mom": _round((d["kospi_close"] / d["kospi_close"].rolling(125).mean() - 1)
+                                   .mul(100).reindex(recent.index)
+                                   if "kospi_close" in d.columns
+                                   else pd.Series(index=recent.index), 2)},
         "signals": signals or {},
         "interp": interp or [],
         "leverage": lev,

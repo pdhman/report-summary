@@ -92,6 +92,17 @@
   </section>
 
   <!-- ============ 변동성 ============ -->
+  <!-- ============ 모멘텀 (동일가중) ============ -->
+  <section class="panel">
+    <div class="sec-head"><h2>모멘텀 <span class="muted">동일가중 · KODEX 200동일가중(252650)</span></h2></div>
+    <div class="grid2">
+      <div class="chart-block"><div class="ct">동일가중 ETF 종가 · 125일선 <span class="cd"><b style="color:var(--teal)">종가</b> · <b style="color:var(--gray)">125일선</b></span></div><div id="ch-ew"></div></div>
+      <div class="chart-block"><div class="ct">125일선 대비 괴리 <span class="cd">% · <b style="color:var(--teal)">동일가중</b> vs <b style="color:var(--gray)">코스피(시총가중)</b></span></div><div id="ch-ewmom"></div></div>
+      <div class="chart-block wide"><div class="ct">누적 수익률 비교 <span class="cd">선택 구간 시작 = 0% · <b style="color:var(--teal)">동일가중</b> vs <b style="color:var(--gray)">코스피</b> · 벌어질수록 소수 대형주 쏠림</span></div><div id="ch-ewrel"></div></div>
+    </div>
+    <p class="muted" style="font-size:12px;margin:8px 2px 0">모멘텀 게이지는 동일가중 ETF의 125일선 대비 괴리를 전 기간 백분위로 환산한 값입니다. 코스피는 시가총액이 큰 몇 종목이 끌어올릴 수 있어, 200종목을 같은 비중으로 담은 동일가중 ETF가 '평균적인 대형주'의 추세를 더 정직하게 보여줍니다.</p>
+  </section>
+
   <section class="panel">
     <div class="sec-head"><h2>변동성</h2></div>
     <div class="grid2">
@@ -616,6 +627,31 @@ function renderSpec(){
       fmt:function(v){ return (v > 0 ? '+' : '') + fmt(v,1) + '%p'; } }] });
 }
 
+function renderMom(){
+  if(!el('ch-ew')) return;
+  if(!D.ew || !D.ew.close){
+    ['ch-ew','ch-ewmom','ch-ewrel'].forEach(function(id){ el(id).innerHTML = '<div class="empty">데이터 준비 중</div>'; });
+    return;
+  }
+  var dates = sl(D.dates), pct = function(v){ return (v > 0 ? '+' : '') + fmt(v,1) + '%'; };
+  drawChart(el('ch-ew'), { dates:dates, h:170, series:[
+    { data:sl(D.ew.ma125 || []), label:'125일선', color:'var(--gray)', width:1.5, nd:0, fmt:function(v){ return fmt(v,0) + '원'; } },
+    { data:sl(D.ew.close), label:'종가', color:'var(--teal)', nd:0, fmt:function(v){ return fmt(v,0) + '원'; } }] });
+  drawChart(el('ch-ewmom'), { dates:dates, h:170, zero:true, series:[
+    { data:sl(D.ew.kospi_mom || []), label:'코스피', color:'var(--gray)', width:1.5, nd:1, fmt:pct },
+    { data:sl(D.ew.mom), label:'동일가중', color:'var(--teal)', type:'area', nd:1, fmt:pct }],
+    yfmt:function(v){ return fmt(v,0) + '%'; } });
+  // 구간 첫 유효값 기준 누적 수익률
+  var rebase = function(arr){
+    var b = arr.find(function(v){ return v != null; });
+    return arr.map(function(v){ return (v == null || !b) ? null : (v / b - 1) * 100; });
+  };
+  drawChart(el('ch-ewrel'), { dates:dates, h:180, zero:true, series:[
+    { data:rebase(sl(D.index.kospi)), label:'코스피', color:'var(--gray)', width:1.5, nd:1, fmt:pct },
+    { data:rebase(sl(D.ew.close)), label:'동일가중', color:'var(--teal)', nd:1, fmt:pct }],
+    yfmt:function(v){ return fmt(v,0) + '%'; } });
+}
+
 function renderVol(){
   var dates = sl(D.dates);
   // VKOSPI 는 수집 시작일 이후만 값이 있으므로 첫 값부터 잘라 빈 공간을 없앤다
@@ -722,7 +758,7 @@ function renderTiles(){
 }
 
 function renderAll(){
-  renderBreadth(); renderSpec(); renderVol(); renderScoreChart();
+  renderBreadth(); renderSpec(); renderMom(); renderVol(); renderScoreChart();
 }
 
 /* ================= 날짜 바 ================= */
