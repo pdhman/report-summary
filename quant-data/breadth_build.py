@@ -687,7 +687,8 @@ def build_interp(d: pd.DataFrame, comp: pd.DataFrame, signals: dict) -> list:
     off = len(d) - len(recent)
     g = lambda col, frame=d: frame[col].to_numpy(dtype=float) if col in frame.columns else None  # noqa: E731
     ks, T = g("kospi_close"), comp["overall"].reindex(d.index).to_numpy(dtype=float)
-    FG, TR, SP, LV = (comp[c].reindex(d.index).to_numpy(dtype=float) for c in ("fg", "trend", "spec", "lev"))
+    FG, TR, SP, LV, VOL = (comp[c].reindex(d.index).to_numpy(dtype=float)
+                           for c in ("fg", "trend", "spec", "lev", "vol"))
     MO, CONC = g("ew_mom"), g("top10_share")
     ADV, DEC, NH, NL, MA200, MA50 = (g(c) for c in ("all_adv", "all_dec", "all_nh", "all_nl", "all_ma200", "all_ma50"))
     flags = signals.get("flags", {})
@@ -723,6 +724,17 @@ def build_interp(d: pd.DataFrame, comp: pd.DataFrame, signals: dict) -> list:
         mo_txt = f" 동일가중 200종목은 125일선 대비 {_sgn(mo)}%." if mo is not None else ""
         tch_txt = f" 온도계는 20일간 {_sgn(tch, 0)}." if tch is not None else ""
 
+        # ---- 강세 다이버전스 신뢰도 (실전 독법 — 2026-09-17 사용자 요청) ----
+        #  high  : 최근 40거래일 안에 냉각(20 미만)을 거쳤고 레버리지가 가벼움(40 미만, 청산 완료)
+        #  fake  : 온도계 상승이 변동성 진정에서만 나오고 추세(폭)는 20일 전보다 내려가는 중
+        #  normal: 그 외
+        bull_grade, tr_ch = None, chg(TR)
+        if on("bull_div"):
+            was_cold = np.nanmin(T[max(0, i - 40):i + 1]) < 20
+            vol_ch = chg(VOL)
+            fake = tr_ch is not None and tr_ch <= -3 and vol_ch is not None and vol_ch <= -3
+            bull_grade = "fake" if fake else "high" if (was_cold and ok(lv) and lv < 40) else "normal"
+
         # ---- 헤드라인 규칙 ----
         stat = None
         if on("bear_div"):
@@ -732,8 +744,11 @@ def build_interp(d: pd.DataFrame, comp: pd.DataFrame, signals: dict) -> list:
             stat = "bear_div"
         elif on("bull_div"):
             icon, main = "🔺", f"강세 다이버전스: 지수는 60일 신저가인데 온도계는 오르고 있습니다({t:.0f})."
-            sub = (f"가격은 저점을 낮추지만 내부(폭·투기·레버리지)는 회복 중 — 바닥 다지기의 전형.{tch_txt}"
-                   " 반전 신호(Zweig 스러스트·90% 업데이)로 타이밍 확인.")
+            grade_txt = {"high": " 신뢰도 높음 — 냉각(20 미만)을 거친 뒤의 회복이고 레버리지도 가벼움(청산 완료).",
+                         "fake": " ⚠ 가짜 가능성 — 상승이 변동성 진정에서만 나오고 추세(폭)는 아직 내려가는 중.",
+                         "normal": " 신뢰도 보통 — 냉각을 거치지 않았거나 레버리지가 아직 가볍지 않음."}[bull_grade]
+            sub = (f"가격은 저점을 낮추지만 내부(폭·투기·레버리지)는 회복 중 — 바닥 다지기의 전형.{tch_txt}{grade_txt}"
+                   " 매수 신호가 아니라 '관심 구간 진입' 신호.")
             stat = "bull_div"
         elif on("healthy_high"):
             icon, main = "✅", f"건전한 신고가: 지수 신고가에 시장 내부도 함께 뜨겁습니다({t:.0f})."
@@ -833,9 +848,19 @@ def build_interp(d: pd.DataFrame, comp: pd.DataFrame, signals: dict) -> list:
                     "소수 종목이 끌어올리는 폭 좁은 반등입니다. 6월 같은 고점 경고와는 다른 국면이지만, 온도계가 40을 넘어서며 "
                     "200일선 위 비율이 늘어나지 않으면 반등이 저항에서 멈추기 쉬우니 추격 매수보다 폭 확장 확인이 먼저입니다.")
         elif on("bull_div"):
-            summ = (f"지수는 60일 저점을 다시 낮췄지만 {tch_txt2}로, 내부(폭·투기·레버리지)가 가격보다 먼저 회복되는 "
-                    f"바닥 다지기의 모습입니다. 이 패턴은 몇 주씩 이어질 수 있으니 신저가 종목수({_f(nlv)})가 줄어드는지와 "
-                    "반전 신호(Zweig 스러스트·90% 업데이)로 진입 시점을 확인하는 것이 안전합니다.")
+            head = f"지수는 60일 저점을 다시 낮췄지만 {tch_txt2}로, 내부가 가격보다 먼저 회복되는 바닥 다지기의 모습입니다. "
+            if bull_grade == "high":
+                summ = (head + f"온도계가 최근 20 아래 냉각을 거친 뒤 올라오고 있고 레버리지({_f(lv)})도 가벼워, 청산이 끝난 뒤의 "
+                        "회복일 가능성이 높은 조합입니다. 다만 매수 신호가 아니라 관심 구간 진입 신호이므로 Zweig 스러스트·"
+                        f"90% 업데이·신저가 종목수({_f(nlv)}) 감소 같은 반전 확인과 함께 분할로 접근하는 것이 안전합니다.")
+            elif bull_grade == "fake":
+                summ = (head + f"그러나 온도계 상승이 변동성 진정에서만 나오고 추세(폭)는 20일 전보다 {_f(abs(tr_ch))}점 더 "
+                        "내려가는 중이라 가짜 신호일 수 있습니다. 하락 종목과 신저가가 줄며 추세 게이지가 돌아서기 전까지는 "
+                        "관망하고, 돌아선 뒤에도 반전 확인 신호와 함께 분할로 접근하는 것이 맞습니다.")
+            else:
+                summ = (head + f"다만 냉각(20 미만)을 거치지 않았거나 레버리지({_f(lv)})가 아직 가볍지 않아 신뢰도는 보통입니다. "
+                        "이 패턴은 몇 주씩 이어질 수 있으니 매수 신호가 아닌 관심 구간 진입으로 보고, 신저가 종목수"
+                        f"({_f(nlv)}) 감소와 반전 신호(Zweig 스러스트·90% 업데이)를 확인하며 분할로 대응합니다.")
         elif t >= 80:
             summ = (f"{idx_txt}, 폭·투기·레버리지가 동시에 역사적 상단이라 상승 사이클 후반부의 전형적인 과열 상태입니다. "
                     "이 구간에서는 신규 진입보다 이익 실현과 비중 관리가 우선이며, 온도계가 75 아래로 내려오면 과열 해제로 봅니다.")
