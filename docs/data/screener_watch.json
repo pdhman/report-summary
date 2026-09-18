@@ -1,51 +1,51 @@
 {
- "date": "2026-09-17",
+ "date": "2026-09-18",
  "high_52w_ratio": 0.65,
  "items": [
   {
    "name": "주성엔지니어링",
    "ticker": "036930",
-   "close": 204000.0,
-   "change_ratio": 1.75,
-   "rs_score": 94.8,
-   "vol_ratio": 62.3,
-   "from_high": -27.9
-  },
-  {
-   "name": "삼화콘덴서",
-   "ticker": "001820",
-   "close": 137600.0,
-   "change_ratio": -3.57,
-   "rs_score": 87.6,
-   "vol_ratio": 35.3,
-   "from_high": -30.1
+   "close": 205500.0,
+   "change_ratio": 0.0,
+   "rs_score": 96.5,
+   "vol_ratio": 84.0,
+   "from_high": -27.4
   },
   {
    "name": "삼성전자우",
    "ticker": "005935",
-   "close": 193300.0,
-   "change_ratio": -0.51,
-   "rs_score": 83.5,
-   "vol_ratio": 80.4,
-   "from_high": -20.6
+   "close": 196100.0,
+   "change_ratio": 0.0,
+   "rs_score": 83.9,
+   "vol_ratio": 97.2,
+   "from_high": -19.5
+  },
+  {
+   "name": "GS",
+   "ticker": "078930",
+   "close": 113900.0,
+   "change_ratio": -0.26,
+   "rs_score": 72.0,
+   "vol_ratio": 87.6,
+   "from_high": -14.5
   },
   {
    "name": "S-Oil",
    "ticker": "010950",
-   "close": 152200.0,
-   "change_ratio": 5.99,
-   "rs_score": 67.0,
-   "vol_ratio": 91.9,
-   "from_high": -14.1
+   "close": 149500.0,
+   "change_ratio": -2.16,
+   "rs_score": 71.3,
+   "vol_ratio": 99.9,
+   "from_high": -15.6
   },
   {
    "name": "한국콜마",
    "ticker": "161890",
-   "close": 147400.0,
-   "change_ratio": -1.86,
-   "rs_score": 53.6,
-   "vol_ratio": 68.1,
-   "from_high": -11.2
+   "close": 145200.0,
+   "change_ratio": -1.89,
+   "rs_score": 56.6,
+   "vol_ratio": 91.6,
+   "from_high": -12.5
   }
  ]
 }
