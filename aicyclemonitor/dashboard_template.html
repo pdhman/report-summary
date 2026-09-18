@@ -141,7 +141,7 @@
         <p class="note">DLR·EQIX — 임대수요·공실 기대를 선반영하는 프록시</p>
         <div id="ch-reit"></div></div>
       <div class="card"><h3>데이터센터 공실률 (%)</h3>
-        <p class="note">CBRE 반기 보고서 → manual_data.json 수동 입력</p>
+        <p class="note" id="vacNote">CBRE 반기 보고서 → manual_data.json 수동 입력</p>
         <div id="ch-vac"></div></div>
     </div>
   </section>
@@ -295,6 +295,7 @@ function lineChart(elId, series, opts={}){
   const allV=series.flatMap(s=>s.values).filter(v=>v!=null);
   let ticks=niceTicks(Math.min(...allV),Math.max(...allV),4);
   const ymin=ticks[0], ymax=ticks[ticks.length-1];
+  const tstep=ticks.length>1?ticks[1]-ticks[0]:1, tdec=tstep>=1?0:(tstep>=0.1?1:2);
   const X=i=>M.l+(n<=1?0:(W-M.l-M.r)*i/(n-1));
   const Y=v=>M.t+(H-M.t-M.b)*(1-(v-ymin)/(ymax-ymin));
   // 그리드 + y축 눈금 (헤어라인, 점선 금지)
@@ -302,7 +303,7 @@ function lineChart(elId, series, opts={}){
     svg.appendChild(svgEl('line',{x1:M.l,x2:W-M.r,y1:Y(t),y2:Y(t),stroke:INK.grid,'stroke-width':1}));
     const tx=svgEl('text',{x:M.l-6,y:Y(t)+4,'text-anchor':'end','font-size':10.5,fill:INK.muted,
       style:'font-variant-numeric:tabular-nums'});
-    tx.textContent=fmt(t,0); svg.appendChild(tx);
+    tx.textContent=fmt(t,tdec); svg.appendChild(tx);
   });
   svg.appendChild(svgEl('line',{x1:M.l,x2:W-M.r,y1:Y(ymin),y2:Y(ymin),stroke:INK.baseline,'stroke-width':1}));
   // x축 눈금 ~6개
@@ -455,6 +456,10 @@ function renderAll(){
   if(vac.length){
     lineChart('ch-vac',[{name:'공실률',dates:vac.map(v=>v.date),values:vac.map(v=>v.vacancy_pct)}],
       {labels:vac.map(v=>v.date),unit:'%',h:180});
+    const vl=vac[vac.length-1], vp=vac.length>1?vac[vac.length-2]:null;
+    document.getElementById('vacNote').textContent=
+      `CBRE 반기 보고서(${vl.region||''}, 수동 입력) — 최신 ${vl.date} ${fmt(vl.vacancy_pct)}%`+
+      (vp?` · 직전 ${vp.date} ${fmt(vp.vacancy_pct)}%`:'')+' · 반기마다 발표(다음: 하반기분, 이듬해 2~3월)';
   } else {
     document.getElementById('ch-vac').innerHTML=
       '<div class="empty">manual_data.json 의 datacenter_vacancy 에 CBRE 공실률을 입력하세요</div>';
