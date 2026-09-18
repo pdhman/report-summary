@@ -441,8 +441,15 @@ def main():
             start = BACKFILL_START
         else:
             start = max(old["date"]) - timedelta(days=14)  # 최근 잠정치 갱신
-        new_rows = fetch_flows(sosok, start, mname)
-        df = upsert(old, new_rows, FLOW_COLS)
+        try:
+            new_rows = fetch_flows(sosok, start, mname)
+        except Exception as e:  # noqa: BLE001
+            # 2026-09-18: finance.naver 구형 선물 수급 페이지가 410(Gone)으로 종료되며
+            # 예외 하나에 코스피·코스닥까지 저장되지 않았다. 한 시장이 실패해도
+            # 기존 값을 유지하고 나머지는 계속 진행한다.
+            logging.warning("%s 수급 수집 실패(기존 값 유지): %s", mname, e)
+            new_rows = {}
+        df = upsert(old, new_rows, FLOW_COLS) if new_rows else old
         df.to_csv(csv_path, index=False, encoding="utf-8-sig")
         flow_dfs[mkey] = df
 
