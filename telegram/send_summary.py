@@ -122,8 +122,9 @@ def section_flows(lines):
             continue
         f, i, p = last(mk.get("foreign")), last(mk.get("inst_total")), last(mk.get("individual"))
         name = mk.get("name", key)
+        unit = " (계약)" if key == "futures" else ""   # 선물은 계약 단위 (2026-09-18 확인)
         lines.append(
-            f"   {name} 외인 {num(f, sign=True)} / 기관 {num(i, sign=True)} / 개인 {num(p, sign=True)}"
+            f"   {name} 외인 {num(f, sign=True)} / 기관 {num(i, sign=True)} / 개인 {num(p, sign=True)}{unit}"
         )
 
 

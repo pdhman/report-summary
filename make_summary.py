@@ -507,15 +507,16 @@ def build():
     except Exception as e:
         print(f"[요약] 수급 카드 실패: {e}")
     if c:
-        def _frow(name, v):
+        def _frow(name, v, unit="억"):
             cls = "up" if v > 0 else ("down" if v < 0 else "")
             sign = "+" if v > 0 else ""
             return (f'<div class="krow"><span class="k-name">{name}</span>'
-                    f'<span class="k-val {cls}">{sign}{v:,}억</span></div>')
+                    f'<span class="k-val {cls}">{sign}{v:,}{unit}</span></div>')
         body = (_frow("개인", c["indiv"]) + _frow("외국인", c["forgn"])
                 + _frow("기관", c["inst"]))
         if c["fut_forgn"] is not None:
-            body += _frow("선물 외국인", c["fut_forgn"])
+            # 선물은 계약 단위 (2026-09-18 확인)
+            body += _frow("선물 외국인", c["fut_forgn"], "계약")
         cards.append(_card("flow.html", "💰", "수급 동향",
                            f'{c["date"]} · 코스피', body))
 
