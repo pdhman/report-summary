@@ -11,19 +11,21 @@
   "datacenter_vacancy": [
     {"date": "2024-H2", "region": "북미 1차 시장", "vacancy_pct": 1.9, "source": "CBRE"},
     {"date": "2025-H1", "region": "북미 1차 시장", "vacancy_pct": 1.6, "source": "CBRE"},
-    {"date": "2025-H2", "region": "북미 1차 시장", "vacancy_pct": 1.4, "source": "CBRE"}
+    {"date": "2025-H2", "region": "북미 1차 시장", "vacancy_pct": 1.4, "source": "CBRE"},
+    {"date": "2026-H1", "region": "북미 1차 시장", "vacancy_pct": 1.4, "source": "CBRE"}
   ],
   "cloud_segment_yoy": {
     "2025Q3": {"Azure": 40.0, "AWS": 20.2, "Google Cloud": 33.5, "OCI": 54.0},
     "2025Q4": {"Azure": 39.0, "AWS": 24.0, "Google Cloud": 48.0, "OCI": 68.0},
     "2026Q1": {"Azure": 40.0, "AWS": 28.0, "Google Cloud": 63.0, "OCI": 84.0},
-    "2026Q2": {"Azure": 43.0, "AWS": 37.0, "Google Cloud": 82.0, "OCI": 93.0}
+    "2026Q2": {"Azure": 43.0, "AWS": 37.0, "Google Cloud": 82.0, "OCI": 93.0},
+    "2026Q3": {"OCI": 121.0}
   },
   "bigtech_cds_5y_bp": {
     "date": "2026-07말~08초",
-    "source": "S&P Global MI·LSEG (언론 인용 종합)",
+    "source": "S&P Global MI·LSEG (언론 인용 종합, AMZN은 65~70bp 보도 범위의 중간값)",
     "ytd_chg": {"ORCL": 70, "AVGO": 48, "META": 39, "NVDA": 32, "AMZN": 30, "GOOGL": 29},
-    "level": {"ORCL": 215, "META": 95, "NVDA": 82, "GOOGL": 67, "MSFT": 49}
+    "level": {"ORCL": 215, "META": 95, "NVDA": 82, "AMZN": 68, "GOOGL": 67, "MSFT": 49}
   },
   "hyperscaler_capex_total_bil": {
     "2023": 160.4,

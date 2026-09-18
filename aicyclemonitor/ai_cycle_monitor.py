@@ -190,13 +190,17 @@ def fetch_prices(tickers):
 _FRED_DIRECT_OK = True  # 직접 접속이 한 번 실패하면 이후 시리즈는 바로 프록시로
 
 
-def _fred_csv_text(series_id):
+def _fred_csv_text(series_id, cosd=None):
     """FRED fredgraph.csv — 직접 접속이 막힌 네트워크(해외 IP 차단)에서는
-    미국 경유 공개 프록시(allorigins.win)로 폴백"""
+    미국 경유 공개 프록시(allorigins.win)로 폴백.
+    cosd(시작일)를 주면 그 이후 구간만 요청 — 프록시가 전체 히스토리(수십 년치)
+    응답에서 520/522를 자주 내므로, 캐시가 있을 땐 최근분만 받아 병합한다."""
     global _FRED_DIRECT_OK
     import requests
     import urllib.parse
     url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
+    if cosd:
+        url += f"&cosd={cosd}"
     if _FRED_DIRECT_OK:
         try:
             r = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
@@ -228,14 +232,20 @@ def _fred_csv_text(series_id):
     raise last
 
 
-def fetch_fred(series_id):
-    """FRED — API 키 불필요한 fredgraph.csv 엔드포인트 (+프록시 폴백)"""
+def fetch_fred(series_id, cached=None):
+    """FRED — API 키 불필요한 fredgraph.csv 엔드포인트 (+프록시 폴백).
+    cached(기존 캐시 Series, % 단위)가 있으면 마지막 날짜 30일 전부터만 받아 병합."""
     import pandas as pd
-    df = pd.read_csv(io.StringIO(_fred_csv_text(series_id)))
+    cosd = None
+    if cached is not None and len(cached) > 200:
+        cosd = (cached.index[-1] - timedelta(days=30)).date().isoformat()
+    df = pd.read_csv(io.StringIO(_fred_csv_text(series_id, cosd)))
     df.columns = ["date", "value"]
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
     df["date"] = pd.to_datetime(df["date"])
     s = df.set_index("date")["value"].dropna()
+    if cosd:
+        s = pd.concat([cached[cached.index < s.index[0]], s]) if len(s) else cached
     cutoff = s.index[-1] - timedelta(days=365 * 2)
     return s[s.index >= cutoff]
 
@@ -638,8 +648,17 @@ def collect_live():
     spreads = {}
     for name, sid in FRED_SERIES.items():
         cache_path = os.path.join(BASE_DIR, f"fred_{name.lower()}_history.csv")
+        rows = []
+        if os.path.exists(cache_path):
+            with open(cache_path, encoding="utf-8") as f:
+                rows = [r for r in csv.reader(f) if r]
         try:
-            s = fetch_fred(sid)
+            cached = None
+            if rows:
+                import pandas as pd
+                cached = pd.Series([float(r[1]) / 100 for r in rows],  # 캐시는 bp → %
+                                   index=pd.to_datetime([r[0] for r in rows]))
+            s = fetch_fred(sid, cached)
             d, v = series_to_lists(s * 100)  # % → bp
             spreads[name] = {"dates": d, "values": v}
             with open(cache_path, "w", newline="", encoding="utf-8") as f:
@@ -647,13 +666,10 @@ def collect_live():
             log(f"FRED {sid}: 최근 {v[-1]:.0f}bp")
         except Exception as e:
             log(f"FRED {sid} 실패: {e}")
-            if os.path.exists(cache_path):
-                with open(cache_path, encoding="utf-8") as f:
-                    rows = [r for r in csv.reader(f) if r]
-                if rows:
-                    spreads[name] = {"dates": [r[0] for r in rows],
-                                     "values": [float(r[1]) for r in rows]}
-                    log(f"FRED {sid}: 지난 캐시 사용 (마지막 {rows[-1][0]})")
+            if rows:
+                spreads[name] = {"dates": [r[0] for r in rows],
+                                 "values": [float(r[1]) for r in rows]}
+                log(f"FRED {sid}: 지난 캐시 사용 (마지막 {rows[-1][0]})")
 
     # ── 공급과잉: GPU 임대가(모델별 임대중/가용) + DC REIT ──
     gpu_hist = fetch_gpu_rental()
@@ -1149,9 +1165,14 @@ def judge(data):
         f"{TH['hs_yoy_consec_slowdown']}분기 이상", slow is not None and slow >= TH["hs_yoy_consec_slowdown"])
     cy = data["demand"]["cloud_yoy"]
     if cy:
-        lastq = sorted(cy.keys())[-1]
-        worst = min(cy[lastq].values())
-        add("수요", f"클라우드 부문 최저 YoY ({lastq}, 수동)", worst, "%",
+        # 각사 최신 분기 기준 — 오라클만 먼저 발표된 부분 분기에 OCI 하나로 판정하지 않도록
+        latest = {}
+        for q in sorted(cy.keys()):
+            for nm, val in cy[q].items():
+                if val is not None:
+                    latest[nm] = (q, val)
+        nm_w, (q_w, worst) = min(latest.items(), key=lambda kv: kv[1][1])
+        add("수요", f"클라우드 부문 최저 YoY ({nm_w} {q_w}, 수동)", worst, "%",
             f"{TH['cloud_yoy_floor']}% 미만", worst < TH["cloud_yoy_floor"])
     else:
         add("수요", "클라우드 부문 YoY (수동 입력 대기)", None, "%", f"{TH['cloud_yoy_floor']}% 미만", False)
