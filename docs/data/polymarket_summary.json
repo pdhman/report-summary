@@ -1,37 +1,37 @@
 {
- "date": "2026-09-18 13:55",
+ "date": "2026-09-18 22:02",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing → / Recession ↓ / Inflation → / Risk →",
+ "arrows": "Easing → / Recession → / Inflation → / Risk →",
  "fomc": {
   "title": "Fed Decision in October?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.505,
-   "d24": 0.05
+   "prob": 0.525,
+   "d24": 0.06
   },
-  "mean": 12.408,
-  "mean_d24": 1.333,
+  "mean": 13.195,
+  "mean_d24": 1.771,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
   "prob": 0.085,
-  "d24": -0.03,
+  "d24": -0.02,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "USA · Will the next diplomatic US-Iran meeting be in the United States by September 30, 2026?",
-  "pmss": 63.0,
+  "q": "March 31, 2027 · US x Iran diplomatic meeting by March 31, 2027?",
+  "pmss": 59.2,
   "band": "Interest",
-  "d24": 0.0505,
-  "prob": 0.052
+  "d24": 0.06,
+  "prob": 0.655
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 63.0
+  "top_pmss": 59.2
  },
- "alerts": 3,
- "n_markets": 427,
+ "alerts": 1,
+ "n_markets": 420,
  "source": "direct"
 }
