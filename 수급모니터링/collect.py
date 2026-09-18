@@ -198,13 +198,66 @@ def fetch_flows_hantu(sosok, start_date, label):
     return out
 
 
+# 선물(KOSPI200) 수급: 한투 '시장별 투자자매매동향(시세)' TR FHPTJ04030000,
+# FID_INPUT_ISCD=K2I(선물·옵션) / FID_INPUT_ISCD_2=F001(선물). 2026-09-18 finance.naver
+# 구형 페이지가 410 으로 종료되어 전환. 단위는 **계약** — 기존 네이버 선물 값도 계약이었다
+# (9/18 외국인 5,642계약 = 1.53조원; 과거 |값| 중앙값 2,558·최대 14,821 은 계약 분포와 일치).
+# 이 TR 은 '당일 누적'만 준다(날짜 파라미터 없음) → 장 마감 뒤 실행 시 오늘 한 줄만 추가하고,
+# 수집을 놓친 날은 사후 보충이 안 된다.
+_FUT_COLMAP = {
+    "individual": ("prsn",), "foreign": ("frgn",), "inst_total": ("orgn",),
+    "fin_invest": ("scrt",), "insurance": ("insu",), "invest_trust": ("ivtr", "pe_fund"),
+    "bank": ("bank",), "other_fin": ("etc_orgt", "mrbn"), "pension": ("fund",),
+    "other_corp": ("etc_corp",),
+}
+
+
+def fetch_flows_hantu_futures(start_date, label):
+    import requests as rq
+    now = datetime.now()
+    if now.weekday() >= 5 or (now.hour, now.minute) < (15, 45):
+        logging.info("%s: 당일 누적 TR 이라 장 마감(15:45) 전·주말엔 수집하지 않음", label)
+        return {}
+    cfg = _hantu_cfg()
+    tok = _hantu_token(cfg)
+    h = {"authorization": f"Bearer {tok}", "appkey": cfg["api_key"],
+         "appsecret": cfg["secret_key"], "tr_id": "FHPTJ04030000", "custtype": "P"}
+    d = rq.get("https://openapi.koreainvestment.com:9443"
+               "/uapi/domestic-stock/v1/quotations/inquire-investor-time-by-market",
+               headers=h, params={"FID_INPUT_ISCD": "K2I", "FID_INPUT_ISCD_2": "F001"},
+               timeout=20).json()
+    if d.get("rt_cd") != "0":
+        raise RuntimeError(f"한투 선물 수급 조회 실패: {d.get('msg1')}")
+    out = d.get("output") or []
+    row = out[0] if isinstance(out, list) and out else out
+    if not row:
+        raise RuntimeError("한투 선물 수급 응답이 비어 있음")
+
+    def qty(prefix):
+        for suf in ("_ntby_qty", "_ntby_vol"):
+            v = row.get(prefix + suf)
+            if v not in (None, ""):
+                return int(float(v))
+        return 0
+
+    vals = {col: sum(qty(p) for p in prefixes) for col, prefixes in _FUT_COLMAP.items()}
+    if all(v == 0 for v in vals.values()):
+        raise RuntimeError("한투 선물 수급 값이 전부 0 (휴장일 또는 미집계)")
+    today = now.date()
+    logging.info("%s 수급 1일 수집 — 한투 API 당일 누적(계약) %s 외국인 %+d",
+                 label, today, vals["foreign"])
+    return {today: vals} if today >= start_date else {}
+
+
 def fetch_flows(sosok, start_date, label):
-    """start_date까지 수급 수집 — 코스피/코스닥은 한투 API, 실패·선물은 구형 페이지."""
+    """start_date까지 수급 수집 — 코스피/코스닥·선물은 한투 API, 실패 시 구형 페이지."""
     if sosok in _HANTU_ISCD:
         try:
             return fetch_flows_hantu(sosok, start_date, label)
         except Exception as e:
             logging.warning("%s 한투 수급 실패(%s) — 구형 페이지 폴백", label, e)
+    if sosok == "03":
+        return fetch_flows_hantu_futures(start_date, label)
     bizdate = datetime.now().strftime("%Y%m%d")
     out = {}
     for page in range(1, MAX_PAGES + 1):
