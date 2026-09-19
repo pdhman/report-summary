@@ -593,15 +593,17 @@ def build():
             body += f'<div class="sc-note">🚨 알림 조건 충족 {c["alerts"]}건</div>'
         cards.append(_card("polymarket.html", "🎯", "폴리마켓 매크로", c.get("date", ""), body))
 
-    # 분석 도구(차트·계절성·RS)는 상시 제공되는 정적 도구라 항상 카드 노출
+    # 분석 도구(차트·계절성·RS·메모리)는 상시 제공되는 정적 도구라 항상 카드 노출
     cards.append(_card(
-        "chart.html", "📈", "분석 도구", "차트 · 계절성 · RS",
+        "chart.html", "📈", "분석 도구", "차트 · 계절성 · RS · 메모리",
         '<div class="krow"><span class="k-name">주식 차트</span>'
         '<span class="k-val">캔들 · 이동평균 · Log</span></div>'
         '<div class="krow"><span class="k-name">계절성 분석</span>'
         '<span class="k-val">월별 통계 · 최적 진입 · 히트맵</span></div>'
         '<div class="krow"><span class="k-name">RS 스크리너</span>'
-        '<span class="k-val">섹터 · 업종 · 테마 랭킹</span></div>'))
+        '<span class="k-val">섹터 · 업종 · 테마 랭킹</span></div>'
+        '<div class="krow"><span class="k-name">메모리 사이클</span>'
+        '<span class="k-val">업황 판정 · HBM 수급 · 국면</span></div>'))
 
     c = None
     try:
