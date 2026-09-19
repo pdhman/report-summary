@@ -1,5 +1,5 @@
 {
- "date": "2026-09-20 03:40",
+ "date": "2026-09-20 07:22",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -7,11 +7,11 @@
   "title": "Fed Decision in October?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.555,
+   "prob": 0.545,
    "d24": 0.0
   },
-  "mean": 13.919,
-  "mean_d24": 0.11,
+  "mean": 13.808,
+  "mean_d24": 0.073,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
@@ -23,8 +23,8 @@
   "q": "≥4.0% · Will annual inflation be 4.0% or more in September?",
   "pmss": 60.5,
   "band": "Interest",
-  "d24": 0.343,
-  "prob": 0.3725
+  "d24": 0.282,
+  "prob": 0.306
  },
  "exposure": {
   "base": 0.5,
@@ -32,6 +32,6 @@
   "top_pmss": 60.5
  },
  "alerts": 0,
- "n_markets": 355,
+ "n_markets": 410,
  "source": "direct"
 }
