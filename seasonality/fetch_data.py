@@ -74,10 +74,34 @@ def read_existing(symbol: str) -> dict | None:
     return d if d.get("bars") else None
 
 
+ADJ_NOISE = 1e-5    # 수정종가 상대 오차 허용폭(0.001%) — 아래 stabilize 참고
+
+
+def stabilize(old_bars: list, new_bars: list) -> list:
+    """야후 수정종가의 부동소수 잡음을 걸러 낸다 — 의미 없는 차이면 기존 행을 유지.
+
+    야후는 받을 때마다 수정종가(adj)가 소수 넷째 자리에서 미세하게 다르게 온다
+    (실측 최대 4e-6, 가격·거래량은 동일). 전체 재수집 날에는 이 잡음만으로 수천 줄이
+    '변경'되어, 실행할 때마다 종목당 수십 KB 의 새 버전이 저장소에 쌓였다
+    (2026-09 실측: 저장소 증가분의 약 80%). 실제 배당·분할 조정은 최소 1e-4 이상이라
+    ADJ_NOISE 로 구분된다 — 기존 값 기준으로 비교하므로 오차가 누적되지도 않는다.
+    """
+    old = {b[0]: b for b in old_bars}
+    out = []
+    for b in new_bars:
+        o = old.get(b[0])
+        if (o is not None and o[1:6] == b[1:6]
+                and abs(b[6] - o[6]) <= ADJ_NOISE * max(abs(o[6]), 1e-9)):
+            out.append(o)
+        else:
+            out.append(b)
+    return out
+
+
 def merge(old_bars: list, new_bars: list) -> list:
     """같은 날짜는 새 값으로 교체하고 날짜순으로 정렬해 합친다."""
     m = {b[0]: b for b in old_bars}
-    for b in new_bars:
+    for b in stabilize(old_bars, new_bars):
         m[b[0]] = b
     return [m[k] for k in sorted(m)]
 
@@ -253,6 +277,8 @@ def main() -> None:
         note = ""
         if full:
             bars, bf = backfill(sym, bars)
+            if prev:                       # --full 강제 재수집일 때는 prev 가 없어 그대로 교체
+                bars = stabilize(prev["bars"], bars)
             if bf:
                 ymd = str(bf[2])
                 note = (f"{ymd[:4]}-{ymd[4:6]} 이전 구간은 {BACKFILL[sym]['label']}로 대체 "
