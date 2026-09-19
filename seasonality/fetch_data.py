@@ -75,6 +75,8 @@ def read_existing(symbol: str) -> dict | None:
 
 
 ADJ_NOISE = 1e-5    # 수정종가 상대 오차 허용폭(0.001%) — 아래 stabilize 참고
+ADJ_TICK = 1.5e-4   # 절대 허용폭: 소수 4자리 반올림 한 칸(0.0001). 한 자릿수 가격대(예: 1.25)는
+                    # 한 칸이 상대 8e-5 라 상대 기준만으로는 잡음이 걸러지지 않는다
 
 
 def stabilize(old_bars: list, new_bars: list) -> list:
@@ -91,7 +93,7 @@ def stabilize(old_bars: list, new_bars: list) -> list:
     for b in new_bars:
         o = old.get(b[0])
         if (o is not None and o[1:6] == b[1:6]
-                and abs(b[6] - o[6]) <= ADJ_NOISE * max(abs(o[6]), 1e-9)):
+                and abs(b[6] - o[6]) <= max(ADJ_NOISE * abs(o[6]), ADJ_TICK)):
             out.append(o)
         else:
             out.append(b)
