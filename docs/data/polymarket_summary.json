@@ -1,5 +1,5 @@
 {
- "date": "2026-09-19 07:41",
+ "date": "2026-09-19 13:47",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -8,30 +8,26 @@
   "top": {
    "label": "25 bps increase",
    "prob": 0.545,
-   "d24": 0.05
+   "d24": 0.04
   },
-  "mean": 13.772,
-  "mean_d24": 1.366,
+  "mean": 13.808,
+  "mean_d24": 1.4,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
- "recession": {
-  "prob": 0.085,
-  "d24": -0.01,
-  "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
- },
+ "recession": null,
  "top_signal": {
   "q": "↓ $95 · Will WTI Crude Oil (WTI) hit (LOW) $95 in September?",
-  "pmss": 72.2,
+  "pmss": 71.0,
   "band": "Tactical Signal",
-  "d24": 0.1645,
+  "d24": 0.1545,
   "prob": 0.9995
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 72.2
+  "top_pmss": 71.0
  },
  "alerts": 1,
- "n_markets": 411,
+ "n_markets": 416,
  "source": "direct"
 }
