@@ -1,5 +1,5 @@
 {
- "date": "2026-09-20 14:04",
+ "date": "2026-09-20 22:07",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -7,11 +7,11 @@
   "title": "Fed Decision in October?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.545,
+   "prob": 0.555,
    "d24": 0.0
   },
-  "mean": 13.772,
-  "mean_d24": -0.036,
+  "mean": 13.883,
+  "mean_d24": 0.0,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
@@ -20,18 +20,18 @@
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "Delcy Rodríguez · Will Delcy Rodríguez be the leader of Venezuela end of 2026?",
-  "pmss": 63.0,
+  "q": "Nicolás Maduro · Will Nicolás Maduro be the leader of Venezuela end of 2026?",
+  "pmss": 60.9,
   "band": "Interest",
-  "d24": 0.38,
-  "prob": 0.505
+  "d24": -0.363,
+  "prob": 0.478
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 63.0
+  "top_pmss": 60.9
  },
- "alerts": 2,
- "n_markets": 406,
+ "alerts": 1,
+ "n_markets": 416,
  "source": "direct"
 }
