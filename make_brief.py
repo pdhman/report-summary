@@ -16,6 +16,7 @@ import datetime
 import markdown as md
 import site_nav
 import market_gaze
+import format_brief
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 BRIEF_DIR = os.path.join(BASE, "briefs")
@@ -85,13 +86,15 @@ def _clean(text):
     1) '데일리 브리핑' 제목 줄 이전의 서두(인삿말·머리말)를 제거.
        (해당 문구가 없으면 원문 유지 — 안전 장치)
     2) 개인 호칭('박동현 님') 제거.
+    3) 말미 후속 질문(Q1/Q2/Q3) 제거 — format_brief 를 거치지 않았거나 구조 인식에
+       실패한 md 도 게시 단계에서 한 번 더 거른다(2026-09-21 실사고).
     """
     lines = text.splitlines()
     for i, line in enumerate(lines):
         if "데일리 브리핑" in line:
             lines = lines[i:]
             break
-    text = "\n".join(lines)
+    text = format_brief._strip_followups("\n".join(lines))
     for p in _STRIP_PHRASES:
         text = text.replace(p, "")
     return text.strip()

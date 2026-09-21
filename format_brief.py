@@ -153,7 +153,14 @@ def main():
     raw = io.open(path, encoding="utf-8-sig").read()
     md = format_text(raw)
     if md is None:
-        print("[서식복구] 구조 인식 실패 — 원본을 그대로 둡니다 (수동 확인 필요)")
+        # 구조를 못 읽어도 말미 후속 질문(Q1/Q2/Q3)만은 지운다. 이 제거가 format_text 성공
+        # 경로에만 있어서, 원문 서식이 바뀐 날 질문이 그대로 게시됐다(2026-09-21 실사고).
+        stripped = _strip_followups(raw)
+        if stripped != raw:
+            io.open(path, "w", encoding="utf-8", newline="\n").write(stripped.rstrip() + "\n")
+            print("[서식복구] 구조 인식 실패 — 말미 후속 질문만 제거하고 나머지는 원본 유지")
+        else:
+            print("[서식복구] 구조 인식 실패 — 원본을 그대로 둡니다 (수동 확인 필요)")
         return 1
     io.open(path, "w", encoding="utf-8", newline="\n").write(md)
     n_items = md.count("* **요약:**")
