@@ -15,6 +15,7 @@ import glob
 import datetime
 import markdown as md
 import site_nav
+import market_gaze
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 BRIEF_DIR = os.path.join(BASE, "briefs")
@@ -100,7 +101,8 @@ def _wrap(title, body):
     return ("<!doctype html><html lang='ko'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
             f"<title>{title}</title></head><body>{body}"
-            f"{site_nav.nav_html('brief')}{_SHARED_STYLE}{site_nav.NAV_CSS}</body></html>")
+            f"{site_nav.nav_html('brief')}{_SHARED_STYLE}{market_gaze.GAZE_CSS}"
+            f"{site_nav.NAV_CSS}</body></html>")
 
 
 def build():
@@ -109,6 +111,17 @@ def build():
         return
     files = [f for f in glob.glob(os.path.join(BRIEF_DIR, "*.md"))
              if not os.path.basename(f).startswith("_")]  # _TEMPLATE.md 등 제외
+    # 시장의 시선(docs/data/gaze/)을 같은 날짜 브리핑 최상단에 얹는다. 허브(briefs.html)는
+    # 날짜별 페이지의 본문을 그대로 모으므로 날짜 바를 옮기면 그날의 시선도 함께 바뀐다.
+    gazes = market_gaze.load_all()
+    gaze_days = sorted(gazes)
+
+    def gaze_block(pretty):
+        if pretty not in gazes:
+            return ""
+        i = gaze_days.index(pretty)
+        return market_gaze.block_html(gazes[pretty], gazes[gaze_days[i - 1]] if i else None)
+
     briefs = []
     for f in files:
         ymd = _parse_date(os.path.basename(f))
@@ -128,7 +141,29 @@ def build():
     <h1>뉴스 브리핑</h1>
     <div class="date">{pretty}</div>
   </header>
+  {gaze_block(pretty)}
   <article class="prose">{body_html}</article>
+  <footer><p class="muted">본 뉴스 브리핑은 AI로 생성한 참고 자료이며 투자 권유가 아닙니다.</p></footer>
+</div>"""
+        os.makedirs(OUT_DIR, exist_ok=True)
+        with open(os.path.join(OUT_DIR, f"brief_{ymd}.html"), "w", encoding="utf-8") as fh:
+            fh.write(_wrap(f"뉴스 브리핑 {pretty}", page))
+        briefs.append(ymd)
+
+    # 시선은 07:30 자동, 브리핑은 수동 게시라 시선만 먼저 나온 날이 있다. 그날도 페이지를
+    # 만들어 허브 최신 날짜가 시선과 어긋나지 않게 한다(브리핑이 올라오면 위 루프가 덮어쓴다).
+    for pretty in gaze_days:
+        ymd = pretty.replace("-", "")
+        if ymd in briefs:
+            continue
+        page = f"""<div class="wrap">
+  <header>
+    <div class="eyebrow">데일리 · 뉴스 브리핑</div>
+    <h1>뉴스 브리핑</h1>
+    <div class="date">{pretty}</div>
+  </header>
+  {gaze_block(pretty)}
+  <article class="prose"><p class="muted">이 날짜의 뉴스 브리핑은 아직 게시되지 않았습니다.</p></article>
   <footer><p class="muted">본 뉴스 브리핑은 AI로 생성한 참고 자료이며 투자 권유가 아닙니다.</p></footer>
 </div>"""
         os.makedirs(OUT_DIR, exist_ok=True)
@@ -145,7 +180,7 @@ def build():
     site_nav.build_hub(
         os.path.join(OUT_DIR, "briefs.html"), "뉴스 브리핑", "brief",
         "brief_*.html", r"brief_(\d{8})\.html$",
-        fallback_style=_SHARED_STYLE,
+        fallback_style=_SHARED_STYLE + market_gaze.GAZE_CSS,   # 허브는 날짜별 페이지의 CSS 를 가져오지 않는다
     )
     print(f"[시황] 생성 완료: {len(briefs)}건 (최신 {briefs[0]})")
 

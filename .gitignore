@@ -11,6 +11,8 @@ gdrive_sa.json
 !x-monitor/accounts.json
 !x-monitor/data/*.json
 !docs/data/*.json
+# 시장의 시선 일별 평가(사이트 빌드에 필요 — market_gaze.py)
+!docs/data/gaze/*.json
 
 # 데이터 파일 (드라이브에서 관리됨)
 *.xlsx

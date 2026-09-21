@@ -4,6 +4,7 @@
     <h1>뉴스 브리핑</h1>
     <div class="date">2026-08-25</div>
   </header>
+  
   <article class="prose"><h3><strong>[2026.08.25] 글로벌 매크로 데일리 브리핑</strong></h3>
 <p><strong>1. [연준] 연준 매파 위원들 "유가 및 물가 상방 압력 시 9월 금리 인상 가능" 배수진</strong></p>
 <ul>
@@ -173,6 +174,38 @@ function _tgTheme(){
   .muted { color:var(--muted); font-size:12px; }
 </style>
 <style>
+  .gz-d { font-size:12px; font-weight:600; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .gz-d.up { color:var(--up); } .gz-d.down { color:var(--accent); }
+  .gz-name { color:var(--ink) !important; flex:1 1 auto !important; }
+  .gz-cardhead { font-size:12px; font-weight:700; color:var(--accent); margin-bottom:2px;
+    display:flex; justify-content:space-between; }
+  .gz-cardhead span { color:var(--muted); font-weight:500; font-variant-numeric:tabular-nums; }
+  .gz-sep { border-top:1px solid var(--line); margin:9px 0 9px; }
+  .gaze { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:18px 22px 14px; margin-bottom:16px; }
+  .gz-title { font-weight:700; font-size:17px; display:flex; align-items:baseline; gap:10px; }
+  .gz-date { color:var(--muted); font-size:12px; font-weight:500; font-variant-numeric:tabular-nums; }
+  .gz-head { margin:8px 0 12px; font-size:14px; }
+  .gz-item { padding:10px 0; border-top:1px dashed var(--line); }
+  .gz-row { display:flex; align-items:baseline; gap:8px; font-size:14.5px; }
+  .gz-rank { flex:0 0 18px; font-weight:700; color:var(--accent); }
+  .gz-nm { flex:1 1 auto; font-weight:700; }
+  .gz-dir { flex:0 0 auto; font-size:12.5px; color:var(--muted); }
+  .gz-w { flex:0 0 auto; font-weight:700; font-variant-numeric:tabular-nums; min-width:56px; text-align:right; }
+  .gz-bar { height:5px; border-radius:3px; margin:6px 0 6px 26px;
+    background:color-mix(in srgb,var(--line) 70%,transparent); overflow:hidden; }
+  .gz-bar i { display:block; height:100%; background:var(--accent); border-radius:3px; }
+  .gz-why, .gz-trg { margin-left:26px; font-size:13px; line-height:1.55; }
+  .gz-trg { color:var(--muted); margin-top:2px; }
+  .gz-trg b { font-weight:600; margin-right:4px; }
+  .gz-sub { margin:12px 0 6px; font-size:12.5px; font-weight:700; color:var(--accent);
+    border-top:1px dashed var(--line); padding-top:10px; }
+  .gz-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .gz-chip { font-size:12.5px; border:1px solid var(--line); border-radius:999px; padding:3px 10px; }
+  .gz-chip em { font-style:normal; color:var(--muted); font-size:11.5px; }
+  .gz-watch { margin:0; padding-left:18px; font-size:13px; }
+  .gz-foot { margin:12px 0 0; color:var(--muted); font-size:11.5px; }
+</style><style>
   .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:2px;
     background:color-mix(in srgb,var(--panel) 92%,transparent); backdrop-filter:blur(10px);
     border-top:1px solid var(--line); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); }

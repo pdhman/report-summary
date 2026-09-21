@@ -396,9 +396,26 @@ def build():
         c = card_brief()
     except Exception as e:
         print(f"[요약] 시황 카드 실패: {e}")
-    if c:
-        cards.append(_card("briefs.html", "📰", "오늘의 뉴스", c["date"],
-                           f'<p class="clamp">{esc(c["excerpt"])}</p>'))
+    # 시장의 시선(market_gaze)을 뉴스 카드 상단에 얹는다(2026-09-21 통합). 만드는 주체·시각이
+    # 달라 기준일을 따로 표기하고, 한쪽만 있어도 카드는 나온다.
+    g = gprev = None
+    try:
+        import market_gaze
+        g, gprev = market_gaze.with_prev()
+    except Exception as e:
+        print(f"[요약] 시장의 시선 실패: {e}")
+    if c or g:
+        body = ""
+        if g:
+            body += (f'<div class="gz-cardhead">👁 시장의 시선<span>{esc(g["date"][5:])}</span></div>'
+                     + market_gaze.card_rows(g, gprev))
+        if c:
+            if g:
+                body += '<div class="gz-sep"></div>'
+            body += f'<p class="clamp{" clamp3" if g else ""}">{esc(c["excerpt"])}</p>'
+        cards.append(_card("briefs.html", "📰",
+                           "오늘의 뉴스 · 시장의 시선" if g else "오늘의 뉴스",
+                           c["date"] if c else g["date"], body))
 
     c = None
     try:
@@ -693,6 +710,7 @@ def build():
   .sc-body {{ min-height:40px; }}
   .clamp {{ margin:0; font-size:13.5px; color:var(--ink); display:-webkit-box;
     -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }}
+  .clamp3 {{ -webkit-line-clamp:3; }}
   .sc-lead {{ font-size:14px; font-weight:700; line-height:1.45; margin-bottom:10px;
     padding-bottom:9px; border-bottom:1px solid var(--line); }}
   .krow {{ display:flex; justify-content:space-between; align-items:baseline; gap:12px;
@@ -716,6 +734,8 @@ def build():
   footer {{ margin-top:26px; }}
   .muted {{ color:var(--muted); font-size:12px; }}
 </style>""" + site_nav.NAV_CSS
+    if g:
+        body_html += market_gaze.GAZE_CSS
 
     os.makedirs(OUT_DIR, exist_ok=True)
     full = ("<!doctype html><html lang='ko'><head><meta charset='utf-8'>"

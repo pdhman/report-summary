@@ -2,13 +2,13 @@
   <header>
     <div class="eyebrow">데일리 대시보드</div>
     <h1>알파노트</h1>
-    <div class="date">2026-09-21 <span class="gen">(갱신 08:55)</span></div>
+    <div class="date">2026-09-21 <span class="gen">(갱신 09:18)</span></div>
   </header>
   <div class="cards">
     <a class="scard" href="briefs.html">
-      <div class="sc-head"><span class="sc-icon">📰</span><span class="sc-title">오늘의 뉴스</span>
+      <div class="sc-head"><span class="sc-icon">📰</span><span class="sc-title">오늘의 뉴스 · 시장의 시선</span>
         <span class="sc-date">2026-09-21</span></div>
-      <div class="sc-body"><p class="clamp">당일 시장 개장 흐름 진단
+      <div class="sc-body"><div class="gz-cardhead">👁 시장의 시선<span>09-21</span></div><div class="krow"><span class="k-name gz-name">1. 연준 추가 인상·미 장기금리</span><span class="k-val">34 🔴</span></div><div class="krow"><span class="k-name gz-name">2. 유가·중동(이란전·호르무즈)</span><span class="k-val">27 🔴</span></div><div class="krow"><span class="k-name gz-name">3. AI·반도체 실적</span><span class="k-val">21 🟢</span></div><div class="gz-sep"></div><p class="clamp clamp3">당일 시장 개장 흐름 진단
 오늘(9월 21일 월요일) 아침 국내 코스피 및 아시아 시장은 주말 사이 뉴욕 증시가 연준의 25bp 금리 인상 소화와 선물·옵션 동시 만기일 수급 변동성 속에서도 국제 유가 하향 안착(WTI $100.30)과 반도체 독점주 폭등(AMD +6.4%, 인텔 +7.7%)에 힘입어 나스닥(+0.7%) 중심의 하방 지지력을 보이며 마감함에 따라, 주초 금리 긴축 재개 악재의 완전한 선반영과 AI 실적 펀더멘털 재평가에 기반한 안도감 탐색전으로 한 주를 시작할 것으로 예상됩니다.
  거시 경제 환경 vs 기업 실적 체력 평가
 연준의 25bp 금리 인상 재개와 미 국채 10년물 금리의 5.0% 부근 상승이 자본 비용 압박을 형성하고 있으나, 팩트셋 9월 18일 최신 확정 기준 S&amp;P 500 기업들의 3분기 순이익 성장률 추정치가 28.9%로 추가 상향되고 지수 P/E가 19.1배로 디레이팅된 정량 수치는 매크로 악재를 완벽히 상쇄할 압도적 어닝 방어판을 공인합니다. 글로벌 메모리 3사의 2027년 HBM 완판과 무디스의 SK하이닉스 신용등급 A3 상향 수치도 단단한 수급 버팀목입니다.
@@ -175,6 +175,7 @@ function _tgTheme(){
   .sc-body { min-height:40px; }
   .clamp { margin:0; font-size:13.5px; color:var(--ink); display:-webkit-box;
     -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+  .clamp3 { -webkit-line-clamp:3; }
   .sc-lead { font-size:14px; font-weight:700; line-height:1.45; margin-bottom:10px;
     padding-bottom:9px; border-bottom:1px solid var(--line); }
   .krow { display:flex; justify-content:space-between; align-items:baseline; gap:12px;
@@ -208,4 +209,36 @@ function _tgTheme(){
   .bottomnav .ni { font-size:20px; line-height:1; }
   .bottomnav .nl { font-size:11px; font-weight:600; }
   body { padding-bottom:92px; }
+</style><style>
+  .gz-d { font-size:12px; font-weight:600; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .gz-d.up { color:var(--up); } .gz-d.down { color:var(--accent); }
+  .gz-name { color:var(--ink) !important; flex:1 1 auto !important; }
+  .gz-cardhead { font-size:12px; font-weight:700; color:var(--accent); margin-bottom:2px;
+    display:flex; justify-content:space-between; }
+  .gz-cardhead span { color:var(--muted); font-weight:500; font-variant-numeric:tabular-nums; }
+  .gz-sep { border-top:1px solid var(--line); margin:9px 0 9px; }
+  .gaze { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:18px 22px 14px; margin-bottom:16px; }
+  .gz-title { font-weight:700; font-size:17px; display:flex; align-items:baseline; gap:10px; }
+  .gz-date { color:var(--muted); font-size:12px; font-weight:500; font-variant-numeric:tabular-nums; }
+  .gz-head { margin:8px 0 12px; font-size:14px; }
+  .gz-item { padding:10px 0; border-top:1px dashed var(--line); }
+  .gz-row { display:flex; align-items:baseline; gap:8px; font-size:14.5px; }
+  .gz-rank { flex:0 0 18px; font-weight:700; color:var(--accent); }
+  .gz-nm { flex:1 1 auto; font-weight:700; }
+  .gz-dir { flex:0 0 auto; font-size:12.5px; color:var(--muted); }
+  .gz-w { flex:0 0 auto; font-weight:700; font-variant-numeric:tabular-nums; min-width:56px; text-align:right; }
+  .gz-bar { height:5px; border-radius:3px; margin:6px 0 6px 26px;
+    background:color-mix(in srgb,var(--line) 70%,transparent); overflow:hidden; }
+  .gz-bar i { display:block; height:100%; background:var(--accent); border-radius:3px; }
+  .gz-why, .gz-trg { margin-left:26px; font-size:13px; line-height:1.55; }
+  .gz-trg { color:var(--muted); margin-top:2px; }
+  .gz-trg b { font-weight:600; margin-right:4px; }
+  .gz-sub { margin:12px 0 6px; font-size:12.5px; font-weight:700; color:var(--accent);
+    border-top:1px dashed var(--line); padding-top:10px; }
+  .gz-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .gz-chip { font-size:12.5px; border:1px solid var(--line); border-radius:999px; padding:3px 10px; }
+  .gz-chip em { font-style:normal; color:var(--muted); font-size:11.5px; }
+  .gz-watch { margin:0; padding-left:18px; font-size:13px; }
+  .gz-foot { margin:12px 0 0; color:var(--muted); font-size:11.5px; }
 </style></body></html>
