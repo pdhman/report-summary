@@ -423,17 +423,26 @@ def build():
                            "오늘의 뉴스 · 시장의 시선" if g else "오늘의 뉴스",
                            c["date"] if c else g["date"], body))
 
+    # X 모니터링 ↔ 상승여력 TOP 3 자리 교환 (2026-09-21 사용자 요청)
     c = None
     try:
-        c = card_upside()
+        c = card_x()
     except Exception as e:
-        print(f"[요약] 상승여력 카드 실패: {e}")
+        print(f"[요약] X 모니터링 카드 실패: {e}")
     if c:
-        rows = "".join(
-            f'<div class="krow"><span class="k-name">{esc(nm)}</span>'
-            f'<span class="k-val up">+{v:.1f}%</span></div>'
-            for nm, v in c["rows"])
-        cards.append(_card("insights.html", "🚀", "상승여력 TOP 3", c["date"], rows))
+        body = ""
+        if c["count"] is not None:
+            body += (f'<div class="krow"><span class="k-name">수집</span>'
+                     f'<span class="k-val">{c["count"]}건</span></div>')
+        if c.get("topics"):
+            body += "".join(f'<div class="xtopic">{esc(t)}</div>' for t in c["topics"])
+            rest = c.get("topic_total", 0) - len(c["topics"])
+            if rest > 0:
+                body += f'<div class="xmore">외 {rest}개 주제</div>'
+        elif c.get("summary"):                       # 주제별 정리가 없는 옛 리포트
+            body += f'<p class="clamp">{esc(c["summary"])}</p>'
+        if body:
+            cards.append(_card("x.html", "𝕏", "X 모니터링", c["date"], body))
 
     c = None
     try:
@@ -473,23 +482,15 @@ def build():
 
     c = None
     try:
-        c = card_x()
+        c = card_upside()
     except Exception as e:
-        print(f"[요약] X 모니터링 카드 실패: {e}")
+        print(f"[요약] 상승여력 카드 실패: {e}")
     if c:
-        body = ""
-        if c["count"] is not None:
-            body += (f'<div class="krow"><span class="k-name">수집</span>'
-                     f'<span class="k-val">{c["count"]}건</span></div>')
-        if c.get("topics"):
-            body += "".join(f'<div class="xtopic">{esc(t)}</div>' for t in c["topics"])
-            rest = c.get("topic_total", 0) - len(c["topics"])
-            if rest > 0:
-                body += f'<div class="xmore">외 {rest}개 주제</div>'
-        elif c.get("summary"):                       # 주제별 정리가 없는 옛 리포트
-            body += f'<p class="clamp">{esc(c["summary"])}</p>'
-        if body:
-            cards.append(_card("x.html", "𝕏", "X 모니터링", c["date"], body))
+        rows = "".join(
+            f'<div class="krow"><span class="k-name">{esc(nm)}</span>'
+            f'<span class="k-val up">+{v:.1f}%</span></div>'
+            for nm, v in c["rows"])
+        cards.append(_card("insights.html", "🚀", "상승여력 TOP 3", c["date"], rows))
 
     c = None
     try:
