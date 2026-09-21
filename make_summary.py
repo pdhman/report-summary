@@ -125,7 +125,13 @@ def card_upside():
     d = d[d["전일수정주가"] > 0]
     if d.empty:
         return None
+    # 한경 원본이 발간 증권사를 대상 종목으로 잘못 넣은 행 제외(요약 앞머리 [증권사] == 종목명).
+    # 목표가는 실제 대상 종목 값이라 상승여력이 튄다 — 2026-09-18 한화투자증권 +999%.
+    src = d["요약"].astype(str).str.extract(r"^\[([^\]]+)\]")[0].fillna("")
+    nm = d["기업명"].astype(str).str.split(" (", regex=False).str[0]
+    d = d[nm.str.replace(" ", "") != src.str.replace(" ", "")]
     d["upside"] = (d["목표주가"] - d["전일수정주가"]) / d["전일수정주가"] * 100
+    d = d[d["upside"] <= 300]          # 상식 밖 괴리는 원본 오류로 보고 제외 (make_insights.GAP_MAX 와 동일)
     # 한 종목에 증권사별 리포트가 여러 건 있어 상위권을 같은 종목이 중복 차지한다.
     # 종목(코드) 기준으로 괴리율이 가장 큰 한 건만 남겨 서로 다른 3종목이 나오게 한다.
     code = d["기업명"].astype(str).str.extract(r"\((\d{6})\)")[0]
