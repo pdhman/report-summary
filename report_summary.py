@@ -210,10 +210,16 @@ def merge_hankyung(df, today):
         b = re.match(r"\[([^\]]+)\]", str(r["요약"]))
         if m:
             seen.add((m.group(1), b.group(1) if b else ""))
-    added, close_cache = [], {}
+    added, close_cache, bad = [], {}, 0
     for row in hk:
         key = (row["_code"], row["_src"])
         if key in seen:
+            continue
+        # 한경 원본 매핑 오류 방어(2026-09-18 실사고): 발간 증권사를 대상 종목으로 넣은 행이
+        # 있다. 예) '한화투자증권(003530) 다시 늘어나는 미수금 / 목표 50,000 / 한화투자증권'
+        # — 목표가는 실제 대상 종목 값이라 상승여력이 +999% 로 튄다.
+        if row["기업명"].split(" (")[0].replace(" ", "") == row["_src"].replace(" ", ""):
+            bad += 1
             continue
         seen.add(key)
         code = row.pop("_code"); row.pop("_src")
@@ -223,7 +229,8 @@ def merge_hankyung(df, today):
         row["전일수정주가"] = close_cache[code]
         row["수집일자"] = today.strftime("%Y-%m-%d")
         added.append(row)
-    print(f"한경 컨센서스 병합: 수집 {len(hk)}건 중 신규 {len(added)}건 추가")
+    print(f"한경 컨센서스 병합: 수집 {len(hk)}건 중 신규 {len(added)}건 추가"
+          + (f" (발간사=종목 매핑 오류 {bad}건 제외)" if bad else ""))
     if not added:
         return df
     return pd.concat([df, pd.DataFrame(added)], ignore_index=True)[df.columns]

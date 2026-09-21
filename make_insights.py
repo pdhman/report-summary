@@ -23,6 +23,7 @@ XLSX = "리포트서머리.xlsx"
 OUT_DIR = "docs"
 TOP_GAP = 5      # 괴리율 TOP N
 TOP_RET = 10     # 실제 상승률 TOP N
+GAP_MAX = 300    # 이 이상은 원본 데이터 오류로 보고 제외 (%, 2026-09-18 한화투자증권 +999% 사고)
 
 
 def esc(s):
@@ -69,7 +70,24 @@ def build():
     # ---- (1) 오늘자 괴리율 TOP5 ----
     L = _load_sheet(xl, latest_sheet)
     L = L[(L["목표주가"] > 0) & (L["전일수정주가"] > 0) & L["code"].notna()].copy()
+    # 한경 원본이 발간 증권사를 대상 종목으로 잘못 넣은 행 제외(요약 앞머리 [증권사] 와 종목명이
+    # 같은 경우). 수집 단계에서도 막지만 이미 저장된 과거 시트를 위해 여기서도 거른다.
+    src = L["요약"].astype(str).str.extract(r"^\[([^\]]+)\]")[0].fillna("")
+    name = L["기업명"].astype(str).str.split(" (", regex=False).str[0]
+    mism = name.str.replace(" ", "") == src.str.replace(" ", "")
+    if mism.any():
+        print(f"[인사이트] 발간사=종목 매핑 오류 {int(mism.sum())}건 제외: "
+              + ", ".join(L.loc[mism, "기업명"].astype(str)))
+        L = L[~mism]
+
     L["괴리율"] = (L["목표주가"] - L["전일수정주가"]) / L["전일수정주가"] * 100
+    # 상식 밖 괴리는 원본 데이터 오류(종목-목표가 매핑 오류·액면분할 미반영)일 확률이 높다.
+    # 2026-09-18: 한경이 발간사를 종목으로 잘못 넣어 한화투자증권 +999% 가 1위로 올라왔다.
+    bogus = L[L["괴리율"] > GAP_MAX]
+    if len(bogus):
+        print(f"[인사이트] 괴리율 {GAP_MAX}% 초과 {len(bogus)}건 제외: "
+              + ", ".join(f"{r['기업명']} {r['괴리율']:.0f}%" for _, r in bogus.iterrows()))
+        L = L[L["괴리율"] <= GAP_MAX]
     # 같은 종목 여러 리포트 → 가장 공격적인(괴리율 높은) 목표가 하나만
     L = L.sort_values("괴리율", ascending=False).drop_duplicates("code", keep="first")
     gap_top = L.head(TOP_GAP).reset_index(drop=True)
