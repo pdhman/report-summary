@@ -18,10 +18,16 @@ import sys
 STRIP = ["박동현 님, ", "박동현 님,", "박동현 님 ", "박동현 님",
          "펀드매니저용 ", "펀드매니저용"]
 
-ADVICE_MARK = "라파엔투자자문"          # 마지막 '운용 전략 제언' 섹션 시작 표식
+ADVICE_MARK = "라파엔투자자문"          # 옛 폴백용 표식
+# '운용 전략 제언' 섹션의 헤딩 줄. 머리말에도 "…라파엔투자자문 개장 전 운용 전략을
+# 정렬해 보고드립니다" 처럼 회사명이 나와서, ADVICE_MARK 를 그냥 find 하면 본문 전체가
+# 제언으로 잘려 항목이 0개가 된다(2026-09-21 실사고). 줄 단위 헤딩만, 그것도 마지막
+# 것을 쓴다.
+ADVICE_HEAD_RE = re.compile(r"^[^\n]{0,40}운용\s*전략\s*제언[^\n]{0,20}$", re.M)
 # 'N. [분류]' 경계. (?<!\d) 가 없으면 "10." 이 "1" + "0." 으로 쪼개져
-# 10번 항목이 0번으로 표시된다.
-ITEM_RE = re.compile(r"(?=(?<!\d)\d{1,2}\.\s*\[[^\]\n]{1,14}\])")
+# 10번 항목이 0번으로 표시된다. 굵게 표식이 번호 뒤(`1. **[연준] …**`)에 오는
+# 붙여넣기도 있어 `**` 를 허용한다.
+ITEM_RE = re.compile(r"(?=(?<!\d)\d{1,2}\.\s*\*{0,2}\s*\[[^\]\n]{1,14}\])")
 LINK_RE = re.compile(r"\[([^\]]+)\]\((https?://[^)\s]+)\)")
 
 
@@ -55,13 +61,14 @@ def _clean_inline(s):
 
 def _parse_item(chunk):
     """'N. [분류] 제목 요약: ... 영향 분석: ... (출처)' 한 항목 파싱."""
-    m = re.match(r"\s*(\d{1,2})\.\s*(\[[^\]]+\])\s*(.*)\Z", chunk, re.S)
+    m = re.match(r"\s*(\d{1,2})\.\s*\*{0,2}\s*(\[[^\]]+\])\s*(.*)\Z", chunk, re.S)
     if not m:
         return None
     num, cat, body = m.group(1), m.group(2), m.group(3)
 
-    sm = re.search(r"요\s*약\s*[:：]", body)
-    am = re.search(r"영향\s*분석\s*[:：]", body)
+    # `**요약**:` 처럼 콜론이 굵게 표식 바깥에 오는 붙여넣기가 있어 `**` 를 허용한다.
+    sm = re.search(r"요\s*약\s*\*{0,2}\s*[:：]", body)
+    am = re.search(r"영향\s*분석\s*\*{0,2}\s*[:：]", body)
     if not sm or not am or am.start() < sm.start():
         return None
     title = _clean_inline(body[:sm.start()])
@@ -120,17 +127,17 @@ def format_text(raw):
 
     # 제언 섹션 분리
     advice = ""
-    ai = text.find(ADVICE_MARK)
-    if ai == -1:
-        am = re.search(r"운용 전략 제언", text)
-        ai = am.start() if am else -1
+    heads = list(ADVICE_HEAD_RE.finditer(text))
+    ai = heads[-1].start() if heads else -1
+    if ai == -1:                                 # 헤딩이 한 줄로 안 오는 옛 붙여넣기 폴백
+        ai = text.rfind(ADVICE_MARK)
     if ai != -1:
         advice = _parse_advice(text[ai:])
         text = text[:ai]
 
     # 항목 분리
     chunks = [c for c in ITEM_RE.split(text) if c.strip()]
-    if chunks and not re.match(r"\s*\d{1,2}\.\s*\[", chunks[0]):
+    if chunks and not re.match(r"\s*\d{1,2}\.\s*\*{0,2}\s*\[", chunks[0]):
         chunks = chunks[1:]                      # 첫 덩어리는 헤더 잔여물
     items = [_parse_item(c) for c in chunks]
     items = [i for i in items if i]
