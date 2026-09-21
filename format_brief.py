@@ -29,6 +29,9 @@ ADVICE_HEAD_RE = re.compile(r"^[^\n]{0,40}운용\s*전략\s*제언[^\n]{0,20}$",
 # 붙여넣기도 있어 `**` 를 허용한다.
 ITEM_RE = re.compile(r"(?=(?<!\d)\d{1,2}\.\s*\*{0,2}\s*\[[^\]\n]{1,14}\])")
 LINK_RE = re.compile(r"\[([^\]]+)\]\((https?://[^)\s]+)\)")
+# 원문의 '출처 링크:' 라벨. 링크는 별도 줄로 나가므로 라벨만 떼어낸다
+# (안 떼면 '…한숨 돌렸다. 출처 링크:' 로 본문 끝에 남는다 — 2026-09-21).
+_SRC_LABEL = re.compile(r"(?:^|\s)\**\s*(?:출\s*처\s*링\s*크|출\s*처|Source)\s*\**\s*[:：]?\s*$")
 
 
 # 생성 모델이 본문 끝에 덧붙이는 '후속 질문' 블록(Q1/Q2/Q3 …?) 제거용.
@@ -87,8 +90,10 @@ def _parse_item(chunk):
             caption = analysis[last + 2:]
             analysis = analysis[:last + 2]
         analysis = _clean_inline(analysis)
-        caption = _clean_inline(caption)
+        caption = _SRC_LABEL.sub("", _clean_inline(caption)).strip()
         link_lines = [f"* {caption}"] if len(caption) >= 5 else []
+    # '영향 분석' 본문 끝에 딸려 온 '출처 링크:' 라벨 제거 — 링크는 아래 줄로 따로 나간다
+    analysis = _SRC_LABEL.sub("", analysis).strip()
 
     lines = [f"**{num}. {cat} {title}**", "",
              f"* **요약:** {summary}",
