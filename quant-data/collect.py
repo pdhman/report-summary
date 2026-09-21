@@ -103,6 +103,12 @@ def build_universe() -> pd.DataFrame:
     uni = krx[krx["Market"].isin(["KOSPI", "KOSDAQ", "KOSDAQ GLOBAL"])].copy()
     uni["Market"] = uni["Market"].replace({"KOSDAQ GLOBAL": "KOSDAQ"})
     uni["Code"] = uni["Code"].astype(str).str.zfill(6)
+    # 목록 소스(FDR·네이버 폴백·KRX)와 무관하게 코드는 유일해야 한다 — 중복행은 하류
+    # (온도계·RS·팩터)의 reindex/merge 를 깨뜨린다 (2026-09-18 036170 실사고).
+    n0 = len(uni)
+    uni = uni.drop_duplicates(subset="Code", keep="first")
+    if len(uni) < n0:
+        log.warning("유니버스 중복 코드 %d건 제거", n0 - len(uni))
 
     try:
         # KRX-DESC 의 Sector 는 코스닥 소속부(KOSPI 는 공란) — 업종은 Industry 컬럼

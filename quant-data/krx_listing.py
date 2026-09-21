@@ -79,6 +79,36 @@ def _naver_snapshot() -> pd.DataFrame:
             return float(s)
         except ValueError:
             return None
+    # 시총순 '실시간 정렬' 목록을 100개씩 페이지로 받으므로, 요청 사이에 순위가 바뀌면
+    # 페이지 경계의 종목이 두 번 잡히고(중복) 자리를 맞바꾼 종목은 빠진다(누락).
+    # 2026-09-18 실사고: 036170 중복행이 퀀트데이터에 실려 온도계 빌드가 죽음.
+    # → 한 번 훑는 동안 중복이 보이면 다시 훑어 합집합을 만들고, 코드 기준으로 유일화한다.
+    by_code, latest = {}, None
+    for attempt in range(3):
+        recs, lt = _naver_one_pass(num)
+        latest = max(latest or lt, lt) if lt else latest
+        seen, dups = set(), 0
+        for rec in recs:
+            if rec["Code"] in seen:
+                dups += 1
+                continue
+            seen.add(rec["Code"])
+            by_code.setdefault(rec["Code"], rec)
+        if dups == 0:
+            break
+        log.warning("네이버 목록 페이지 경계 이동 감지(중복 %d건) — 누락 보정을 위해 재수집 %d/2", dups, attempt + 1)
+    recs = list(by_code.values())
+    if len(recs) < 1500:
+        raise RuntimeError(f"네이버 스냅샷 종목 수 비정상: {len(recs)}")
+    df = pd.DataFrame(recs).sort_values("Marcap", ascending=False).reset_index(drop=True)
+    df.attrs["date"] = latest
+    df.attrs["source"] = "naver"
+    return df
+
+
+def _naver_one_pass(num) -> tuple[list[dict], str | None]:
+    """네이버 시총순 목록을 KOSPI·KOSDAQ 전 페이지 한 번 훑는다 (중복 제거는 호출부)."""
+    import requests
     recs, latest = [], None
     for market in ("KOSPI", "KOSDAQ"):
         page = 1
@@ -116,12 +146,7 @@ def _naver_snapshot() -> pd.DataFrame:
             if len(items) < 100 or page * 100 >= total:
                 break
             page += 1
-    if len(recs) < 1500:
-        raise RuntimeError(f"네이버 스냅샷 종목 수 비정상: {len(recs)}")
-    df = pd.DataFrame(recs).sort_values("Marcap", ascending=False).reset_index(drop=True)
-    df.attrs["date"] = latest
-    df.attrs["source"] = "naver"
-    return df
+    return recs, latest
 
 
 def stock_listing(date: dt.date | str | None = None) -> pd.DataFrame:
