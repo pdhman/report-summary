@@ -89,6 +89,9 @@ def load_universe() -> pd.DataFrame:
     df = pd.read_csv(UNI_PATH, dtype={"코드": str},
                      usecols=["코드", "회사명", "시장", "주가", "시가총액(억)"])
     df["코드"] = df["코드"].str.zfill(6)
+    # 주간 수집본에 같은 종목이 두 줄 들어온 적이 있다(2026-09-18 036170) — 코드 중복은
+    # 이후 reindex 에서 'duplicate labels' 로 빌드 전체를 죽이므로 여기서 제거한다.
+    df = df.drop_duplicates(subset="코드", keep="first")
     df = df[~df["회사명"].str.contains("스팩", na=False)]
     df = df[df["주가"] > 0]
     # 상장주식수 근사(주간 스냅샷 기준) — 일일 시총 = 주식수 × 당일 종가
