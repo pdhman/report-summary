@@ -478,7 +478,9 @@ def build():
         if c["adjust"]:
             body += (f'<div class="krow"><span class="k-name">조정</span>'
                      f'<span class="k-val">{esc(c["adjust"])}</span></div>')
-        cards.append(_card("strategy.html", "📝", "주도섹터 리포트", c["date"], body))
+        # 카테고리명: 주도섹터 리포트 → 마켓 인사이트 (2026-09-21, 글이 섹터 외에
+        # 퀀트픽·수급·매크로 해설까지 담아 이름이 좁았다)
+        cards.append(_card("strategy.html", "📝", "마켓 인사이트", c["date"], body))
 
     c = None
     try:

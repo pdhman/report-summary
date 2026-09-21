@@ -63,7 +63,7 @@ def build():
 
     # 투자전략 허브(strategy.html): 날짜 바 + 최신 본문 (index.html 은 요약 대시보드)
     site_nav.build_hub(
-        os.path.join(OUT_DIR, "strategy.html"), "투자전략 · 일간 주도섹터 리포트", "strategy",
+        os.path.join(OUT_DIR, "strategy.html"), "마켓 인사이트", "strategy",
         "blog_*.html", r"blog_(\d{8})\.html$", fallback_style=_STYLE,
     )
     print(f"[투자전략] 페이지 {made}개 + strategy.html 허브 생성")
