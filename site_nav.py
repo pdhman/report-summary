@@ -23,8 +23,7 @@ _ITEMS = [
     ("strategy", "📝", "마켓 인사이트", "strategy.html"),   # 블로그 일간 주도섹터 리포트
     ("stock",    "🔎", "종목탐색", "screener.html"),  # 자동 스크리너
     ("analysis", "📈", "분석",    "chart.html"),      # 주식 차트 · 계절성 (인사이트는 홈 카드로 접근)
-    ("gaze",     "👁", "시선",    "gaze.html"),       # 시장의 시선 (2026-09-22 뉴스에서 분리)
-    ("brief",    "📰", "뉴스",    "briefs.html"),
+    ("brief",    "📰", "뉴스",    "briefs.html"),     # 시장의 시선 · 오늘의 뉴스 (페이지 안에서 탭)
 ]
 
 
@@ -118,15 +117,7 @@ NAV_CSS = """<style>
   .bottomnav .nav-cell:hover { color:var(--accent); }
   .bottomnav .nav-cell.active { color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .bottomnav .ni { font-size:20px; line-height:1; }
-  .bottomnav .nl { font-size:11px; font-weight:600; white-space:nowrap; }
-  /* 탭이 6개(2026-09-22 '시선' 추가)라 좁은 화면에서 '마켓 인사이트' 가 줄바꿈되며
-     바 높이가 들쭉날쭉해진다 — 폰 폭에서는 라벨을 줄이고 여백을 좁힌다. */
-  @media (max-width:430px) {
-    .bottomnav { gap:0; padding-left:2px; padding-right:2px; }
-    .bottomnav .nav-cell { padding:6px 1px; }
-    .bottomnav .ni { font-size:18px; }
-    .bottomnav .nl { font-size:9.5px; letter-spacing:-.02em; }
-  }
+  .bottomnav .nl { font-size:11px; font-weight:600; }
   body { padding-bottom:92px; }
 </style>"""
 
@@ -240,8 +231,17 @@ def extract_style(html):
     return max(blocks, key=len) if blocks else ""
 
 
-def build_hub(out_path, title, section, glob_name, id_regex, fallback_style=""):
-    """날짜별 페이지들을 모아 허브(날짜 바 + 본문 전환) 페이지 생성."""
+def build_hub(out_path, title, section, glob_name, id_regex, fallback_style="",
+              tabs="", view_attr="", extra=""):
+    """날짜별 페이지들을 모아 허브(날짜 바 + 본문 전환) 페이지 생성.
+
+    tabs/view_attr/extra 는 본문 안 탭이 필요한 섹션용(뉴스=시장의 시선·오늘의 뉴스).
+    날짜마다 같은 패널이 반복되므로 id 로는 못 묶는다 — 탭은 #view 의 data 속성
+    하나만 바꾸고 CSS 가 그날 보이는 패널에서 골라 숨긴다.
+      tabs      : 날짜 바 아래에 넣을 탭 바 HTML
+      view_attr : <div id="view"> 에 붙일 속성(예: ' data-tab="gaze"') — 첫 탭 초기값
+      extra     : 끝에 덧붙일 <style>/<script>
+    """
     d = os.path.dirname(out_path) or "."
     entries = []
     for f in glob.glob(os.path.join(d, glob_name)):
@@ -263,12 +263,12 @@ def build_hub(out_path, title, section, glob_name, id_regex, fallback_style=""):
         panels.append(f'<div class="day" id="day-{ymd}"{hide}>{extract_wrap_inner(html)}</div>')
 
     dates = [ymd for ymd, _ in entries]
-    body = (f'<div class="wrap">{_datebar(dates, dates[0])}'
-            f'<div id="view">{"".join(panels)}</div></div>\n{nav_html(section)}')
+    body = (f'<div class="wrap">{_datebar(dates, dates[0])}{tabs}'
+            f'<div id="view"{view_attr}>{"".join(panels)}</div></div>\n{nav_html(section)}')
     full = ("<!doctype html><html lang='ko'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
             f"<title>{title}</title></head><body>{body}"
-            f"{style}{NAV_CSS}{DATEBAR_CSS}{HUB_JS}</body></html>")
+            f"{style}{NAV_CSS}{DATEBAR_CSS}{HUB_JS}{extra}</body></html>")
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(full)
     print(f"[허브] {os.path.basename(out_path)} 갱신 ({len(entries)}건, 최신 {dates[0]})")

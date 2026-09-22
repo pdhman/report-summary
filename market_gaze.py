@@ -4,12 +4,12 @@
 
 데이터: docs/data/gaze/YYYY-MM-DD.json  (매일 아침 Claude 예약 작업이 작성·push.
         절차와 형식은 market-gaze/README.md)
-쓰는 곳: make_gaze(시선 탭 gaze.html — 전체 블록), make_summary(홈 '시장의 시선' 카드),
-        telegram/send_gaze.py(발송).
+쓰는 곳: make_summary(홈 '오늘의 뉴스 · 시장의 시선' 카드 상단),
+        make_brief(briefs.html '👁 시장의 시선' 탭), telegram/send_gaze.py(발송).
 
-2026-09-21 에 뉴스 브리핑과 한 화면에 합쳤다가, 한 카드·한 페이지가 너무 길어져
-2026-09-22 자체 탭으로 다시 떼어냈다. 브리핑(briefs/*.md, 수동 게시)과는 만드는
-주체·시각이 다르므로 데이터도 화면도 서로 독립이다.
+뉴스 브리핑(briefs/*.md, 수동 게시)과 만드는 주체·시각이 달라 데이터는 따로 두고
+화면에서만 합친다 — 한쪽이 늦거나 빠져도 다른 쪽은 그대로 나온다. 홈 카드는 둘을
+합쳐 보여주고, 눌러서 들어간 briefs.html 안에서 탭으로 갈린다(2026-09-22).
 """
 import os
 import glob

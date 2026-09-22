@@ -397,9 +397,12 @@ def _card(href, icon, title, date, body):
 _CARD_RE = re.compile(r'\n    <a class="scard".*?\n    </a>', re.S)
 _TITLE_RE = re.compile(r'class="sc-title">([^<]*)<')
 
-# 이름이 바뀌거나 쪼개진 카드는 직전 홈에서 되살리지 않는다. 없으면 _keep_missing_cards 가
-# '이번 빌드에서 빠진 카드'로 보고 옛 카드를 끼워 넣어 중복이 생긴다.
-_RETIRED_TITLES = {"오늘의 뉴스 · 시장의 시선"}   # 2026-09-22 '시장의 시선' + '오늘의 뉴스' 로 분리
+# 같은 카드가 상황에 따라 제목을 달리 쓰거나(시선 유무) 이름이 바뀐 이력이 있으면 한
+# 묶음으로 본다. 안 묶으면 _keep_missing_cards 가 옛 제목 카드를 '이번 빌드에서 빠진
+# 카드'로 보고 직전 홈에서 끌어와 같은 내용이 두 장 생긴다.
+_CARD_ALIASES = [
+    {"오늘의 뉴스 · 시장의 시선", "오늘의 뉴스", "시장의 시선"},   # 2026-09-21~22 합본↔분리 왕복
+]
 
 
 def _card_title(html):
@@ -424,10 +427,13 @@ def _keep_missing_cards(cards):
     except OSError:
         return cards
     have = {_card_title(c) for c in cards}
+    for grp in _CARD_ALIASES:      # 한 묶음 중 하나라도 나왔으면 그 묶음 전체를 '있음'으로
+        if have & grp:
+            have |= grp
     kept, out = [], list(cards)
     for i, old in enumerate(prev):
         t = _card_title(old)
-        if t and t not in have and t not in _RETIRED_TITLES:
+        if t and t not in have:
             # 직전 순서를 따라 끼워 넣는다(맨 뒤로 밀리지 않게)
             out.insert(min(i, len(out)), old)
             kept.append(t)
@@ -439,26 +445,32 @@ def _keep_missing_cards(cards):
 def build():
     cards = []
 
-    # 시장의 시선 — 2026-09-21 에 뉴스 카드와 합쳤다가 한 카드가 너무 길어져
-    # 2026-09-22 다시 떼어냈다(사용자 요청). 시선이 먼저, 뉴스가 그 다음.
+    c = None
+    try:
+        c = card_brief()
+    except Exception as e:
+        print(f"[요약] 시황 카드 실패: {e}")
+    # 시장의 시선(market_gaze)을 뉴스 카드 상단에 얹는다(2026-09-21 통합). 만드는 주체·시각이
+    # 달라 기준일을 따로 표기하고, 한쪽만 있어도 카드는 나온다. 카드는 합본으로 두고
+    # 눌러서 들어간 briefs.html 안에서 탭으로 갈린다(2026-09-22).
     g = gprev = None
     try:
         import market_gaze
         g, gprev = market_gaze.with_prev()
     except Exception as e:
         print(f"[요약] 시장의 시선 실패: {e}")
-    if g:
-        cards.append(_card("gaze.html", "👁", "시장의 시선", g["date"],
-                           market_gaze.card_rows(g, gprev)))
-
-    c = None
-    try:
-        c = card_brief()
-    except Exception as e:
-        print(f"[요약] 시황 카드 실패: {e}")
-    if c:
-        cards.append(_card("briefs.html", "📰", "오늘의 뉴스", c["date"],
-                           f'<p class="clamp">{esc(c["excerpt"])}</p>'))
+    if c or g:
+        body = ""
+        if g:
+            body += (f'<div class="gz-cardhead">👁 시장의 시선<span>{esc(g["date"][5:])}</span></div>'
+                     + market_gaze.card_rows(g, gprev))
+        if c:
+            if g:
+                body += '<div class="gz-sep"></div>'
+            body += f'<p class="clamp{" clamp3" if g else ""}">{esc(c["excerpt"])}</p>'
+        cards.append(_card("briefs.html", "📰",
+                           "오늘의 뉴스 · 시장의 시선" if g else "오늘의 뉴스",
+                           c["date"] if c else g["date"], body))
 
     # X 모니터링 ↔ 상승여력 TOP 3 자리 교환 (2026-09-21 사용자 요청)
     c = None

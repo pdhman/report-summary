@@ -15,6 +15,7 @@ import glob
 import datetime
 import markdown as md
 import site_nav
+import market_gaze
 import format_brief
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -70,6 +71,73 @@ _SHARED_STYLE = """
 """
 
 
+# ---- 본문 안 탭: 👁 시장의 시선 / 📰 오늘의 뉴스 (2026-09-22) -----------------
+# 홈 카드는 둘을 합쳐 보여주고(오늘의 뉴스 · 시장의 시선), 눌러서 들어온 이 페이지에서
+# 탭으로 나눈다. 허브는 날짜마다 같은 패널을 반복해 담으므로 패널을 id 로 묶을 수 없다
+# — #view 의 data-tab 하나만 바꾸고 CSS 가 그날 보이는 패널에서 골라 숨긴다.
+_TABS = ('<nav class="tabs" role="tablist" aria-label="브리핑 섹션">'
+         '<button role="tab" data-tab="gaze" aria-selected="true">👁 시장의 시선</button>'
+         '<button role="tab" data-tab="brief" aria-selected="false" tabindex="-1">'
+         '📰 오늘의 뉴스</button></nav>')
+
+_TAB_CSS = """<style>
+  .tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); margin:0 0 18px; flex-wrap:wrap; }
+  .tabs button { flex:0 0 auto; border:0; border-bottom:2px solid transparent; background:none;
+    font:inherit; font-size:14px; color:var(--muted); padding:11px 12px 9px; cursor:pointer; white-space:nowrap; }
+  .tabs button:hover { color:var(--ink); }
+  .tabs button[aria-selected="true"] { color:var(--ink); font-weight:700; border-bottom-color:var(--accent); }
+  .tabs button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; border-radius:4px; }
+  #view[data-tab="gaze"] .pane-brief { display:none; }
+  #view[data-tab="brief"] .pane-gaze { display:none; }
+  .pane-gaze .gaze { margin-bottom:0; }
+  @media (max-width:820px) { .tabs button { padding:10px 9px 8px; font-size:13.5px; } }
+</style>
+<noscript><style>/* 탭 전환이 안 되므로 둘 다 펼친다 */
+  .tabs { display:none; }
+  #view[data-tab] .pane-gaze, #view[data-tab] .pane-brief { display:block !important; }
+</style></noscript>"""
+
+# 날짜 전환(HUB_JS)이 주소의 #YYYYMMDD 를 쓰므로 탭은 해시를 건드리지 않는다.
+_TAB_JS = """<script>
+(function(){
+  var tabs=[].slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  var view=document.getElementById('view');
+  if(!tabs.length||!view)return;
+  function show(id){
+    view.dataset.tab=id;
+    tabs.forEach(function(t){var on=t.dataset.tab===id;
+      t.setAttribute('aria-selected',on?'true':'false');t.tabIndex=on?0:-1;});
+  }
+  tabs.forEach(function(t,k){
+    t.addEventListener('click',function(){show(t.dataset.tab);});
+    t.addEventListener('keydown',function(e){
+      var d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(!d)return;
+      var n=tabs[(k+d+tabs.length)%tabs.length];n.focus();show(n.dataset.tab);e.preventDefault();});
+  });
+})();
+</script>"""
+
+
+def _page(pretty, gaze_html, brief_html):
+    """날짜별 페이지 본문: 시선 패널 + 뉴스 패널.
+
+    탭 바는 허브(briefs.html)에만 둔다 — 날짜별 페이지에 넣으면 허브가 날짜마다
+    탭 바를 하나씩 담게 된다. 이 파일을 직접 열면 두 패널이 이어서 보인다.
+    """
+    return f"""<div class="wrap">
+  {gaze_html}
+  <div class="pane pane-brief">
+    <header>
+      <div class="eyebrow">데일리 · 뉴스 브리핑</div>
+      <h1>뉴스 브리핑</h1>
+      <div class="date">{pretty}</div>
+    </header>
+    {brief_html}
+    <footer><p class="muted">본 뉴스 브리핑은 AI로 생성한 참고 자료이며 투자 권유가 아닙니다.</p></footer>
+  </div>
+</div>"""
+
+
 def _parse_date(name):
     m = re.search(r"(\d{4})[-_.]?(\d{2})[-_.]?(\d{2})", name)
     return "".join(m.groups()) if m else None
@@ -103,24 +171,27 @@ def _wrap(title, body):
     return ("<!doctype html><html lang='ko'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
             f"<title>{title}</title></head><body>{body}"
-            f"{site_nav.nav_html('brief')}{_SHARED_STYLE}"
+            f"{site_nav.nav_html('brief')}{_SHARED_STYLE}{market_gaze.GAZE_CSS}"
             f"{site_nav.NAV_CSS}</body></html>")
 
 
 def build():
-    # 시장의 시선은 2026-09-22 부터 자체 탭(gaze.html). 여기서 늦게 import 하는 건
-    # make_gaze 가 _SHARED_STYLE 을 가져다 쓰기 때문(순환 import 회피).
-    try:
-        import make_gaze
-        make_gaze.build()
-    except Exception as e:
-        print(f"[경고] 시선 페이지 생성 건너뜀: {e}")
-
     if not os.path.isdir(BRIEF_DIR):
         print("[시황] briefs 폴더 없음 — 건너뜀")
         return
     files = [f for f in glob.glob(os.path.join(BRIEF_DIR, "*.md"))
              if not os.path.basename(f).startswith("_")]  # _TEMPLATE.md 등 제외
+    # 시장의 시선(docs/data/gaze/)은 같은 날짜 브리핑과 한 페이지에서 탭으로 갈린다.
+    gazes = market_gaze.load_all()
+    gaze_days = sorted(gazes)
+
+    def gaze_pane(pretty):
+        if pretty not in gazes:
+            return ('<div class="pane pane-gaze"><article class="prose">'
+                    '<p class="muted">이 날짜의 시장의 시선은 없습니다.</p></article></div>')
+        i = gaze_days.index(pretty)
+        block = market_gaze.block_html(gazes[pretty], gazes[gaze_days[i - 1]] if i else None)
+        return f'<div class="pane pane-gaze">{block}</div>'
 
     briefs = []
     for f in files:
@@ -135,33 +206,37 @@ def build():
         text = _clean(text)
         body_html = md.markdown(text, extensions=["extra", "sane_lists", "nl2br"])
         pretty = f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:]}"
-        page = f"""<div class="wrap">
-  <header>
-    <div class="eyebrow">데일리 · 뉴스 브리핑</div>
-    <h1>뉴스 브리핑</h1>
-    <div class="date">{pretty}</div>
-  </header>
-  <article class="prose">{body_html}</article>
-  <footer><p class="muted">본 뉴스 브리핑은 AI로 생성한 참고 자료이며 투자 권유가 아닙니다.</p></footer>
-</div>"""
+        page = _page(pretty, gaze_pane(pretty), f'<article class="prose">{body_html}</article>')
         os.makedirs(OUT_DIR, exist_ok=True)
         with open(os.path.join(OUT_DIR, f"brief_{ymd}.html"), "w", encoding="utf-8") as fh:
             fh.write(_wrap(f"뉴스 브리핑 {pretty}", page))
         briefs.append(ymd)
 
-    # (~2026-09-21 에는 시선만 먼저 나온 날의 빈 브리핑 페이지를 만들어 허브 최신 날짜를
-    #  시선과 맞췄다. 시선이 자체 탭으로 빠진 뒤로는 맞출 이유가 없어 없앴다.)
+    # 시선은 07:30 자동, 브리핑은 수동 게시라 시선만 먼저 나온 날이 있다. 그날도 페이지를
+    # 만들어 허브 최신 날짜가 시선과 어긋나지 않게 한다(브리핑이 올라오면 위 루프가 덮어쓴다).
+    for pretty in gaze_days:
+        ymd = pretty.replace("-", "")
+        if ymd in briefs:
+            continue
+        page = _page(pretty, gaze_pane(pretty),
+                     '<article class="prose"><p class="muted">'
+                     '이 날짜의 뉴스 브리핑은 아직 게시되지 않았습니다.</p></article>')
+        os.makedirs(OUT_DIR, exist_ok=True)
+        with open(os.path.join(OUT_DIR, f"brief_{ymd}.html"), "w", encoding="utf-8") as fh:
+            fh.write(_wrap(f"뉴스 브리핑 {pretty}", page))
+        briefs.append(ymd)
 
     briefs = sorted(set(briefs), reverse=True)
     if not briefs:
         print("[시황] 생성할 브리핑 없음")
         return
 
-    # 시황 허브(briefs.html): 상단 날짜 바 + 최신 시황 본문, 날짜 클릭 시 전환.
+    # 시황 허브(briefs.html): 상단 날짜 바 + 본문 안 탭(시선·뉴스), 날짜 클릭 시 전환.
     site_nav.build_hub(
         os.path.join(OUT_DIR, "briefs.html"), "뉴스 브리핑", "brief",
         "brief_*.html", r"brief_(\d{8})\.html$",
-        fallback_style=_SHARED_STYLE,   # 허브는 날짜별 페이지의 CSS 를 가져오지 않는다
+        fallback_style=_SHARED_STYLE + market_gaze.GAZE_CSS,   # 허브는 날짜별 페이지의 CSS 를 가져오지 않는다
+        tabs=_TABS, view_attr=' data-tab="gaze"', extra=_TAB_CSS + _TAB_JS,
     )
     print(f"[시황] 생성 완료: {len(briefs)}건 (최신 {briefs[0]})")
 
