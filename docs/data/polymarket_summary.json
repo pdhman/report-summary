@@ -1,37 +1,37 @@
 {
- "date": "2026-09-22 05:29",
+ "date": "2026-09-22 09:07",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing → / Recession → / Inflation ↓ / Risk →",
+ "arrows": "Easing → / Recession → / Inflation → / Risk →",
  "fomc": {
   "title": "Fed Decision in October?",
   "top": {
    "label": "25 bps increase",
    "prob": 0.525,
-   "d24": -0.03
+   "d24": -0.02
   },
-  "mean": 13.139,
-  "mean_d24": -0.744,
+  "mean": 13.202,
+  "mean_d24": -0.57,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
   "prob": 0.065,
-  "d24": -0.01,
+  "d24": -0.02,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "September 30 · Israel x Iran ceasefire continues through September 30?",
-  "pmss": 76.2,
+  "q": "↑ $100 · Will WTI Crude Oil (WTI) hit (HIGH) $100 in September?",
+  "pmss": 75.0,
   "band": "Tactical Signal",
-  "d24": 0.044,
-  "prob": 0.969
+  "d24": -0.39,
+  "prob": 0.295
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 76.2
+  "top_pmss": 75.0
  },
- "alerts": 4,
- "n_markets": 467,
+ "alerts": 3,
+ "n_markets": 464,
  "source": "direct"
 }
