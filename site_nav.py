@@ -23,6 +23,7 @@ _ITEMS = [
     ("strategy", "📝", "마켓 인사이트", "strategy.html"),   # 블로그 일간 주도섹터 리포트
     ("stock",    "🔎", "종목탐색", "screener.html"),  # 자동 스크리너
     ("analysis", "📈", "분석",    "chart.html"),      # 주식 차트 · 계절성 (인사이트는 홈 카드로 접근)
+    ("gaze",     "👁", "시선",    "gaze.html"),       # 시장의 시선 (2026-09-22 뉴스에서 분리)
     ("brief",    "📰", "뉴스",    "briefs.html"),
 ]
 
@@ -117,7 +118,15 @@ NAV_CSS = """<style>
   .bottomnav .nav-cell:hover { color:var(--accent); }
   .bottomnav .nav-cell.active { color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .bottomnav .ni { font-size:20px; line-height:1; }
-  .bottomnav .nl { font-size:11px; font-weight:600; }
+  .bottomnav .nl { font-size:11px; font-weight:600; white-space:nowrap; }
+  /* 탭이 6개(2026-09-22 '시선' 추가)라 좁은 화면에서 '마켓 인사이트' 가 줄바꿈되며
+     바 높이가 들쭉날쭉해진다 — 폰 폭에서는 라벨을 줄이고 여백을 좁힌다. */
+  @media (max-width:430px) {
+    .bottomnav { gap:0; padding-left:2px; padding-right:2px; }
+    .bottomnav .nav-cell { padding:6px 1px; }
+    .bottomnav .ni { font-size:18px; }
+    .bottomnav .nl { font-size:9.5px; letter-spacing:-.02em; }
+  }
   body { padding-bottom:92px; }
 </style>"""
 

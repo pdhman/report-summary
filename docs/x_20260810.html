@@ -128,7 +128,7 @@
       <div id="xm-shield" hidden role="link" tabindex="0"
            title="클릭하면 X에서 원문이 열립니다"></div></div></div>
   </div>
-</div><nav class="bottomnav"><a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a><a class="nav-cell" href="strategy.html"><span class="ni">📝</span><span class="nl">마켓 인사이트</span></a><a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a><a class="nav-cell" href="chart.html"><span class="ni">📈</span><span class="nl">분석</span></a><a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">뉴스</span></a></nav><script>
+</div><nav class="bottomnav"><a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a><a class="nav-cell" href="strategy.html"><span class="ni">📝</span><span class="nl">마켓 인사이트</span></a><a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a><a class="nav-cell" href="chart.html"><span class="ni">📈</span><span class="nl">분석</span></a><a class="nav-cell" href="gaze.html"><span class="ni">👁</span><span class="nl">시선</span></a><a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">뉴스</span></a></nav><script>
 function _tgCur(){
   var t = document.documentElement.dataset.theme;
   if(t) return t;
@@ -238,7 +238,15 @@ function _tgTheme(){
   .bottomnav .nav-cell:hover { color:var(--accent); }
   .bottomnav .nav-cell.active { color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .bottomnav .ni { font-size:20px; line-height:1; }
-  .bottomnav .nl { font-size:11px; font-weight:600; }
+  .bottomnav .nl { font-size:11px; font-weight:600; white-space:nowrap; }
+  /* 탭이 6개(2026-09-22 '시선' 추가)라 좁은 화면에서 '마켓 인사이트' 가 줄바꿈되며
+     바 높이가 들쭉날쭉해진다 — 폰 폭에서는 라벨을 줄이고 여백을 좁힌다. */
+  @media (max-width:430px) {
+    .bottomnav { gap:0; padding-left:2px; padding-right:2px; }
+    .bottomnav .nav-cell { padding:6px 1px; }
+    .bottomnav .ni { font-size:18px; }
+    .bottomnav .nl { font-size:9.5px; letter-spacing:-.02em; }
+  }
   body { padding-bottom:92px; }
 </style>
 <style>
