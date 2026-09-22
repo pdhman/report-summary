@@ -394,6 +394,44 @@ def _card(href, icon, title, date, body):
     </a>"""
 
 
+_CARD_RE = re.compile(r'\n    <a class="scard".*?\n    </a>', re.S)
+_TITLE_RE = re.compile(r'class="sc-title">([^<]*)<')
+
+
+def _card_title(html):
+    m = _TITLE_RE.search(html)
+    return m.group(1) if m else ""
+
+
+def _keep_missing_cards(cards):
+    """이번 빌드에서 빠진 카드는 직전 index.html 의 카드로 메운다.
+
+    2026-09-22 실사고: 폴리마켓 GitHub Actions 러너에 markdown·openpyxl 이 없어
+    X 모니터링·오늘의 주도주·상승여력 카드가 통째로 빠진 홈이 게시됐다. 데이터
+    소스가 없는 실행 환경 때문에 이미 만들어 둔 카드가 사라지는 것을 막는다
+    (날짜는 그 카드가 만들어진 시점 그대로라 오래되면 카드 안 날짜로 드러난다).
+    """
+    path = os.path.join(OUT_DIR, "index.html")
+    if not os.path.exists(path):
+        return cards
+    try:
+        with open(path, encoding="utf-8") as f:
+            prev = _CARD_RE.findall(f.read())
+    except OSError:
+        return cards
+    have = {_card_title(c) for c in cards}
+    kept, out = [], list(cards)
+    for i, old in enumerate(prev):
+        t = _card_title(old)
+        if t and t not in have:
+            # 직전 순서를 따라 끼워 넣는다(맨 뒤로 밀리지 않게)
+            out.insert(min(i, len(out)), old)
+            kept.append(t)
+    if kept:
+        print(f"[요약] 이번 빌드에서 빠진 카드 {len(kept)}개는 직전 값 유지: {', '.join(kept)}")
+    return out
+
+
 def build():
     cards = []
 
@@ -672,6 +710,8 @@ def build():
         if upd != c["date"]:
             body += f'<div class="sc-note">수치는 {esc(c["date"])} 기준</div>'
         cards.append(_card("leverage.html", "📈", "시장 레버리지", upd, body))
+
+    cards = _keep_missing_cards(cards)
 
     import pytz
     today = datetime.datetime.now(pytz.timezone("Asia/Seoul"))   # 러너(UTC)에서도 KST 표기

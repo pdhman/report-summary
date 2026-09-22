@@ -36,7 +36,10 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install -r "polymarket watch/requirements.txt"
+        # markdown·openpyxl 은 홈 카드(X 모니터링·오늘의 주도주) 생성에 필요하다.
+        # 2026-09-22: 없어서 카드 3개가 빠진 홈이 게시됐다(make_summary 가 직전 카드를
+        # 유지하도록 고쳤지만, 여기서도 갖춰 최신 값으로 다시 만들게 한다).
+        run: pip install -r "polymarket watch/requirements.txt" markdown openpyxl
 
       - name: Run watch (수집 → PMSS → docs/polymarket.html + data JSON)
         env:
