@@ -1,42 +1,60 @@
 {
- "date": "2026-09-22",
+ "date": "2026-09-23",
  "high_52w_ratio": 0.65,
  "items": [
   {
    "name": "가온전선",
    "ticker": "000500",
-   "close": 321500.0,
-   "change_ratio": -1.38,
-   "rs_score": 98.4,
-   "vol_ratio": 73.0,
-   "from_high": -8.9
+   "close": 318500.0,
+   "change_ratio": -1.7,
+   "rs_score": 98.3,
+   "vol_ratio": 27.6,
+   "from_high": -9.7
   },
   {
    "name": "주성엔지니어링",
    "ticker": "036930",
-   "close": 203500.0,
-   "change_ratio": -2.4,
-   "rs_score": 96.0,
-   "vol_ratio": 95.6,
-   "from_high": -28.1
+   "close": 209500.0,
+   "change_ratio": 2.95,
+   "rs_score": 96.6,
+   "vol_ratio": 97.4,
+   "from_high": -26.0
+  },
+  {
+   "name": "심텍",
+   "ticker": "222800",
+   "close": 149500.0,
+   "change_ratio": 0.4,
+   "rs_score": 91.5,
+   "vol_ratio": 79.7,
+   "from_high": -9.0
+  },
+  {
+   "name": "삼화콘덴서",
+   "ticker": "001820",
+   "close": 146900.0,
+   "change_ratio": -0.47,
+   "rs_score": 88.0,
+   "vol_ratio": 52.6,
+   "from_high": -25.4
   },
   {
    "name": "SK",
    "ticker": "034730",
-   "close": 588000.0,
-   "change_ratio": 1.73,
-   "rs_score": 72.2,
-   "vol_ratio": 81.6,
-   "from_high": -33.4
+   "close": 611000.0,
+   "change_ratio": 3.91,
+   "rs_score": 72.6,
+   "vol_ratio": 88.5,
+   "from_high": -30.8
   },
   {
-   "name": "GS건설",
-   "ticker": "006360",
-   "close": 37450.0,
-   "change_ratio": 1.77,
-   "rs_score": 54.8,
-   "vol_ratio": 87.3,
-   "from_high": -16.5
+   "name": "GS",
+   "ticker": "078930",
+   "close": 110700.0,
+   "change_ratio": 1.0,
+   "rs_score": 62.4,
+   "vol_ratio": 99.2,
+   "from_high": -16.9
   }
  ]
 }
