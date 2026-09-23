@@ -112,7 +112,9 @@ def block_html(cur, prev):
     return (f'<section class="gaze"><div class="gz-title">👁 시장의 시선'
             f'<span class="gz-date">{esc(cur["date"])} 기준</span></div>{head}{items}{extra}'
             f'<p class="gz-foot">시장 가격이 지금 어떤 변수에 가장 민감한지 매긴 웨이트(합 100)입니다. '
-            f'뉴스·가격 반응·예측시장 {mix["base"]}% + X 모니터링 {mix["x"]}% · AI 판단 추정치이며 '
+            f'뉴스·가격 반응·예측시장 {mix["base"]}% + X 모니터링 {mix["x"]}%'
+            + (f' + 증권사 모닝 노트 {mix["note"]}%' if mix.get("note") else "")
+            + ' · AI 판단 추정치이며 '
             f'투자 권유가 아닙니다.</p></section>')
 
 

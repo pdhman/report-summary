@@ -84,7 +84,8 @@ def build_message(cur, prev):
         lines.append("")
     mix = cur.get("source_mix") or {"base": 80, "x": 20}
     lines += [f'<a href="{PAGE_URL}">뉴스 브리핑과 함께 보기</a>', ""]
-    lines.append(f"<i>웨이트 합 100 · 뉴스·가격반응·폴리마켓 {mix['base']}% + X모니터링 {mix['x']}% · 판단 추정치</i>")
+    note = f" + 모닝노트 {mix['note']}%" if mix.get("note") else ""
+    lines.append(f"<i>웨이트 합 100 · 뉴스·가격반응·폴리마켓 {mix['base']}% + X모니터링 {mix['x']}%{note} · 판단 추정치</i>")
     return "\n".join(lines)
 
 
