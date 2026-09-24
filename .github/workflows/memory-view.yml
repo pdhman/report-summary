@@ -1,0 +1,53 @@
+name: Memory Cycle View
+
+# 메모리 사이클 대시보드(docs/memory.html)의 '현재 결론' 구역만 다시 그린다.
+# 판정 파일(memory-cycle/data/cycle_view_manual.json)이 main 에 올라오면 자동 실행 —
+# PC 가 꺼져 있을 때 클라우드 세션이나 GitHub 앱에서 판정만 고쳐도 페이지가 따라온다.
+# 차트는 건드리지 않는다(입력 데이터가 PC 에만 있음 — 차트 갱신은 PC 의 cycle_model.py).
+# 페이지가 이미 판정과 같으면(PC 에서 같이 커밋한 경우) 아무것도 커밋하지 않는다.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "memory-cycle/data/cycle_view_manual.json"
+      - "memory-cycle/cycle_view.py"
+      - "memory-cycle/update_view.py"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: memory-view
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 표준 라이브러리만 쓰므로 패키지 설치 없음. 입력 오류면 여기서 실패하고 페이지는 그대로.
+      - name: Render '현재 결론' panels
+        env:
+          PYTHONUTF8: "1"
+        run: python3 memory-cycle/update_view.py
+
+      - name: Commit page (push = 배포)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/memory.html
+          if git diff --staged --quiet; then
+            echo "변경 없음 — 커밋 건너뜀"
+          else
+            git commit -m "memory: 현재 결론 경량 갱신 $(date -u +%Y-%m-%d) [skip ci]"
+            # 다른 워크플로우·로컬 파이프라인과 push 경쟁 시 리베이스 후 재시도
+            for i in 1 2 3; do
+              git push && break
+              git pull --rebase -X theirs origin main || true
+              sleep 5
+            done
+          fi

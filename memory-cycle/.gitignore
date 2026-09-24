@@ -1,0 +1,5 @@
+# 저장소에는 '현재 결론' 경량 갱신에 필요한 것만 올린다(클라우드 세션·GitHub Actions 용):
+#   cycle_view.py · update_view.py · UPDATE.md · data/cycle_view_manual.json
+# 전체 빌드(cycle_model.py · fetch_data.py)와 입력 데이터(주가·재무·컨센서스)는 PC 전용이라 추적하지 않는다.
+# 루트 .gitignore 의 *.json 규칙에서 판정 파일만 예외로 뺀다.
+!data/cycle_view_manual.json
