@@ -44,12 +44,16 @@ PC가 꺼져 있어도 클라우드 세션(claude.ai/code, Claude 앱)에서 할
    git commit -m "메모리 사이클: YYYY-MM-DD 갱신 — (한 줄 요약)"
    git push origin HEAD:main
    ```
-   main 에 직접 푸시가 안 되면 PR 을 만들어 병합한다(사용자가 GitHub 앱에서 병합해도 된다).
+   클라우드 세션은 기본적으로 `claude/…` 브랜치에 올린다. main 에 직접 푸시가 안 되면
+   PR 을 만들고 사용자에게 병합을 요청한다(휴대폰 GitHub 앱에서 병합 가능).
    JSON 이 main 에 들어가기만 하면 GitHub Actions(`memory-view.yml`)가 페이지를 자동으로 다시 그린다.
 5. 1~2분 뒤 라이브 페이지에 새 기준일이 보이는지 확인한다.
    ```bash
    curl -s "https://pdhman.github.io/report-summary/memory.html?v=$RANDOM" | grep -o "판정 기준일 <!--cv:asof-->[0-9-]*"
    ```
+   클라우드 기본 네트워크(Trusted)에서는 `pdhman.github.io` 가 막혀 이 명령이 실패할 수 있다.
+   그 경우 WebFetch 로 확인하거나, 확인을 건너뛰고 사용자에게 페이지 링크로 확인해 달라고 한다.
+   (영구 해결: 클라우드 환경 설정 → 네트워크 Custom → `pdhman.github.io` 추가)
 
 ## 쓰는 법 (사용자 요청 사항)
 
