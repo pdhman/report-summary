@@ -1,37 +1,37 @@
 {
- "date": "2026-09-24 22:39",
+ "date": "2026-09-25 05:03",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing → / Recession → / Inflation → / Risk →",
+ "arrows": "Easing → / Recession ↑ / Inflation → / Risk →",
  "fomc": {
   "title": "Fed Decision in October?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.625,
-   "d24": 0.09
+   "prob": 0.665,
+   "d24": 0.02
   },
-  "mean": 15.788,
-  "mean_d24": 2.337,
+  "mean": 16.712,
+  "mean_d24": 0.689,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
   "prob": 0.105,
-  "d24": 0.02,
+  "d24": 0.03,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "1 (25 bps) · Will 1 Fed rate hike happen in 2026?",
-  "pmss": 74.5,
-  "band": "Tactical Signal",
-  "d24": -0.05,
-  "prob": 0.085
+  "q": "25 bps increase · Will the Fed increase interest rates by 25 bps after the December 2026 meeting?",
+  "pmss": 52.3,
+  "band": "Watch",
+  "d24": 0.02,
+  "prob": 0.715
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 74.5
+  "top_pmss": 52.3
  },
- "alerts": 1,
- "n_markets": 459,
+ "alerts": 0,
+ "n_markets": 433,
  "source": "direct"
 }
