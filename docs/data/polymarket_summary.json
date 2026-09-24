@@ -1,5 +1,5 @@
 {
- "date": "2026-09-25 05:03",
+ "date": "2026-09-25 08:16",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession ↑ / Inflation → / Risk →",
@@ -10,28 +10,28 @@
    "prob": 0.665,
    "d24": 0.02
   },
-  "mean": 16.712,
-  "mean_d24": 0.689,
+  "mean": 16.745,
+  "mean_d24": 0.563,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
-  "prob": 0.105,
-  "d24": 0.03,
+  "prob": 0.095,
+  "d24": 0.02,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "25 bps increase · Will the Fed increase interest rates by 25 bps after the December 2026 meeting?",
-  "pmss": 52.3,
-  "band": "Watch",
-  "d24": 0.02,
-  "prob": 0.715
+  "q": "December 31 · US x Iran ceasefire continues through December 31?",
+  "pmss": 55.2,
+  "band": "Interest",
+  "d24": -0.06,
+  "prob": 0.415
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 52.3
+  "top_pmss": 55.2
  },
  "alerts": 0,
- "n_markets": 433,
+ "n_markets": 436,
  "source": "direct"
 }
