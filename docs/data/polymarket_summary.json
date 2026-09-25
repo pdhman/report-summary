@@ -1,37 +1,37 @@
 {
- "date": "2026-09-25 08:16",
+ "date": "2026-09-25 22:58",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing → / Recession ↑ / Inflation → / Risk →",
+ "arrows": "Easing → / Recession → / Inflation → / Risk →",
  "fomc": {
   "title": "Fed Decision in October?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.665,
-   "d24": 0.02
+   "prob": 0.645,
+   "d24": 0.01
   },
-  "mean": 16.745,
-  "mean_d24": 0.563,
+  "mean": 16.324,
+  "mean_d24": 0.354,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
   "prob": 0.095,
-  "d24": 0.02,
+  "d24": 0.0,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "December 31 · US x Iran ceasefire continues through December 31?",
-  "pmss": 55.2,
+  "q": "Strait of Hormuz traffic returns to normal by December 31?",
+  "pmss": 63.5,
   "band": "Interest",
-  "d24": -0.06,
-  "prob": 0.415
+  "d24": 0.03,
+  "prob": 0.235
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 55.2
+  "top_pmss": 63.5
  },
  "alerts": 0,
- "n_markets": 436,
+ "n_markets": 432,
  "source": "direct"
 }
