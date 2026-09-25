@@ -1,32 +1,23 @@
 {
- "date": "2026-09-23",
+ "date": "2026-09-25",
  "high_52w_ratio": 0.65,
  "items": [
   {
    "name": "가온전선",
    "ticker": "000500",
-   "close": 318500.0,
-   "change_ratio": -1.7,
+   "close": 318000.0,
+   "change_ratio": -1.85,
    "rs_score": 98.3,
-   "vol_ratio": 27.6,
-   "from_high": -9.7
-  },
-  {
-   "name": "주성엔지니어링",
-   "ticker": "036930",
-   "close": 209500.0,
-   "change_ratio": 2.95,
-   "rs_score": 96.6,
-   "vol_ratio": 97.4,
-   "from_high": -26.0
+   "vol_ratio": 28.7,
+   "from_high": -9.9
   },
   {
    "name": "심텍",
    "ticker": "222800",
-   "close": 149500.0,
-   "change_ratio": 0.4,
+   "close": 149400.0,
+   "change_ratio": 0.34,
    "rs_score": 91.5,
-   "vol_ratio": 79.7,
+   "vol_ratio": 82.2,
    "from_high": -9.0
   },
   {
@@ -34,27 +25,27 @@
    "ticker": "001820",
    "close": 146900.0,
    "change_ratio": -0.47,
-   "rs_score": 88.0,
-   "vol_ratio": 52.6,
+   "rs_score": 87.3,
+   "vol_ratio": 55.4,
    "from_high": -25.4
   },
   {
    "name": "SK",
    "ticker": "034730",
-   "close": 611000.0,
-   "change_ratio": 3.91,
-   "rs_score": 72.6,
-   "vol_ratio": 88.5,
-   "from_high": -30.8
+   "close": 607000.0,
+   "change_ratio": 3.23,
+   "rs_score": 71.2,
+   "vol_ratio": 89.8,
+   "from_high": -31.3
   },
   {
    "name": "GS",
    "ticker": "078930",
-   "close": 110700.0,
-   "change_ratio": 1.0,
-   "rs_score": 62.4,
-   "vol_ratio": 99.2,
-   "from_high": -16.9
+   "close": 110600.0,
+   "change_ratio": 0.91,
+   "rs_score": 62.7,
+   "vol_ratio": 99.4,
+   "from_high": -17.0
   }
  ]
 }
