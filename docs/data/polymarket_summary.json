@@ -1,5 +1,5 @@
 {
- "date": "2026-09-26 05:04",
+ "date": "2026-09-26 08:22",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -11,27 +11,27 @@
    "d24": -0.04
   },
   "mean": 15.726,
-  "mean_d24": -0.986,
+  "mean_d24": -1.019,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
-  "prob": 0.115,
-  "d24": 0.01,
+  "prob": 0.095,
+  "d24": 0.0,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "Strait of Hormuz traffic returns to normal by October 31?",
-  "pmss": 64.9,
+  "q": "Strait of Hormuz traffic returns to normal by December 31?",
+  "pmss": 62.5,
   "band": "Interest",
-  "d24": 0.04,
-  "prob": 0.105
+  "d24": 0.05,
+  "prob": 0.275
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 64.9
+  "top_pmss": 62.5
  },
- "alerts": 0,
- "n_markets": 440,
+ "alerts": 2,
+ "n_markets": 441,
  "source": "direct"
 }
