@@ -23,6 +23,17 @@ if (-not $Force) {
     $skip = $null
     if ($now.DayOfWeek -eq 'Saturday' -or $now.DayOfWeek -eq 'Sunday') { $skip = '주말 휴장' }
     elseif ($now.TimeOfDay -lt [TimeSpan]'15:30:00') { $skip = '장 마감 전' }
+    # 평일 휴장(추석·개천절 등): 오늘자 코스피 일봉이 없으면 휴장으로 본다.
+    # 2026-09-25 실사고: 추석 연휴 중 따라잡기 실행이 9/23 종가로 '9/25자' 리포트를 발행해
+    # 삼성전자 등이 '5일 연속'으로 잘못 게시됐다. 조회 실패 시엔 막지 않는다(정상일 유실 방지).
+    if (-not $skip) {
+        try {
+            $d = $now.ToString('yyyyMMdd')
+            $u = "https://api.stock.naver.com/chart/domestic/index/KOSPI/day?startDateTime=${d}00&endDateTime=${d}23"
+            $r = Invoke-RestMethod -Uri $u -Headers @{ 'User-Agent' = 'Mozilla/5.0' } -TimeoutSec 15
+            if (@($r).Count -eq 0) { $skip = '평일 휴장(오늘자 지수 없음)' }
+        } catch { }
+    }
     if ($skip) {
         $g = Join-Path $proj 'logs'
         if (-not (Test-Path $g)) { New-Item -ItemType Directory -Path $g | Out-Null }
