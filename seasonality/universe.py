@@ -61,6 +61,8 @@ UNIVERSE = [
         "XLRE": "리츠",
         "XLC": "커뮤니케이션",
         "SMH": "반도체",
+        "SOXX": "반도체(iShares)",
+        "DRAM": "메모리 반도체(Roundhill, 2026-04 상장)",
         "IBB": "바이오",
         "KBE": "은행",
         "XOP": "원유탐사",
