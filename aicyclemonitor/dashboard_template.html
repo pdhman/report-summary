@@ -210,7 +210,7 @@
         <p class="note">SEC 현금흐름표(YTD 차분) — GPU 담보부채로 조달하는 buildout, 급감 = 자금줄 경색 신호</p>
         <div id="ch-crwv"></div></div>
       <div class="card"><h3>빅테크 5Y CDS 레벨 (bp)</h3>
-        <p class="note" id="cdsNote">개별 CDS는 유료라 언론 인용 스냅샷을 수동 기록 — 괄호는 연초 대비 변화</p>
+        <p class="note" id="cdsNote">개별 CDS는 유료라 공개 자료 스냅샷을 수동 기록 — 괄호는 직전 스냅샷 대비 변화</p>
         <div id="ch-cds"></div></div>
       <div class="card"><h3>오라클 RPO 수주잔고 ($B)</h3>
         <p class="note">장기 컴퓨팅 계약의 총량(SEC) — 증가 정체·감소 전환 = 계약 취소/사용률 하락의
@@ -568,12 +568,18 @@ function renderAll(){
     document.getElementById('ch-crwv').innerHTML='<div class="empty">SEC 수집 대기</div>';
   }
   const cds=DATA.leverage.cds||{}, cchg=cds.ytd_chg||{}, clvl=cds.level||{};
+  const cprev=(cds.prev||{}).level||{}, hasPrev=Object.keys(cprev).length>0;
   if(Object.keys(clvl).length||Object.keys(cchg).length){
     document.getElementById('cdsNote').textContent=
-      `${cds.date||''} 기준 · ${cds.source||''} — 유료 데이터라 언론 인용 스냅샷 수동 기록, 괄호=연초 대비(bp)`;
-    // 레벨이 있으면 레벨 막대(+YTD 괄호), 없으면 YTD 변화 막대로 폴백
+      `${cds.date||''} 기준 · ${cds.source||''} — 유료 데이터라 공개 자료(언론·증권사 차트) 스냅샷 수동 기록, `
+      +(hasPrev?`괄호=직전 스냅샷(${cds.prev.date||''}) 대비 변화(bp)`:'괄호=연초 대비(bp)');
+    // 레벨 막대 + 괄호: 직전 스냅샷이 있으면 그 대비 변화(직전 레벨이 없던 이름은 '첫 기록'), 없으면 연초 대비.
+    // 레벨이 없으면 연초 대비 변화 막대로 폴백.
+    const sgn=v=>(v>=0?'+':'')+v;
     const items=Object.keys(clvl).length
-      ?Object.keys(clvl).map(k=>({label:k+(cchg[k]!=null?` (+${cchg[k]})`:''),value:clvl[k]}))
+      ?Object.keys(clvl).map(k=>({value:clvl[k], label:k+(hasPrev
+          ?(cprev[k]!=null?` (${sgn(clvl[k]-cprev[k])})`:' (첫 기록)')
+          :(cchg[k]!=null?` (+${cchg[k]})`:''))}))
       :Object.keys(cchg).map(k=>({label:k,value:cchg[k]}));
     hbarChart('ch-cds',items.sort((a,b)=>b.value-a.value),'bp');
   } else {

@@ -5,7 +5,7 @@
     "nvda_dc_revenue_bil": "NVIDIA 실적 발표의 Data Center 부문 분기 매출($B). 키는 회계분기 말월(YYYY-MM, 1·4·7·10월). 공급자 측 총 AI 인프라 투자 프록시.",
     "hyperscaler_capex_total_bil": "5대 하이퍼스케일러(GOOGL+MSFT+AMZN+META+ORCL) 연간 capex 합산($B). 'E' 접미사=Bloomberg 컨센서스 추정치 — 컨센서스가 바뀌면 갱신. 차트는 2025년부터 표시.",
     "hyperscaler_capex_consensus_vintages": "컨센서스 집계 이력(기준일별 E값). 새 컨센서스가 나오면 항목 추가 — 최신 집계의 내년 전망치가 직전 집계보다 5% 이상 하향 수정되면 경계(수요 조기 경보).",
-    "bigtech_cds_5y_bp": "빅테크 5년 CDS 스냅샷(bp). 유료 데이터(S&P Global/Bloomberg)라 언론·리서치 인용 시 수동 갱신 — ytd_chg(연초 대비 변화)·level(현재 레벨, 알려진 것만). ORCL 레벨 200bp 이상 → 경계.",
+    "bigtech_cds_5y_bp": "빅테크 5년 CDS 스냅샷(bp). 유료 데이터(Bloomberg 등)라 언론·증권사 차트 인용 시 수동 갱신 — level(현재 레벨), prev(직전 스냅샷: 갱신 때 지금 level 을 여기로 옮김 → 화면 괄호 = 직전 대비 변화), ytd_chg(연초 대비, 있을 때만). ORCL 레벨 200bp 이상 → 경계.",
     "notes": "값을 채우면 대시보드의 해당 차트가 자동으로 갱신됩니다. 비워두면 '수동 입력 대기'로 표시됩니다."
   },
   "datacenter_vacancy": [
@@ -22,10 +22,15 @@
     "2026Q3": {"OCI": 121.0}
   },
   "bigtech_cds_5y_bp": {
-    "date": "2026-07말~08초",
-    "source": "S&P Global MI·LSEG (언론 인용 종합, AMZN은 65~70bp 보도 범위의 중간값)",
-    "ytd_chg": {"ORCL": 70, "AVGO": 48, "META": 39, "NVDA": 32, "AMZN": 30, "GOOGL": 29},
-    "level": {"ORCL": 215, "META": 95, "NVDA": 82, "AMZN": 68, "GOOGL": 67, "MSFT": 49}
+    "date": "2026-09 말",
+    "source": "Bloomberg(하나증권 Total ETF '주요 기업들의 CDS 추이' 차트 끝값 판독, ±3bp)",
+    "level": {"ORCL": 237, "SPCX·xAI": 180, "AVGO": 126, "META": 97, "NVDA": 87, "AMZN": 73, "GOOGL": 72, "MSFT": 52, "AAPL": 43},
+    "prev": {
+      "date": "2026-07말~08초",
+      "source": "S&P Global MI·LSEG (언론 인용 종합, AMZN은 65~70bp 보도 범위의 중간값)",
+      "level": {"ORCL": 215, "META": 95, "NVDA": 82, "AMZN": 68, "GOOGL": 67, "MSFT": 49},
+      "ytd_chg": {"ORCL": 70, "AVGO": 48, "META": 39, "NVDA": 32, "AMZN": 30, "GOOGL": 29}
+    }
   },
   "hyperscaler_capex_total_bil": {
     "2023": 160.4,

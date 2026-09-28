@@ -34,8 +34,9 @@
 > 개별 기업 CDS(오라클·NVIDIA·브로드컴 등)는 Markit/Bloomberg 유료 독점이라 무료 추적 불가.
 > 대신 등급 버킷 OAS로 프록시: AA=하이퍼스케일러(MSFT AAA·GOOGL AA+·AMZN AA·META AA-)·NVIDIA급,
 > BBB=오라클·브로드컴급. 해당 등급 스프레드가 벌어지면 그 그룹의 조달비용 상승 신호.
-> 개별 CDS 수치가 언론·리서치에 인용되면 manual_data.json 의 bigtech_cds_5y_bp 에 스냅샷으로
-> 기록(차트 + ORCL 200bp 이상 경계). 개별 CDS는 등급 버킷보다 개별 리스크를 먼저 반영한다 —
+> 개별 CDS 수치가 언론·리서치(증권사 차트 포함)에 인용되면 manual_data.json 의 bigtech_cds_5y_bp 에
+> 스냅샷으로 기록(차트 + ORCL 200bp 이상 경계). 갱신할 때 기존 level 을 prev 로 옮기면 화면 괄호가
+> '직전 스냅샷 대비 변화'로 나온다(차트에서 읽은 연초 대비 값은 이중 판독 오차가 커서 쓰지 않음). 개별 CDS는 등급 버킷보다 개별 리스크를 먼저 반영한다 —
 > 2026-07 기준 ORCL CDS 215bp vs BBB OAS 97bp 처럼 괴리가 커지면 그 자체가 신호.
 >
 > **오라클 신용등급: 2026-08 S&P가 BBB-로 강등** (FY26 FCF -$237억, 총부채 ~$1,300억) —
