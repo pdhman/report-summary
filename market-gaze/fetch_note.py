@@ -23,6 +23,8 @@ import urllib.request
 
 URL = "https://t.me/s/hedgecat0301"
 KEY = "장 시작 전 생각"
+# 월요일(연휴 뒤 첫날 포함)엔 '장 시작 전 생각' 대신 주간 전망 'Kiwoom Weekly'만 올라온다(2026-09-28 07:32).
+KEYS = (KEY, "Kiwoom Weekly")
 KST = dt.timezone(dt.timedelta(hours=9))
 
 
@@ -61,12 +63,12 @@ def main():
     except Exception as e:
         print(f"[노트] 가져오기 실패: {e}")
         return 1
-    notes = [p for p in posts if KEY in p["text"][:80]]
+    notes = [p for p in posts if any(k in p["text"][:80] for k in KEYS)]
     if not a.latest:
         day = a.date or dt.datetime.now(KST).strftime("%Y-%m-%d")
         notes = [p for p in notes if p["when"].strftime("%Y-%m-%d") == day]
     if not notes:
-        print(f"[노트] 해당 날짜의 '{KEY}' 글 없음 (채널 최근 글 {len(posts)}개 확인)")
+        print(f"[노트] 해당 날짜의 '{KEY}' · Weekly 글 없음 (채널 최근 글 {len(posts)}개 확인)")
         return 2
     n = notes[-1]
     print(f"[노트] {n['when']:%Y-%m-%d %H:%M} KST · t.me/{n['post']}\n")
