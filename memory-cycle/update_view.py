@@ -46,6 +46,8 @@ def main() -> int:
         for e in errs:
             print("  -", e)
         return 1
+    for w in cvw.lint(cv):
+        print("[경고]", w)
     parts = cvw.render_cycle_view(cv)
     print(f"[검사] 통과 — 기준일 {cv['as_of']}, 판정 {len(cv['rows'])}행, "
           f"최근 신호 {len(cv.get('updates', []))}건")

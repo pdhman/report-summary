@@ -27,6 +27,12 @@ PUBLIC_REPLACE = (
 )
 PANEL_KEYS = (("now", "verdict"), ("notes", "notes"), ("hbm", "gap"))
 
+# 카드 길이 규칙 — 카드는 '지금 판단과 그 이유'만, 이력은 '최근 반영한 신호'가 맡는다.
+NOTE_MAX = 3          # 보이는 핵심 줄 수(초과는 오류 → more 로 옮길 것)
+NOTE_LINE_MAX = 150   # 보이는 한 줄 길이(초과는 경고)
+MORE_MAX = 6          # 접는 근거 줄 수(초과는 경고 — 오래된 근거는 지우거나 합칠 것)
+UPD_SHOW = 6          # 신호 로그에서 펼쳐 보이는 최근 건수(나머지는 접기)
+
 
 def apply_public(html):
     for a_, b_ in PUBLIC_REPLACE:
@@ -82,10 +88,15 @@ def render_cycle_view(cv):
         f"<td>{esc(r.get('direction', ''))}</td></tr>"
         for r in cv["rows"])
     def _note(r):
-        # note 는 문장 리스트(한 줄씩) 또는 문자열. what = 그 영역이 무엇인지 한 줄 풀이.
+        # note = 보이는 핵심(최대 NOTE_MAX 줄), more = '근거 더 보기'로 접는 세부 근거.
+        # what = 그 영역이 무엇인지 한 줄 풀이.
         n = r["note"]
         body = ("<ul>" + "".join(f"<li>{esc(x)}</li>" for x in n) + "</ul>"
                 if isinstance(n, list) else f"<p>{esc(n)}</p>")
+        more = r.get("more") or []
+        if more:
+            body += (f"<details class='cvmore'><summary>근거 더 보기 ({len(more)})</summary><ul>"
+                     + "".join(f"<li>{esc(x)}</li>" for x in more) + "</ul></details>")
         what = f"<div class='cvw'>{esc(r['what'])}</div>" if r.get("what") else ""
         return (f"<div class='cvn'><div class='cvh'><span class='dots'>{_cv_dots(r['dots'])}</span>"
                 f"<b>{esc(r['area'])}</b> <span class='mut'>{esc(r.get('label', ''))}</span></div>"
@@ -151,11 +162,15 @@ def render_cycle_view(cv):
         if lt.get("note"):
             gap_html += f"<p class='note'>{esc(lt['note'])}</p>"
 
-    upd = "".join(
-        f"<li><span class='dots'>{_cv_dots(u.get('level', 'y'))}</span>"
-        f"<span class='mut'>{esc(u['date'])}</span> <b>{esc(u['title'])}</b><br>{esc(u['impact'])}</li>"
-        for u in cv.get("updates", [])[:6])
-    upd_html = f"<h3>최근 반영한 신호</h3><ul class='cvu'>{upd}</ul>" if upd else ""
+    def _upd(u):
+        return (f"<li><span class='dots'>{_cv_dots(u.get('level', 'y'))}</span>"
+                f"<span class='mut'>{esc(u['date'])}</span> <b>{esc(u['title'])}</b><br>{esc(u['impact'])}</li>")
+    ups = cv.get("updates", [])
+    upd = "".join(_upd(u) for u in ups[:UPD_SHOW])
+    old = ups[UPD_SHOW:]
+    upd_old = (f"<details class='cvold'><summary>지난 신호 전체 보기 ({len(old)}건)</summary>"
+               f"<ul class='cvu'>{''.join(_upd(u) for u in old)}</ul></details>") if old else ""
+    upd_html = f"<h3>최근 반영한 신호</h3><ul class='cvu'>{upd}</ul>{upd_old}" if upd else ""
 
     legend = " · ".join(
         f'<span class="dots"><span class="dot" style="background:{CV_COLOR[c]}"></span></span>{CV_NAME[c]}'
@@ -229,7 +244,13 @@ def validate(cv):
             if isinstance(r, dict):
                 if "dots" in r:
                     dots(r["dots"], w)
-                for k in ("area", "label", "direction", "what", "note"):
+                n = r.get("note")
+                if isinstance(n, list) and len(n) > NOTE_MAX:
+                    errs.append(f"{w}.note: 보이는 핵심은 최대 {NOTE_MAX}줄 (지금 {len(n)}줄) — "
+                                "새 근거는 기존 줄과 합치거나, 세부 근거는 more 로 옮길 것")
+                if "more" in r and not isinstance(r["more"], list):
+                    errs.append(f"{w}.more: 문장 리스트여야 함")
+                for k in ("area", "label", "direction", "what", "note", "more"):
                     if k in r:
                         text(r[k], f"{w}.{k}")
     g = cv.get("hbm_gap")
@@ -270,3 +291,19 @@ def validate(cv):
             if k in u:
                 text(u[k], f"{w}.{k}")
     return errs
+
+
+def lint(cv):
+    """막지는 않지만 고치면 좋은 것(길이). update_view.py 가 경고로 출력한다."""
+    warns = []
+    for r in cv.get("rows", []):
+        a = r.get("area", "?")
+        for i, t in enumerate(r.get("note") or []):
+            if isinstance(t, str) and len(t) > NOTE_LINE_MAX:
+                warns.append(f"{a}.note[{i}]: {len(t)}자 — 보이는 줄은 {NOTE_LINE_MAX}자 이내 권장"
+                             " (세부 숫자는 more 로)")
+        m = r.get("more") or []
+        if len(m) > MORE_MAX:
+            warns.append(f"{a}.more: {len(m)}줄 — {MORE_MAX}줄 이내 권장 (오래된 근거는 지우거나 합칠 것,"
+                         " 이력은 updates 에 남아 있음)")
+    return warns
