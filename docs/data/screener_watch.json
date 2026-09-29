@@ -1,69 +1,78 @@
 {
- "date": "2026-09-28",
+ "date": "2026-09-29",
  "high_52w_ratio": 0.65,
  "items": [
   {
    "name": "가온전선",
    "ticker": "000500",
-   "close": 300500.0,
-   "change_ratio": -5.5,
-   "rs_score": 98.0,
-   "vol_ratio": 24.6,
-   "from_high": -14.8
+   "close": 314500.0,
+   "change_ratio": 5.36,
+   "rs_score": 97.9,
+   "vol_ratio": 55.0,
+   "from_high": -10.9
   },
   {
-   "name": "주성엔지니어링",
-   "ticker": "036930",
-   "close": 209000.0,
-   "change_ratio": -0.24,
-   "rs_score": 95.1,
-   "vol_ratio": 89.5,
-   "from_high": -26.1
+   "name": "피에스케이",
+   "ticker": "319660",
+   "close": 148800.0,
+   "change_ratio": 5.53,
+   "rs_score": 90.5,
+   "vol_ratio": 77.3,
+   "from_high": -32.2
   },
   {
    "name": "심텍",
    "ticker": "222800",
-   "close": 147200.0,
-   "change_ratio": -1.47,
-   "rs_score": 91.2,
-   "vol_ratio": 73.8,
-   "from_high": -10.4
+   "close": 152200.0,
+   "change_ratio": 4.89,
+   "rs_score": 87.4,
+   "vol_ratio": 70.4,
+   "from_high": -7.3
   },
   {
-   "name": "삼화콘덴서",
-   "ticker": "001820",
-   "close": 145000.0,
-   "change_ratio": -1.29,
-   "rs_score": 87.3,
-   "vol_ratio": 46.1,
-   "from_high": -26.3
+   "name": "삼성전자",
+   "ticker": "005930",
+   "close": 272500.0,
+   "change_ratio": 0.93,
+   "rs_score": 80.0,
+   "vol_ratio": 76.6,
+   "from_high": -27.2
   },
   {
-   "name": "테스",
-   "ticker": "095610",
-   "close": 161900.0,
-   "change_ratio": 0.0,
-   "rs_score": 86.3,
-   "vol_ratio": 93.0,
-   "from_high": -31.5
+   "name": "삼성전자우",
+   "ticker": "005935",
+   "close": 204000.0,
+   "change_ratio": -0.73,
+   "rs_score": 77.9,
+   "vol_ratio": 68.2,
+   "from_high": -16.2
+  },
+  {
+   "name": "S-Oil",
+   "ticker": "010950",
+   "close": 157800.0,
+   "change_ratio": -3.78,
+   "rs_score": 69.5,
+   "vol_ratio": 69.1,
+   "from_high": -10.9
+  },
+  {
+   "name": "SK",
+   "ticker": "034730",
+   "close": 586000.0,
+   "change_ratio": 1.74,
+   "rs_score": 67.4,
+   "vol_ratio": 87.5,
+   "from_high": -33.6
   },
   {
    "name": "GS건설",
    "ticker": "006360",
-   "close": 35550.0,
-   "change_ratio": 2.3,
-   "rs_score": 52.9,
-   "vol_ratio": 70.1,
-   "from_high": -20.7
-  },
-  {
-   "name": "삼성E&A",
-   "ticker": "028050",
-   "close": 50000.0,
-   "change_ratio": 0.81,
-   "rs_score": 51.0,
-   "vol_ratio": 59.3,
-   "from_high": -25.7
+   "close": 34000.0,
+   "change_ratio": -3.82,
+   "rs_score": 52.6,
+   "vol_ratio": 76.2,
+   "from_high": -24.2
   }
  ]
 }
