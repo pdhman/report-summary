@@ -1,17 +1,17 @@
 {
- "date": "2026-09-29 19:48",
- "regime_icon": "⚪",
- "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing → / Recession → / Inflation → / Risk →",
+ "date": "2026-09-30 03:10",
+ "regime_icon": "🟠",
+ "regime_name": "Reflation (근사)",
+ "arrows": "Easing → / Recession → / Inflation ↑ / Risk →",
  "fomc": {
   "title": "Fed Decision in October?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.685,
-   "d24": 0.04
+   "prob": 0.56,
+   "d24": -0.125
   },
-  "mean": 17.218,
-  "mean_d24": 0.832,
+  "mean": 14.252,
+  "mean_d24": -2.966,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
@@ -20,18 +20,18 @@
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "25 bps increase · Will the Fed increase interest rates by 25 bps after the January 2027 meeting?",
-  "pmss": 79.0,
-  "band": "Tactical Signal",
-  "d24": 0.12,
-  "prob": 0.465
+  "q": "↓ $90 · Will WTI Crude Oil (WTI) hit (LOW) $90 in September?",
+  "pmss": 80.4,
+  "band": "Strong Signal",
+  "d24": 0.4945,
+  "prob": 0.9995
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 79.0
+  "top_pmss": 80.4
  },
- "alerts": 1,
- "n_markets": 414,
+ "alerts": 2,
+ "n_markets": 424,
  "source": "direct"
 }
