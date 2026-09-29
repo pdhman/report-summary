@@ -68,7 +68,7 @@ function _tgTheme(){
 # 새로고침한다. 내용이 그대로면 아무 일도 일어나지 않아 화면이 튀지 않는다.
 # 모바일은 백그라운드 타이머를 늦추므로 탭 복귀 시에도 즉시 확인한다.
 # 홈페이지(rapha-n-site) 의 iframe 안에서 열리면 하단 탭바·테마 버튼을 숨긴다(상위 사이트가 내비게이션 담당).
-_EMBED_HIDE_SCRIPT = '''<script id="embed-hide">(function(){if(window.self!==window.top){var s=document.createElement("style");s.textContent=".bottomnav,#theme-toggle{display:none!important}body{padding-bottom:0!important}";document.head.appendChild(s);}})();</script>'''
+_EMBED_HIDE_SCRIPT = '''<script id="embed-hide">(function(){var e=window.self!==window.top,q=null;try{q=new URLSearchParams(location.search).get("theme")}catch(x){}if(q==="dark"||q==="light"){document.documentElement.dataset.theme=q;if(e){try{localStorage.setItem("theme",q)}catch(x){}}}if(e){var s=document.createElement("style");s.textContent=".bottomnav,#theme-toggle{display:none!important}body{padding-bottom:0!important}";document.head.appendChild(s);}})();</script>'''
 
 _AUTOREFRESH_SCRIPT = """<script>
 (function(){

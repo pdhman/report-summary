@@ -566,5 +566,6 @@ if(window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEvent
 new MutationObserver(renderAll).observe(document.documentElement,
   {attributes:true,attributeFilter:['data-theme']});
 </script>
+<script id="embed-hide">(function(){var e=window.self!==window.top,q=null;try{q=new URLSearchParams(location.search).get("theme")}catch(x){}if(q==="dark"||q==="light"){document.documentElement.dataset.theme=q;if(e){try{localStorage.setItem("theme",q)}catch(x){}}}if(e){var s=document.createElement("style");s.textContent=".bottomnav,#theme-toggle{display:none!important}body{padding-bottom:0!important}";document.head.appendChild(s);}})();</script>
 </body>
 </html>
