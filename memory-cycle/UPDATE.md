@@ -15,7 +15,7 @@ PC가 꺼져 있어도 클라우드 세션(claude.ai/code, Claude 앱)에서 할
 | `as_of` | 기준일 | `YYYY-MM-DD`. 갱신한 날짜로 바꾼다 |
 | `rows[]` | 현재 결론 표 + 항목별 해설 카드 | `area`·`dots`·`label`·`direction`·`what`·`note[]`(보이는 핵심, 최대 3줄)·`more[]`(접히는 근거) |
 | `hbm_gap` | 수급 지표 탭 — HBM 수요·공급·Gap·공급/수요 비율 | |
-| `peak_warning.items[]` | HBM 정점 경고 5개 조건 | `met: true/false`, `now`. 충족 개수는 자동 집계 |
+| `peak_warning.items[]` | HBM 정점 경고 5개 조건 | `met: true/false`, `now`. 충족 개수는 자동 집계. 충족은 아니지만 첫 신호가 나온 조건은 `watch: true`(화면에 '경계', 개수에는 안 셈 — 예: 증권사 가정 변경만 있고 실제 계약가는 그대로일 때). 신호가 사라지면 `watch` 를 지운다 |
 | `lead_times.items[].history[]` | 리드타임 표 | `{date, weeks, source}` 한 줄 추가. 방향은 자동 판정 |
 | `updates[]` | 최근 반영한 신호 | **맨 위에** 추가. 화면에는 최근 6건, 나머지는 '지난 신호 전체 보기'로 접힘 |
 | `source` | 출처 줄 | 새 종류의 출처를 쓰면 이름 추가 |

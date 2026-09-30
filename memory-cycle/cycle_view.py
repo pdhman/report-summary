@@ -108,7 +108,10 @@ def render_cycle_view(cv):
     pw = cv.get("peak_warning") or {}
     items = pw.get("items", [])
     n_met = sum(1 for i in items if i.get("met"))
-    pw_lv = "r" if n_met >= 3 else ("y" if n_met == 2 else "g")
+    # watch = 충족은 아니지만 첫 신호가 나온 조건('경계'). 충족 개수에는 세지 않는다.
+    n_watch = sum(1 for i in items if i.get("watch") and not i.get("met"))
+    pw_lv = "r" if n_met >= 3 else ("y" if n_met == 2 else ("g/y" if n_watch else "g"))
+    watch_txt = f" <span class='mut' style='white-space:nowrap'>(경계 {n_watch})</span>" if n_watch else ""
     if g:
         gap_html = f"""
 <h3>HBM — 수요와 공급, 어느 쪽이 더 빨리 느는가</h3>
@@ -117,18 +120,22 @@ def render_cycle_view(cv):
   <div><span class="k">공급 증가</span><b>{esc(g['supply']['arrow'])}</b> {esc(g['supply']['text'])}</div>
   <div><span class="k">Gap</span><b>{esc(g['gap'])}</b></div>
   <div><span class="k">공급/수요 비율</span>{esc(g['coverage'])}</div>
-  <div><span class="k">Peak Warning</span><span class="dots">{_cv_dots(pw_lv)}</span><b style="white-space:nowrap">{n_met} / {len(items)}</b>
+  <div><span class="k">Peak Warning</span><span class="dots">{_cv_dots(pw_lv)}</span><b style="white-space:nowrap">{n_met} / {len(items)}</b>{watch_txt}
     <span class="mut">{esc(pw.get('rule', ''))}</span></div>
 </div>"""
     if items:
         met_y, met_n = "<b>✓ 충족</b>", "<span class='mut'>✕ 아님</span>"
+        met_w = f"<span class='dots'>{_cv_dots('y')}</span>경계"
         gap_html += ("<h3>HBM 정점(Peak) 경고 조건</h3>"
                      "<table class='cvpw'><tr><th>Peak 조건</th><th>현재</th><th>충족</th></tr>"
                      + "".join(
                          f"<tr><td>{'①②③④⑤⑥⑦⑧'[k]} {esc(i['cond'])}</td><td>{esc(i.get('now', ''))}</td>"
-                         f"<td>{met_y if i.get('met') else met_n}</td></tr>"
+                         f"<td>{met_y if i.get('met') else met_w if i.get('watch') else met_n}</td></tr>"
                          for k, i in enumerate(items))
                      + "</table>")
+        if n_watch:
+            gap_html += ("<p class='note'>'경계' = 아직 충족은 아니지만 첫 신호가 나온 조건. "
+                         "충족 개수에는 세지 않는다.</p>")
 
     # 리드타임(주문→납품 대기 기간) — 기록을 쌓아 '길어짐/짧아짐' 방향까지 본다.
     # 계약 가격보다 먼저 움직이므로 수급이 조이는지 풀리는지를 빨리 보여준다.
@@ -268,6 +275,8 @@ def validate(cv):
         need(it, "now", w)
         if not isinstance(it.get("met"), bool):
             errs.append(f"{w}: met 는 true/false")
+        if "watch" in it and not isinstance(it["watch"], bool):
+            errs.append(f"{w}: watch 는 true/false")
     lt = cv.get("lead_times") or {}
     if "note" in lt:
         text(lt["note"], "lead_times.note")
