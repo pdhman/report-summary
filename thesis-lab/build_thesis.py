@@ -11,7 +11,7 @@ thesis-lab 빌더 — "현상 → 원인 → 산업 확인 → 병목 → 증거
   3. 실적 전달(Earnings) : 분기 실적 → 마진 추이·증분마진·영업레버리지·EPS 추정치 변화
   4. 상대 비교(Winner)   : 업종 내 매출 순위·레버리지·가시성·밸류 → Core / Beta 분류
   5. 주가·수급(Price)    : 52주 고점 대비·MA200·외국인+기관 20일 순매수·거래량 비율
-  6. 촉매·스코어         : 다음 실적 발표 D-day, 15항목 30점 자동 채점
+  6. 촉매·스코어         : 다음 실적 발표 D-day, 15항목 × 0~5점 = 75점 자동 채점 (2026-09-30 부터; 이전 CSV 는 30점 척도 → ×2.5 환산)
 
 출력
   ../docs/thesis_data.js        (window.THESIS_DATA = {...})
@@ -224,10 +224,13 @@ def load_score_history(exclude_ymd: str) -> dict[str, list]:
             tot = pd.to_numeric(r.get("자동점수"), errors="coerce")
             if pd.isna(tot):
                 continue
+            # 척도: '척도' 열이 있으면 그 값(75), 없으면 옛 30점 척도 → ×2.5 로 75점 척도에 맞춘다
+            scale = pd.to_numeric(r.get("척도"), errors="coerce") if "척도" in d.columns else float("nan")
+            k = 1.0 if (not pd.isna(scale) and scale == 75) else 2.5
             items = None
             if has_items:
-                items = [None if pd.isna(r[c]) else int(r[c]) for c in item_cols]
-            hist.setdefault(str(r["코드"]).zfill(6), []).append((ymd, int(tot), items))
+                items = [None if pd.isna(r[c]) else round(float(r[c]) * k, 1) for c in item_cols]
+            hist.setdefault(str(r["코드"]).zfill(6), []).append((ymd, round(float(tot) * k, 1), items))
     S.log(f"점수 히스토리: {len(hist)}종목 · 스냅샷 {len({h[0] for v in hist.values() for h in v})}개")
     return hist
 
@@ -442,9 +445,9 @@ def build(top: int = 15, offline: bool = False) -> str:
         c["hist"] = [[ymd, t] for ymd, t, _ in h][-(HIST_KEEP - 1):] + [[today_ymd, tot]]
         if h:
             p_ymd, p_tot, p_items = h[-1]
-            c["prev_ymd"], c["score_prev"], c["score_chg"] = p_ymd, p_tot, tot - p_tot
+            c["prev_ymd"], c["score_prev"], c["score_chg"] = p_ymd, p_tot, round(tot - p_tot, 1)
             if p_items:
-                c["item_chg"] = [[i, (it[0] or 0) - (p_items[i] or 0)]
+                c["item_chg"] = [[i, round((it[0] or 0) - (p_items[i] or 0), 1)]
                                  for i, it in enumerate(c["score"]["items"])
                                  if (it[0] or 0) != (p_items[i] or 0)]
             # 첫 등장일(히스토리 시작)과 최고점
@@ -583,7 +586,7 @@ def build(top: int = 15, offline: bool = False) -> str:
         if not c["deep"]:
             continue
         rows.append({"코드": c["code"], "회사명": c["name"], "업종": c["ind"], "시가총액(억)": c["mcap"],
-                     "RS": c["rs"], "자동점수": c["score"]["total"], "전회점수": c.get("score_prev"),
+                     "RS": c["rs"], "자동점수": c["score"]["total"], "척도": 75, "전회점수": c.get("score_prev"),
                      "점수변화": c.get("score_chg"), "자료없음항목": c["score"]["na"],
                      "판정": c["score"]["grade"], "Core/Beta": c.get("cls"),
                      "EPS추정변화4주(%)": c["eps_rev4w"], "OPM_YoY(pp)": c.get("opm_yoy_pp"),

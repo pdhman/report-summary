@@ -82,7 +82,7 @@ def company_md(D, c) -> str:
     lv = " · ".join(f"L{l} {n}건" for l, n in sorted(g.get("ev_levels", {}).items(), key=lambda x: -int(x[0]))) or "-"
     L = []
     L.append(f"# {c['name']} ({c['code']}) 투자 논리 — 기준 {D['asof']}\n")
-    L.append(f"업종 {c.get('ind') or '-'} · {c.get('cls') or '-'} · 자동점수 **{sc['total']}/30** ({sc['grade']})"
+    L.append(f"업종 {c.get('ind') or '-'} · {c.get('cls') or '-'} · 자동점수 **{sc['total']}/75** ({sc['grade']})"
              + (f" · 자료없음 {sc['na']}항목" if sc.get("na") else "")
              + (f" · 전회({c['prev_ymd'][4:6]}/{c['prev_ymd'][6:]}) {c['score_prev']} → {c['score_chg']:+d}" if c.get("score_chg") is not None else " · 점수 히스토리 첫 기록"))
     if c.get("hist"):
@@ -150,7 +150,7 @@ def company_md(D, c) -> str:
         L.append(f"| {it['cat']} | {it['q']} | {r[1]} | {'-' if r[0] is None else r[0]} |")
     for m in D["manual_items"]:
         L.append(f"| {m['cat']} | {m['q']} | 수동 (0~{m.get('max', 2)}) | |")
-    L.append(f"| | **합계** | | **{sc['total']}/30** |")
+    L.append(f"| | **합계** | | **{sc['total']}/75** (자동 15항목 × 0~5) |")
     return "\n".join(L)
 
 

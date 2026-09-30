@@ -87,7 +87,7 @@ def main():
             idx = json.load(f)
     prev = idx.get(code, {})
     idx[code] = {"name": name, "ind": co.get("ind"), "date": today, "score": score, "cls": cls,
-                 "auto_score": co.get("score", {}).get("total"), "file": f"thesis/{code}.md",
+                 "auto_score": co.get("score", {}).get("total"), "auto_scale": co.get("score", {}).get("max", 75), "file": f"thesis/{code}.md",
                  "prev_score": prev.get("score") if prev.get("date") != today else prev.get("prev_score"),
                  "prev_date": prev.get("date") if prev.get("date") != today else prev.get("prev_date")}
     with open(INDEX, "w", encoding="utf-8") as f:
