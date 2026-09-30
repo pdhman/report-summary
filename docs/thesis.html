@@ -233,8 +233,8 @@
     <div class="kpis" id="cKpis"></div>
     <div class="grid2">
       <div>
-        <h3>체크리스트 — 자동 15항목 + 수동 4항목</h3>
-        <div class="meta">자동 15항목은 기본 점수가 채워져 있고, 드롭다운으로 바꾸면 조정치로 저장됩니다(자동값으로 되돌리면 해제). 자료가 없는 항목은 "-"(0점 처리). 수동 4항목과 조정치는 이 브라우저에만 저장됩니다.</div>
+        <h3>체크리스트 — 20항목 × 5점 = 100점 (자동 15 + 수동 4 + 기술적 분석)</h3>
+        <div class="meta">자동 15항목은 기본 점수(0/1/2)가 채워져 있고, 드롭다운으로 바꾸면 조정치로 저장됩니다(자동값으로 되돌리면 해제). 자료가 없는 항목은 "-"(0점 처리). 0/1/2 항목은 ×2.5, 기술적 분석은 0~5점 그대로 합산해 100점. 수동 입력과 조정치는 이 브라우저에만 저장됩니다.</div>
         <table class="chk" id="cChk"></table>
       </div>
       <div>
@@ -478,12 +478,17 @@ function showCompany(code, scroll) {
   const eff = sc.items.map((r, i) => ov(i) !== null ? ov(i) : (r[0] || 0));
   const nOv = sc.items.filter((r, i) => ov(i) !== null && ov(i) !== (r[0] || 0)).length;
   const adjTotal = eff.reduce((a, b) => a + b, 0);
-  const maxPts = 30 + manN * 2, finalPts = adjTotal + manTotal;
-  const finalGrade = gradeOf(Math.round(finalPts / maxPts * 30));          // 30점 척도로 환산해 같은 기준 적용
-  const final100 = Math.round(finalPts / maxPts * 100);                    // 자동+수동을 100점 만점으로
-  const finalGrade100 = gradeOf(Math.round(finalPts / maxPts * 30));       // 판정 기준은 30점 척도 그대로
+  // 100점 = 20항목 × 5점. 0/1/2 항목은 ×2.5, 기술적 분석(0~5)은 그대로.
+  const mval = m => (man[m.k] === undefined || man[m.k] === null || man[m.k] === '') ? 0 : +man[m.k];
+  const pts5 = (v, mx) => v * 5 / mx;
+  const auto100 = pts5(adjTotal, 2), man100 = D.manual_items.filter(m => (m.max || 2) === 2).reduce((s, m) => s + pts5(mval(m), 2), 0);
+  const techItem = D.manual_items.find(m => (m.max || 2) !== 2), tech100 = techItem ? pts5(mval(techItem), techItem.max) : 0;
+  const finalPts = auto100 + man100 + tech100, maxPts = 100;
+  const final100 = Math.round(finalPts);
+  const finalGrade100 = gradeOf(Math.round(finalPts / 100 * 30));         // 판정 기준은 30점 척도 비율
+  const f1 = v => Number.isInteger(v) ? String(v) : v.toFixed(1);
   $('#cScore').innerHTML = `${final100}<small> /100</small>`;
-  $('#cGrade').innerHTML = `자동 ${sc.total}${nOv ? ` → 조정 ${adjTotal}` : ''}/30${manN ? ` + 수동 ${manTotal}/${manN * 2} = ${finalPts}/${maxPts}` : ''} · <b>${finalGrade100}</b>${sc.na ? ` · 자료없음 ${sc.na}항목` : ''}`;
+  $('#cGrade').innerHTML = `자동 ${f1(auto100)}/75 (${sc.total}${nOv ? `→${adjTotal}` : ''}/30) · 수동 ${f1(man100)}/20 · 기술 ${f1(tech100)}/5 · <b>${finalGrade100}</b>${sc.na ? ` · 자료없음 ${sc.na}항목` : ''}`;
   $('#cKpis').innerHTML = [
     ['종합 RS', rsBadge(c.rs), `1M ${nz(c.r1,0)} · 3M ${nz(c.r3,0)} · 12M ${nz(c.r12,0)}`],
     ['52주 고점 대비', `<span class="${cls(c.off_high)}">${sg(c.off_high,1,'%')}</span>`, `MA200 ${sg(c.ma200,1,'%')}`],
@@ -503,9 +508,10 @@ function showCompany(code, scroll) {
     const changed = o !== null && o !== (p || 0);
     const sel = `<select class="ovSel ${pc}" data-i="${i}" title="자동 ${p === null ? '-' : p}점 · 바꾸면 조정치로 저장">${[0,1,2].map(v => `<option value="${v}" ${shown === v ? 'selected' : ''}>${v}</option>`).join('')}${p === null && o === null ? '<option value="" selected>-</option>' : ''}</select>`;
     h += `<tr class="${changed ? 'ovrow' : ''}"><td class="cat">${it.cat}</td><td><b>${esc(it.q)}</b><div class="why">${esc(it.how)}</div></td><td class="why">${esc(r[1])}</td><td class="p">${sel}${changed ? `<div class="sub" style="font-size:10.5px">자동 ${p === null ? '-' : p} → 조정</div>` : ''}${dh}</td></tr>`; });
-  D.manual_items.forEach(m => { const v = man[m.k] ?? '';
-    h += `<tr><td class="cat">${m.cat}</td><td><b>${esc(m.q)}</b><div class="why">수동 판단</div></td><td class="why">직접 판단 (0 나쁨 · 1 보통 · 2 좋음)</td><td class="p"><select data-k="${m.k}" class="manSel"><option value="">-</option><option value="0" ${v==='0'||v===0?'selected':''}>0</option><option value="1" ${v==='1'||v===1?'selected':''}>1</option><option value="2" ${v==='2'||v===2?'selected':''}>2</option></select></td></tr>`; });
-  h += `<tr><td></td><td><b>합계</b></td><td class="why">자동 ${sc.total}${nOv ? ` → 조정 ${adjTotal} (${nOv}항목 변경)` : ''}/30 · 수동 ${manTotal}/${manN * 2}${manN ? ` → ${finalPts}/${maxPts}` : ' (미입력)'} → <b>${final100}/100</b> (${finalGrade100})</td><td class="p">${final100}</td></tr></tbody>`;
+  D.manual_items.forEach(m => { const v = man[m.k]; const mx = m.max || 2; const has = v !== undefined && v !== null && v !== '';
+    const guide = mx === 2 ? '직접 판단 (0 나쁨 · 1 보통 · 2 좋음)' : '직접 판단 0~5 (추세·패턴·거래량·수급을 종합, 5 = 매우 좋음)';
+    h += `<tr><td class="cat">${m.cat}</td><td><b>${esc(m.q)}</b><div class="why">수동 판단 · ${mx}점 만점${mx === 2 ? ' (×2.5 환산)' : ''}</div></td><td class="why">${guide}</td><td class="p"><select data-k="${m.k}" class="manSel"><option value="" ${has ? '' : 'selected'}>-</option>${Array.from({length: mx + 1}, (_, k) => `<option value="${k}" ${has && +v === k ? 'selected' : ''}>${k}</option>`).join('')}</select></td></tr>`; });
+  h += `<tr><td></td><td><b>합계 (20항목 × 5점)</b></td><td class="why">자동 15항목 ${f1(auto100)}/75${nOv ? ` (${nOv}항목 조정)` : ''} · 수동 4항목 ${f1(man100)}/20${manN ? '' : ' (미입력)'} · 기술적 분석 ${f1(tech100)}/5 → <b>${final100}/100</b> (${finalGrade100})</td><td class="p">${final100}</td></tr></tbody>`;
   $('#cChk').innerHTML = h;
   $('#cChk').querySelectorAll('.manSel').forEach(s => s.onchange = () => { const m = LS(code); m[s.dataset.k] = s.value === '' ? undefined : +s.value; LSset(code, m); showCompany(code, false); });
   $('#cChk').querySelectorAll('.ovSel').forEach(s => s.onchange = () => { const m = LS(code); const i = +s.dataset.i; const auto = sc.items[i][0] || 0;
@@ -549,11 +555,12 @@ function copyMd() {
   let adj = 0;
   D.items.forEach((it, i) => { const r = c.score.items[i]; const o = man['o_' + i]; const has = o !== undefined && o !== null && o !== ''; const v = has ? +o : (r[0] || 0); adj += v;
     md += `| ${it.cat} | ${it.q} | ${r[1]}${has && +o !== (r[0] || 0) ? ` (자동 ${r[0] === null ? '-' : r[0]} → 조정)` : ''} | ${has ? +o : (r[0] === null ? '-' : r[0])} |\n`; });
-  D.manual_items.forEach(m => { md += `| ${m.cat} | ${m.q} | 수동 | ${man[m.k] ?? '-'} |\n`; });
-  const manTotal = D.manual_items.reduce((s,m) => s + (+man[m.k] || 0), 0);
-  const manN = D.manual_items.filter(m => man[m.k] !== undefined && man[m.k] !== null && man[m.k] !== '').length;
-  const maxPts = 30 + manN * 2, finalPts = adj + manTotal;
-  md += `| | **합계** | 자동 ${c.score.total}${adj !== c.score.total ? ` → 조정 ${adj}` : ''}/30 · 수동 ${manTotal}/${manN * 2} = ${finalPts}/${maxPts} | **${Math.round(finalPts / maxPts * 100)}/100** |\n`;
+  D.manual_items.forEach(m => { md += `| ${m.cat} | ${m.q} | 수동 (0~${m.max || 2}) | ${man[m.k] ?? '-'} |\n`; });
+  const mv = m => (man[m.k] === undefined || man[m.k] === null || man[m.k] === '') ? 0 : +man[m.k];
+  const a100 = adj * 2.5, m100 = D.manual_items.filter(m => (m.max || 2) === 2).reduce((s, m) => s + mv(m) * 2.5, 0);
+  const tItem = D.manual_items.find(m => (m.max || 2) !== 2), t100 = tItem ? mv(tItem) * 5 / tItem.max : 0;
+  const tot100 = Math.round(a100 + m100 + t100);
+  md += `| | **합계 (20항목 × 5점)** | 자동 ${a100}/75 (${c.score.total}${adj !== c.score.total ? `→${adj}` : ''}/30) · 수동 ${m100}/20 · 기술 ${t100}/5 | **${tot100}/100** (${gradeOf(Math.round(tot100 / 100 * 30))}) |\n`;
   navigator.clipboard.writeText(md).then(() => { $('#copyMsg').textContent = '복사됨'; setTimeout(() => $('#copyMsg').textContent = '', 1500); })
     .catch(() => { $('#copyMsg').textContent = '복사 실패 — 브라우저 권한 확인'; });
 }

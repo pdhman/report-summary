@@ -568,7 +568,7 @@ def build(top: int = 15, offline: bool = False) -> str:
         "prior_asof": f"{pri_ymd[:4]}-{pri_ymd[4:6]}-{pri_ymd[6:]}" if pri_ymd else None,
         "generated": dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
         "items": [{"k": k, "cat": cat, "q": q, "how": how} for k, cat, q, how in ITEMS],
-        "manual_items": [{"k": k, "cat": cat, "q": q} for k, cat, q in MANUAL_ITEMS],
+        "manual_items": [{"k": k, "cat": cat, "q": q, "max": mx} for k, cat, q, mx in MANUAL_ITEMS],
         "groups": groups,
         "companies": companies,
     }

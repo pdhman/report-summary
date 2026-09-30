@@ -149,7 +149,7 @@ def company_md(D, c) -> str:
     for it, r in zip(D["items"], sc["items"]):
         L.append(f"| {it['cat']} | {it['q']} | {r[1]} | {'-' if r[0] is None else r[0]} |")
     for m in D["manual_items"]:
-        L.append(f"| {m['cat']} | {m['q']} | 수동 | |")
+        L.append(f"| {m['cat']} | {m['q']} | 수동 (0~{m.get('max', 2)}) | |")
     L.append(f"| | **합계** | | **{sc['total']}/30** |")
     return "\n".join(L)
 
