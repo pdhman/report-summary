@@ -472,10 +472,11 @@ function showCompany(code, scroll) {
   const manN = D.manual_items.filter(m => man[m.k] !== undefined && man[m.k] !== null && man[m.k] !== '').length;   // 답한 수동 항목 수
   const maxPts = 30 + manN * 2, finalPts = sc.total + manTotal;
   const finalGrade = gradeOf(Math.round(finalPts / maxPts * 30));          // 30점 척도로 환산해 같은 기준 적용
-  $('#cScore').innerHTML = manN
-    ? `${finalPts}<small> /${maxPts}</small><br><small>자동 ${sc.total}/30 + 수동 ${manTotal}/${manN * 2}</small>`
-    : `${sc.total}<small> /30 자동</small>`;
-  $('#cGrade').innerHTML = `${manN ? `${finalGrade} <span style="opacity:.7">(자동만 ${sc.grade})</span>` : sc.grade}${sc.na ? ` · 자료없음 ${sc.na}항목` : ''}<br>${c.score_chg == null ? '점수 히스토리 첫 기록' : `전회(${fmtD(c.prev_ymd)}) ${c.score_prev} → <b class="${cls(c.score_chg)}">${chgTxt(c.score_chg)}</b>`}${c.hist_max != null && c.hist_max > sc.total ? ` · 최고 ${c.hist_max}` : ''}`;
+  const final30 = manN ? Math.round(finalPts / maxPts * 30) : sc.total;   // 수동 포함 시 30점 척도로 환산
+  $('#cScore').innerHTML = `${final30}<small> /30</small>`;
+  $('#cGrade').innerHTML = manN
+    ? `자동 ${sc.total} + 수동 ${manTotal} = ${finalPts}/${maxPts} → 30점 환산 · <b>${finalGrade}</b>${sc.na ? ` · 자료없음 ${sc.na}항목` : ''}`
+    : `자동 ${sc.total}/30 · <b>${sc.grade}</b>${sc.na ? ` · 자료없음 ${sc.na}항목` : ''}`;
   $('#cKpis').innerHTML = [
     ['종합 RS', rsBadge(c.rs), `1M ${nz(c.r1,0)} · 3M ${nz(c.r3,0)} · 12M ${nz(c.r12,0)}`],
     ['52주 고점 대비', `<span class="${cls(c.off_high)}">${sg(c.off_high,1,'%')}</span>`, `MA200 ${sg(c.ma200,1,'%')}`],
@@ -495,7 +496,7 @@ function showCompany(code, scroll) {
     h += `<tr><td class="cat">${it.cat}</td><td><b>${esc(it.q)}</b><div class="why">${esc(it.how)}</div></td><td class="why">${esc(r[1])}</td><td class="p ${pc}">${p === null ? '-' : p}${dh}</td></tr>`; });
   D.manual_items.forEach(m => { const v = man[m.k] ?? '';
     h += `<tr><td class="cat">${m.cat}</td><td><b>${esc(m.q)}</b><div class="why">수동 판단</div></td><td class="why">직접 판단 (0 나쁨 · 1 보통 · 2 좋음)</td><td class="p"><select data-k="${m.k}" class="manSel"><option value="">-</option><option value="0" ${v==='0'||v===0?'selected':''}>0</option><option value="1" ${v==='1'||v===1?'selected':''}>1</option><option value="2" ${v==='2'||v===2?'selected':''}>2</option></select></td></tr>`; });
-  h += `<tr><td></td><td><b>합계</b></td><td class="why">자동 ${sc.total}/30 (${sc.grade}) · 수동 ${manTotal}/${manN * 2}${manN ? ` → 최종 ${finalPts}/${maxPts} (${finalGrade})` : ' (미입력)'}</td><td class="p">${finalPts}</td></tr></tbody>`;
+  h += `<tr><td></td><td><b>합계</b></td><td class="why">자동 ${sc.total}/30 (${sc.grade}) · 수동 ${manTotal}/${manN * 2}${manN ? ` → ${finalPts}/${maxPts} = 30점 환산 ${final30} (${finalGrade})` : ' (미입력)'}</td><td class="p">${final30}</td></tr></tbody>`;
   $('#cChk').innerHTML = h;
   $('#cChk').querySelectorAll('.manSel').forEach(s => s.onchange = () => { const m = LS(code); m[s.dataset.k] = s.value === '' ? undefined : +s.value; LSset(code, m); showCompany(code, false); });
   // quarterly
