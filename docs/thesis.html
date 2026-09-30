@@ -170,7 +170,7 @@
         <span class="chip on" data-v="업종">🏭 업종</span>
         <span class="chip" data-v="테마">🏷️ 테마</span>
       </span>
-      <label class="meta" style="margin:0"><input type="checkbox" id="deepOnly" checked> 심화 분석 그룹만</label>
+      <label class="meta" style="margin:0"><input type="checkbox" id="deepOnly" checked> 주도 섹터 그룹만</label>
     </div>
   </div>
 
@@ -182,7 +182,7 @@
 
   <!-- ① 관찰: 주도 그룹 -->
   <div class="card" id="secGroups">
-    <h2>① 무슨 일이 벌어지고 있는가 — 주도 그룹 <span class="cnt" id="cntGroups"></span><button class="fold" data-sec="secGroups" onclick="toggleFold(this)">접기 ▲</button></h2>
+    <h2>주도 그룹 <span class="cnt" id="cntGroups"></span><button class="fold" data-sec="secGroups" onclick="toggleFold(this)">접기 ▲</button></h2>
     <div class="meta">종합 RS(1M 20%·3M 40%·6M 20%·12M 20%) 순. 확산 = 그룹 내 RS≥70 종목 비중, 4주Δ = 4주 전 스냅샷 대비 그룹 평균 RS 변화.
       EPS↑ = 커버리지 종목 중 4주간 EPS(E) 상향 비중, OPM↑ = 최근 분기 영업이익률이 전년동기보다 높은 종목 비중. 행을 누르면 재료·기업 비교로 내려갑니다.</div>
     <div class="tblwrap"><table id="tblGroups"></table></div>
