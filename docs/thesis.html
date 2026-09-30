@@ -115,6 +115,10 @@
   .tpl .q { font-weight: 700; font-size: 13px; margin: 12px 0 4px; }
   .tpl .auto { font-size: 12.5px; color: var(--ink-2); background: var(--soft); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; line-height: 1.5; white-space: pre-wrap; }
   .hidden { display: none !important; }
+  .fold { margin-left: auto; font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--grid); background: var(--surface); color: var(--muted); cursor: pointer; }
+  .fold:hover { border-color: var(--accent); color: var(--accent); }
+  .card.folded > *:not(h2) { display: none !important; }
+  .card.folded > h2 { margin-bottom: 0; }
   details > summary { cursor: pointer; list-style: none; margin-top: 14px; }
   details > summary::-webkit-details-marker { display: none; }
   details > summary::before { content: '▶'; font-size: 11px; color: var(--muted); margin-right: 6px; display: inline-block; transition: transform .15s; }
@@ -171,14 +175,14 @@
   </div>
 
   <div class="card hidden" id="secDeepList">
-    <h2>📝 심층 투자 논리 리포트 <span class="cnt" id="deepListCnt"></span></h2>
+    <h2>📝 심층 투자 논리 리포트 <span class="cnt" id="deepListCnt"></span><button class="fold" data-sec="secDeepList" onclick="toggleFold(this)">접기 ▲</button></h2>
     <div class="meta">Claude Code 에서 <code>/thesis 종목명</code> 으로 생성한 15단계 리포트(웹 검색 증거 포함). 종목을 누르면 상세에서 본문을 보여줍니다.</div>
     <div class="tblwrap"><table id="tblDeep"></table></div>
   </div>
 
   <!-- ① 관찰: 주도 그룹 -->
   <div class="card" id="secGroups">
-    <h2>① 무슨 일이 벌어지고 있는가 — 주도 그룹 <span class="cnt" id="cntGroups"></span></h2>
+    <h2>① 무슨 일이 벌어지고 있는가 — 주도 그룹 <span class="cnt" id="cntGroups"></span><button class="fold" data-sec="secGroups" onclick="toggleFold(this)">접기 ▲</button></h2>
     <div class="meta">종합 RS(1M 20%·3M 40%·6M 20%·12M 20%) 순. 확산 = 그룹 내 RS≥70 종목 비중, 4주Δ = 4주 전 스냅샷 대비 그룹 평균 RS 변화.
       EPS↑ = 커버리지 종목 중 4주간 EPS(E) 상향 비중, OPM↑ = 최근 분기 영업이익률이 전년동기보다 높은 종목 비중. 행을 누르면 재료·기업 비교로 내려갑니다.</div>
     <div class="tblwrap"><table id="tblGroups"></table></div>
@@ -186,7 +190,7 @@
 
   <!-- ② 그룹 상세 -->
   <div class="card hidden" id="secGroup">
-    <h2>② 왜 오르는가 — <span id="gTitle"></span> <span class="cnt" id="gSub"></span></h2>
+    <h2>② 왜 오르는가 — <span id="gTitle"></span> <span class="cnt" id="gSub"></span><button class="fold" data-sec="secGroup" onclick="toggleFold(this)">접기 ▲</button></h2>
     <div class="kpis" id="gKpis"></div>
     <h3>인과 사슬 초안 (Earnings Transmission Chain)</h3>
     <ol class="chain" id="gChain"></ol>
@@ -311,6 +315,16 @@ function makeTable(tbl, cols, rows, key, onRow, selId) {
   tbl.querySelectorAll('th').forEach(th => th.onclick = () => { const i = +th.dataset.i; if (st.col === i) st.asc = !st.asc; else { st.col = i; st.asc = false; } makeTable(tbl, cols, rows, key, onRow, selId); });
   tbl.querySelectorAll('tbody tr').forEach(tr => tr.onclick = () => onRow(tr.dataset.id));
 }
+
+// ---------------- 카드 접기/펼치기 (상태는 브라우저에 저장)
+function setFold(sec, folded) {
+  const card = $('#' + sec); if (!card) return;
+  card.classList.toggle('folded', folded);
+  const b = card.querySelector('.fold'); if (b) b.textContent = folded ? '펼치기 ▼' : '접기 ▲';
+  try { localStorage.setItem('thesis:fold:' + sec, folded ? '1' : '0'); } catch(e) {}
+}
+function toggleFold(btn) { const sec = btn.dataset.sec; setFold(sec, !$('#' + sec).classList.contains('folded')); }
+(function(){ ['secDeepList','secGroups','secGroup'].forEach(sec => { try { if (localStorage.getItem('thesis:fold:' + sec) === '1') setFold(sec, true); } catch(e) {} }); })();
 
 // ---------------- ① groups
 function renderGroups() {
