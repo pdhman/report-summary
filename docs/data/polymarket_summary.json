@@ -1,5 +1,5 @@
 {
- "date": "2026-09-30 08:49",
+ "date": "2026-09-30 14:45",
  "regime_icon": "🟢",
  "regime_name": "Goldilocks (근사)",
  "arrows": "Easing ↑ / Recession → / Inflation → / Risk →",
@@ -8,10 +8,10 @@
   "top": {
    "label": "No change",
    "prob": 0.555,
-   "d24": 0.25
+   "d24": 0.24
   },
   "mean": 10.924,
-  "mean_d24": -6.359,
+  "mean_d24": -6.156,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
@@ -20,18 +20,18 @@
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "No change · Will there be no change in Fed interest rates after the October 2026 meeting?",
-  "pmss": 62.9,
+  "q": "25 bps increase · Will the Fed increase interest rates by 25 bps after the October 2026 meeting?",
+  "pmss": 65.0,
   "band": "Interest",
-  "d24": 0.25,
-  "prob": 0.555
+  "d24": -0.25,
+  "prob": 0.435
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.6,
-  "top_pmss": 62.9
+  "top_pmss": 65.0
  },
  "alerts": 3,
- "n_markets": 467,
+ "n_markets": 411,
  "source": "direct"
 }
