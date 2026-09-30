@@ -213,7 +213,7 @@
       </div>
     </div>
     <h3>③ 누가 가장 많이 버는가 — 그룹 내 기업 비교 <span class="cnt" id="gMemCnt"></span></h3>
-    <div class="meta">자동점수 = 15항목×2점(30점), 아래 작은 숫자는 전회 실행 대비 변화(업종 기준). 점수 추이는 실행일별 기록(0~30 고정 축). Core = 규모·가시성 우위, Beta = 변동성·영업레버리지 우위(업종 피어 대비). 열 머리글로 정렬, 행을 누르면 종목 논리 템플릿으로.</div>
+    <div class="meta">점수 = 100점 만점(자동 15항목 75 + 수동 4항목 20 + 기술적 분석 5). 수동·조정 입력이 없는 종목은 자동 부분만 들어가 최대 75점입니다. Δ전회·추이는 자동 30점 기준 실행일별 기록. Core = 규모·가시성 우위, Beta = 변동성·영업레버리지 우위(업종 피어 대비). 열 머리글로 정렬, 행을 누르면 종목 상세로.</div>
     <div class="tblwrap"><table id="tblMem"></table></div>
   </div>
 
@@ -277,6 +277,22 @@ const cls = v => (v === null || v === undefined) ? '' : v > 0 ? 'pos' : v < 0 ? 
 const fmtInt = v => (v === null || v === undefined) ? '-' : Math.round(v).toLocaleString();
 const rsBadge = v => v === null || v === undefined ? '<span class="badge b-mid">-</span>' : `<span class="badge ${v>=80?'b-hi':v>=50?'b-mid':'b-lo'}">${v.toFixed(0)}</span>`;
 const scBadge = v => `<span class="badge ${v>=21?'b-hi':v>=17?'b-mid':'b-lo'}">${v}</span>`;
+const sc100Badge = v => `<span class="badge ${v>=70?'b-hi':v>=57?'b-mid':'b-lo'}">${v}</span>`;
+// 100점 계산 (20항목 × 5점): 자동 15항목(조정치 우선) ×2.5 + 수동 4항목 ×2.5 + 기술적 분석 0~5. 브라우저 저장값(LS) 반영.
+function calc100(c, man, autoTotalOverride) {
+  const sc = c.score; man = man || {};
+  const ov = i => { const v = man['o_' + i]; return (v === undefined || v === null || v === '') ? null : +v; };
+  const eff = sc.items.map((r, i) => ov(i) !== null ? ov(i) : (r[0] || 0));
+  const nOv = sc.items.filter((r, i) => ov(i) !== null && ov(i) !== (r[0] || 0)).length;
+  const adjTotal = autoTotalOverride != null ? autoTotalOverride : eff.reduce((a, b) => a + b, 0);
+  const mval = m => (man[m.k] === undefined || man[m.k] === null || man[m.k] === '') ? 0 : +man[m.k];
+  const manN = D.manual_items.filter(m => man[m.k] !== undefined && man[m.k] !== null && man[m.k] !== '').length;
+  const auto100 = adjTotal * 2.5;
+  const man100 = D.manual_items.filter(m => (m.max || 2) === 2).reduce((s, m) => s + mval(m) * 2.5, 0);
+  const techItem = D.manual_items.find(m => (m.max || 2) !== 2), tech100 = techItem ? mval(techItem) * 5 / techItem.max : 0;
+  const finalPts = auto100 + man100 + tech100;
+  return {adjTotal, nOv, manN, auto100, man100, tech100, finalPts, final100: Math.round(finalPts), grade: gradeOf(Math.round(finalPts / 100 * 30))};
+}
 const tagCls = c => c === 'Core' ? 't-core' : c === 'Beta' ? 't-beta' : 't-mixed';
 const chgTxt = v => (v === null || v === undefined) ? '' : v === 0 ? '±0' : (v > 0 ? '+' : '') + v;
 const chgHtml = (v, unit='') => (v === null || v === undefined) ? '<span class="sub">첫 기록</span>' : `<span class="sub ${cls(v)}">${chgTxt(v)}${unit} 전회</span>`;
@@ -382,12 +398,14 @@ function showGroup(id) {
   $('#gAliases').textContent = g.aliases ? `검색 키워드: ${g.aliases.join(', ')}` : '';
   $('#gNar').innerHTML = nar.map(n => `<div class="ev"><div class="s">${esc(n.text)}</div><div class="m">${n.date} · ${esc(n.src)}</div></div>`).join('') || '<div class="meta">최근 14일 언급 없음</div>';
   // members
-  const mem = (g.members || []).map(m => ({...C[m.code], __id: m.code, gtotal: m.total})).filter(r => r.code);
-  $('#gMemCnt').textContent = `${mem.length}종목 (시총 상위 40 이내)`;
+  // 테마 그룹은 테마 맥락 자동점수(m.total)를 자동 15항목 합계로 쓰고, 조정·수동은 브라우저 저장값을 얹는다
+  const mem = (g.members || []).map(m => { const c = C[m.code]; if (!c) return null; const man = LS(m.code); const k = calc100(c, man, (man && Object.keys(man).some(x => x.startsWith('o_'))) ? null : m.total); return {...c, __id: m.code, gtotal: m.total, k100: k}; }).filter(Boolean);
+  $('#gMemCnt').textContent = `${mem.length}종목 (시총 상위 40 이내) · 100점 = 자동 75 + 수동 20 + 기술 5, 이 브라우저의 수동·조정 입력 반영`;
   const cols = [
     {h:'종목', l:true, v:r=>r.name, f:r=>`<b>${esc(r.name)}</b> <span class="code">${r.code}</span><span class="sub">${esc(r.ind||'')} · 매출 ${r.rev_rank??'-'}위</span>`},
-    {h:'점수', v:r=>r.gtotal, f:r=>`${scBadge(r.gtotal)}${chgHtml(r.score_chg)}`},
-    {h:'점수 추이', v:r=>(r.hist||[]).length, f:r=>spark((r.hist||[]).map(h=>h[1]), 0, 30)},
+    {h:'점수 /100', v:r=>r.k100.final100, f:r=>`${sc100Badge(r.k100.final100)}<span class="sub">자동 ${r.gtotal}/30${r.k100.nOv ? '→' + r.k100.adjTotal : ''}${r.k100.manN ? ` · 수동 ${r.k100.man100 + r.k100.tech100}` : ''}</span>`},
+    {h:'Δ전회(자동)', v:r=>r.score_chg, f:r=>chgHtml(r.score_chg)},
+    {h:'점수 추이(자동)', v:r=>(r.hist||[]).length, f:r=>spark((r.hist||[]).map(h=>h[1]), 0, 30)},
     {h:'구분', v:r=>r.cls||'', f:r=>r.cls ? `<span class="tag ${tagCls(r.cls)}">${r.cls}</span>` : '-'},
     {h:'시총(억)', v:r=>r.mcap, f:r=>fmtInt(r.mcap)},
     {h:'RS', v:r=>r.rs, f:r=>rsBadge(r.rs)},
@@ -475,17 +493,8 @@ function showCompany(code, scroll) {
   const manN = D.manual_items.filter(m => man[m.k] !== undefined && man[m.k] !== null && man[m.k] !== '').length;   // 답한 수동 항목 수
   // 자동 15항목은 기본 점수를 주되, 사용자가 드롭다운으로 바꾸면(조정) 그 값을 쓴다 (브라우저 저장 키 o_<번호>)
   const ov = i => { const v = man['o_' + i]; return (v === undefined || v === null || v === '') ? null : +v; };
-  const eff = sc.items.map((r, i) => ov(i) !== null ? ov(i) : (r[0] || 0));
-  const nOv = sc.items.filter((r, i) => ov(i) !== null && ov(i) !== (r[0] || 0)).length;
-  const adjTotal = eff.reduce((a, b) => a + b, 0);
-  // 100점 = 20항목 × 5점. 0/1/2 항목은 ×2.5, 기술적 분석(0~5)은 그대로.
-  const mval = m => (man[m.k] === undefined || man[m.k] === null || man[m.k] === '') ? 0 : +man[m.k];
-  const pts5 = (v, mx) => v * 5 / mx;
-  const auto100 = pts5(adjTotal, 2), man100 = D.manual_items.filter(m => (m.max || 2) === 2).reduce((s, m) => s + pts5(mval(m), 2), 0);
-  const techItem = D.manual_items.find(m => (m.max || 2) !== 2), tech100 = techItem ? pts5(mval(techItem), techItem.max) : 0;
-  const finalPts = auto100 + man100 + tech100, maxPts = 100;
-  const final100 = Math.round(finalPts);
-  const finalGrade100 = gradeOf(Math.round(finalPts / 100 * 30));         // 판정 기준은 30점 척도 비율
+  const K = calc100(c, man);
+  const {adjTotal, nOv, auto100, man100, tech100, finalPts, final100} = K; const finalGrade100 = K.grade;
   const f1 = v => Number.isInteger(v) ? String(v) : v.toFixed(1);
   $('#cScore').innerHTML = `${final100}<small> /100</small>`;
   $('#cGrade').innerHTML = `자동 ${f1(auto100)}/75 (${sc.total}${nOv ? `→${adjTotal}` : ''}/30) · 수동 ${f1(man100)}/20 · 기술 ${f1(tech100)}/5 · <b>${finalGrade100}</b>${sc.na ? ` · 자료없음 ${sc.na}항목` : ''}`;
@@ -513,10 +522,10 @@ function showCompany(code, scroll) {
     h += `<tr><td class="cat">${m.cat}</td><td><b>${esc(m.q)}</b><div class="why">수동 판단 · ${mx}점 만점${mx === 2 ? ' (×2.5 환산)' : ''}</div></td><td class="why">${guide}</td><td class="p"><select data-k="${m.k}" class="manSel"><option value="" ${has ? '' : 'selected'}>-</option>${Array.from({length: mx + 1}, (_, k) => `<option value="${k}" ${has && +v === k ? 'selected' : ''}>${k}</option>`).join('')}</select></td></tr>`; });
   h += `<tr><td></td><td><b>합계 (20항목 × 5점)</b></td><td class="why">자동 15항목 ${f1(auto100)}/75${nOv ? ` (${nOv}항목 조정)` : ''} · 수동 4항목 ${f1(man100)}/20${manN ? '' : ' (미입력)'} · 기술적 분석 ${f1(tech100)}/5 → <b>${final100}/100</b> (${finalGrade100})</td><td class="p">${final100}</td></tr></tbody>`;
   $('#cChk').innerHTML = h;
-  $('#cChk').querySelectorAll('.manSel').forEach(s => s.onchange = () => { const m = LS(code); m[s.dataset.k] = s.value === '' ? undefined : +s.value; LSset(code, m); showCompany(code, false); });
+  $('#cChk').querySelectorAll('.manSel').forEach(s => s.onchange = () => { const m = LS(code); m[s.dataset.k] = s.value === '' ? undefined : +s.value; LSset(code, m); showCompany(code, false); refreshMemRow(code); });
   $('#cChk').querySelectorAll('.ovSel').forEach(s => s.onchange = () => { const m = LS(code); const i = +s.dataset.i; const auto = sc.items[i][0] || 0;
     if (s.value === '' || +s.value === auto) delete m['o_' + i]; else m['o_' + i] = +s.value;   // 자동값과 같으면 조정 해제
-    LSset(code, m); showCompany(code, false); });
+    LSset(code, m); showCompany(code, false); refreshMemRow(code); });
   // quarterly
   if (c.q_periods && c.q_periods.length) {
     const per = c.q_periods; let qh = '<thead><tr><th class="l">분기</th>' + per.map(p => `<th>${p}</th>`).join('') + `<th>${c.next_q ? c.next_q + '(E)' : ''}</th></tr></thead><tbody>`;
@@ -546,6 +555,7 @@ function spark(vals, fixMin, fixMax, w = 70, hgt = 20) {
   const last = v[v.length-1], lx = (w-2).toFixed(1), ly = (hgt - 2 - (last-mn)/rng*(hgt-4)).toFixed(1);
   return `<svg class="spark" width="${w}" height="${hgt}" viewBox="0 0 ${w} ${hgt}"><polyline fill="none" stroke="var(--accent)" stroke-width="1.6" points="${pts}"/><circle cx="${lx}" cy="${ly}" r="2" fill="var(--accent)"/></svg>`;
 }
+function refreshMemRow(code) { if (curG && $('#tblMem').querySelector(`tr[data-id="${code}"]`)) { const keep = curC; showGroup(curG.kind + '|' + curG.name); curC = keep; const tr = $('#tblMem').querySelector(`tr[data-id="${code}"]`); if (tr) tr.classList.add('sel'); } }
 function resetManual() { if (!curC) return; try { localStorage.removeItem('thesis:' + curC); } catch(e) {} showCompany(curC, false); }
 function copyMd() {
   const c = C[curC]; if (!c) return; const g = G.find(x => x.kind === '업종' && x.name === c.ind) || {}; const at = autoText(c, g); const man = LS(curC);
