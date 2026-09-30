@@ -118,6 +118,8 @@
   .tpl .q { font-weight: 700; font-size: 13px; margin: 12px 0 4px; }
   .tpl .auto { font-size: 12.5px; color: var(--ink-2); background: var(--soft); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; line-height: 1.5; white-space: pre-wrap; }
   .hidden { display: none !important; }
+  .scrollbox { max-height: 480px; overflow: auto; padding-right: 6px; }
+  .memwrap { max-height: 560px; overflow: auto; }
   .fold { margin-left: auto; font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--grid); background: var(--surface); color: var(--muted); cursor: pointer; }
   .fold:hover { border-color: var(--accent); color: var(--accent); }
   .card.folded > *:not(h2) { display: none !important; }
@@ -197,24 +199,25 @@
     <div class="kpis" id="gKpis"></div>
     <h3>인과 사슬 초안 (Earnings Transmission Chain)</h3>
     <ol class="chain" id="gChain"></ol>
+    <h3>③ 누가 가장 많이 버는가 — 그룹 내 기업 비교 <span class="cnt" id="gMemCnt"></span></h3>
+    <div class="meta">점수 = 100점 만점(자동 15항목 75 + 수동 4항목 20 + 기술적 분석 5). 수동·조정 입력이 없는 종목은 자동 부분만 들어가 최대 75점입니다. Δ전회·추이는 자동 30점 기준 실행일별 기록. Core = 규모·가시성 우위, Beta = 변동성·영업레버리지 우위(업종 피어 대비). 열 머리글로 정렬, 행을 누르면 종목 상세로.</div>
+    <div class="tblwrap memwrap"><table id="tblMem"></table></div>
+    <h3>④ 재료·증거 <span class="cnt">— 리포트·공시·뉴스·매크로 언급 (각 목록은 안에서 스크롤)</span></h3>
     <div class="grid2">
       <div>
         <h3>증거 사다리 — 증권사 리포트 30일 + DART 수주·공급계약 공시 60일 <span class="cnt" id="gEvCnt"></span></h3>
         <div class="meta">L5 데이터(DART 단일판매ㆍ공급계약 공시 = 실제 주문, 리포트의 수주·판가·출하·증설) › L4 고객사 › L3 산업·경쟁사 › L2 애널리스트 › L1 회사 주장. 리포트 태깅은 키워드 규칙이라 참고용, DART 공시는 원문 링크로 열립니다. 여러 계층에서 같은 이야기가 나올 때가 가장 강한 아이디어입니다.</div>
         <div class="chips" id="lvChips" style="margin-bottom:6px"></div>
-        <div id="gEv"></div>
+        <div id="gEv" class="scrollbox"></div>
       </div>
       <div>
         <h3>뉴스 헤드라인 7일 <span class="cnt" id="gNewsCnt"></span></h3>
-        <div id="gNews"></div>
+        <div id="gNews" class="scrollbox"></div>
         <h3>매크로·주도섹터 텍스트 언급 14일 <span class="cnt" id="gNarCnt"></span></h3>
         <div class="meta" id="gAliases"></div>
-        <div id="gNar"></div>
+        <div id="gNar" class="scrollbox" style="max-height:260px"></div>
       </div>
     </div>
-    <h3>③ 누가 가장 많이 버는가 — 그룹 내 기업 비교 <span class="cnt" id="gMemCnt"></span></h3>
-    <div class="meta">점수 = 100점 만점(자동 15항목 75 + 수동 4항목 20 + 기술적 분석 5). 수동·조정 입력이 없는 종목은 자동 부분만 들어가 최대 75점입니다. Δ전회·추이는 자동 30점 기준 실행일별 기록. Core = 규모·가시성 우위, Beta = 변동성·영업레버리지 우위(업종 피어 대비). 열 머리글로 정렬, 행을 누르면 종목 상세로.</div>
-    <div class="tblwrap"><table id="tblMem"></table></div>
   </div>
 
   <!-- ③ 종목 상세 -->
