@@ -112,6 +112,9 @@
   .chk .cat { color: var(--muted); font-size: 11px; width: 42px; }
   .chk .why { color: var(--muted); font-size: 12px; }
   .p2 { color: var(--pos); } .p1 { color: var(--warn); } .p0 { color: var(--neg); } .pna { color: var(--muted); }
+  .chk select { font-weight: 800; font-family: Consolas, monospace; padding: 3px 6px; }
+  .chk select.p2 { color: var(--pos); } .chk select.p1 { color: var(--warn); } .chk select.p0 { color: var(--neg); }
+  .chk tr.ovrow td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
   .tpl .q { font-weight: 700; font-size: 13px; margin: 12px 0 4px; }
   .tpl .auto { font-size: 12.5px; color: var(--ink-2); background: var(--soft); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; line-height: 1.5; white-space: pre-wrap; }
   .hidden { display: none !important; }
@@ -231,7 +234,7 @@
     <div class="grid2">
       <div>
         <h3>체크리스트 — 자동 15항목 + 수동 4항목</h3>
-        <div class="meta">자료가 없는 항목은 "-"(0점 처리). 수동 항목은 직접 선택하면 브라우저에 저장됩니다.</div>
+        <div class="meta">자동 15항목은 기본 점수가 채워져 있고, 드롭다운으로 바꾸면 조정치로 저장됩니다(자동값으로 되돌리면 해제). 자료가 없는 항목은 "-"(0점 처리). 수동 4항목과 조정치는 이 브라우저에만 저장됩니다.</div>
         <table class="chk" id="cChk"></table>
       </div>
       <div>
@@ -253,7 +256,7 @@
       <summary><h3 style="display:inline">한 장짜리 투자 논리 템플릿 + 내 메모</h3> <span class="cnt" id="cTplHint">— 자동 채움(회색) + 내 메모(입력창, 브라우저에 자동 저장)</span></summary>
       <div class="row" style="margin:8px 0 6px">
         <button class="btn pri" onclick="copyMd()">📋 마크다운 복사</button>
-        <button class="btn" onclick="resetManual()">↺ 이 종목 메모 초기화</button>
+        <button class="btn" onclick="resetManual()">↺ 이 종목 메모·조정·수동점수 초기화</button>
         <span class="meta" id="copyMsg" style="margin:0"></span>
       </div>
       <div class="tpl" id="cTpl"></div>
@@ -470,12 +473,17 @@ function showCompany(code, scroll) {
   const man = LS(code); const manTotal = D.manual_items.reduce((s,m) => s + (+man[m.k] || 0), 0);
   const sc = c.score;
   const manN = D.manual_items.filter(m => man[m.k] !== undefined && man[m.k] !== null && man[m.k] !== '').length;   // 답한 수동 항목 수
-  const maxPts = 30 + manN * 2, finalPts = sc.total + manTotal;
+  // 자동 15항목은 기본 점수를 주되, 사용자가 드롭다운으로 바꾸면(조정) 그 값을 쓴다 (브라우저 저장 키 o_<번호>)
+  const ov = i => { const v = man['o_' + i]; return (v === undefined || v === null || v === '') ? null : +v; };
+  const eff = sc.items.map((r, i) => ov(i) !== null ? ov(i) : (r[0] || 0));
+  const nOv = sc.items.filter((r, i) => ov(i) !== null && ov(i) !== (r[0] || 0)).length;
+  const adjTotal = eff.reduce((a, b) => a + b, 0);
+  const maxPts = 30 + manN * 2, finalPts = adjTotal + manTotal;
   const finalGrade = gradeOf(Math.round(finalPts / maxPts * 30));          // 30점 척도로 환산해 같은 기준 적용
   const final100 = Math.round(finalPts / maxPts * 100);                    // 자동+수동을 100점 만점으로
   const finalGrade100 = gradeOf(Math.round(finalPts / maxPts * 30));       // 판정 기준은 30점 척도 그대로
   $('#cScore').innerHTML = `${final100}<small> /100</small>`;
-  $('#cGrade').innerHTML = `자동 ${sc.total}/30${manN ? ` + 수동 ${manTotal}/${manN * 2} = ${finalPts}/${maxPts}` : ''} · <b>${finalGrade100}</b>${sc.na ? ` · 자료없음 ${sc.na}항목` : ''}`;
+  $('#cGrade').innerHTML = `자동 ${sc.total}${nOv ? ` → 조정 ${adjTotal}` : ''}/30${manN ? ` + 수동 ${manTotal}/${manN * 2} = ${finalPts}/${maxPts}` : ''} · <b>${finalGrade100}</b>${sc.na ? ` · 자료없음 ${sc.na}항목` : ''}`;
   $('#cKpis').innerHTML = [
     ['종합 RS', rsBadge(c.rs), `1M ${nz(c.r1,0)} · 3M ${nz(c.r3,0)} · 12M ${nz(c.r12,0)}`],
     ['52주 고점 대비', `<span class="${cls(c.off_high)}">${sg(c.off_high,1,'%')}</span>`, `MA200 ${sg(c.ma200,1,'%')}`],
@@ -490,14 +498,19 @@ function showCompany(code, scroll) {
   // checklist
   let h = '<thead><tr><th>구분</th><th>항목</th><th>근거</th><th style="text-align:center">점수</th></tr></thead><tbody>';
   const ichg = {}; (c.item_chg || []).forEach(([i, d]) => ichg[i] = d);
-  D.items.forEach((it, i) => { const r = sc.items[i]; const p = r[0]; const pc = p === null ? 'pna' : 'p' + p;
-    const d = ichg[i]; const dh = d == null ? '' : `<div class="sub ${cls(d)}" style="font-size:10.5px">${chgTxt(d)}</div>`;
-    h += `<tr><td class="cat">${it.cat}</td><td><b>${esc(it.q)}</b><div class="why">${esc(it.how)}</div></td><td class="why">${esc(r[1])}</td><td class="p ${pc}">${p === null ? '-' : p}${dh}</td></tr>`; });
+  D.items.forEach((it, i) => { const r = sc.items[i]; const p = r[0]; const o = ov(i); const shown = o !== null ? o : p; const pc = shown === null ? 'pna' : 'p' + shown;
+    const d = ichg[i]; const dh = d == null ? '' : `<div class="sub ${cls(d)}" style="font-size:10.5px">${chgTxt(d)} 전회</div>`;
+    const changed = o !== null && o !== (p || 0);
+    const sel = `<select class="ovSel ${pc}" data-i="${i}" title="자동 ${p === null ? '-' : p}점 · 바꾸면 조정치로 저장">${[0,1,2].map(v => `<option value="${v}" ${shown === v ? 'selected' : ''}>${v}</option>`).join('')}${p === null && o === null ? '<option value="" selected>-</option>' : ''}</select>`;
+    h += `<tr class="${changed ? 'ovrow' : ''}"><td class="cat">${it.cat}</td><td><b>${esc(it.q)}</b><div class="why">${esc(it.how)}</div></td><td class="why">${esc(r[1])}</td><td class="p">${sel}${changed ? `<div class="sub" style="font-size:10.5px">자동 ${p === null ? '-' : p} → 조정</div>` : ''}${dh}</td></tr>`; });
   D.manual_items.forEach(m => { const v = man[m.k] ?? '';
     h += `<tr><td class="cat">${m.cat}</td><td><b>${esc(m.q)}</b><div class="why">수동 판단</div></td><td class="why">직접 판단 (0 나쁨 · 1 보통 · 2 좋음)</td><td class="p"><select data-k="${m.k}" class="manSel"><option value="">-</option><option value="0" ${v==='0'||v===0?'selected':''}>0</option><option value="1" ${v==='1'||v===1?'selected':''}>1</option><option value="2" ${v==='2'||v===2?'selected':''}>2</option></select></td></tr>`; });
-  h += `<tr><td></td><td><b>합계</b></td><td class="why">자동 ${sc.total}/30 (${sc.grade}) · 수동 ${manTotal}/${manN * 2}${manN ? ` → ${finalPts}/${maxPts}` : ' (미입력)'} → <b>${final100}/100</b> (${finalGrade100})</td><td class="p">${final100}</td></tr></tbody>`;
+  h += `<tr><td></td><td><b>합계</b></td><td class="why">자동 ${sc.total}${nOv ? ` → 조정 ${adjTotal} (${nOv}항목 변경)` : ''}/30 · 수동 ${manTotal}/${manN * 2}${manN ? ` → ${finalPts}/${maxPts}` : ' (미입력)'} → <b>${final100}/100</b> (${finalGrade100})</td><td class="p">${final100}</td></tr></tbody>`;
   $('#cChk').innerHTML = h;
   $('#cChk').querySelectorAll('.manSel').forEach(s => s.onchange = () => { const m = LS(code); m[s.dataset.k] = s.value === '' ? undefined : +s.value; LSset(code, m); showCompany(code, false); });
+  $('#cChk').querySelectorAll('.ovSel').forEach(s => s.onchange = () => { const m = LS(code); const i = +s.dataset.i; const auto = sc.items[i][0] || 0;
+    if (s.value === '' || +s.value === auto) delete m['o_' + i]; else m['o_' + i] = +s.value;   // 자동값과 같으면 조정 해제
+    LSset(code, m); showCompany(code, false); });
   // quarterly
   if (c.q_periods && c.q_periods.length) {
     const per = c.q_periods; let qh = '<thead><tr><th class="l">분기</th>' + per.map(p => `<th>${p}</th>`).join('') + `<th>${c.next_q ? c.next_q + '(E)' : ''}</th></tr></thead><tbody>`;
@@ -533,10 +546,14 @@ function copyMd() {
   let md = `# ${c.name} (${c.code}) 투자 논리 — 기준 ${D.asof}\n\n업종 ${c.ind||'-'} · ${c.cls||'-'} · 자동점수 **${c.score.total}/30** (${c.score.grade})${c.score_chg == null ? '' : ` · 전회 ${c.score_prev} (${chgTxt(c.score_chg)})`}\n점수 추이: ${(c.hist||[]).map(h=>`${fmtD(h[0])} ${h[1]}`).join(' → ')}\n\n`;
   TPL.forEach(([k, q]) => { md += `## ${q}\n${at[k]}\n${man['t_' + k] ? '\n> ' + man['t_' + k].replace(/\n/g, '\n> ') + '\n' : ''}\n`; });
   md += `## 체크리스트\n| 구분 | 항목 | 근거 | 점수 |\n|---|---|---|---|\n`;
-  D.items.forEach((it, i) => { const r = c.score.items[i]; md += `| ${it.cat} | ${it.q} | ${r[1]} | ${r[0] === null ? '-' : r[0]} |\n`; });
+  let adj = 0;
+  D.items.forEach((it, i) => { const r = c.score.items[i]; const o = man['o_' + i]; const has = o !== undefined && o !== null && o !== ''; const v = has ? +o : (r[0] || 0); adj += v;
+    md += `| ${it.cat} | ${it.q} | ${r[1]}${has && +o !== (r[0] || 0) ? ` (자동 ${r[0] === null ? '-' : r[0]} → 조정)` : ''} | ${has ? +o : (r[0] === null ? '-' : r[0])} |\n`; });
   D.manual_items.forEach(m => { md += `| ${m.cat} | ${m.q} | 수동 | ${man[m.k] ?? '-'} |\n`; });
   const manTotal = D.manual_items.reduce((s,m) => s + (+man[m.k] || 0), 0);
-  md += `| | **합계** | 자동 ${c.score.total}/30 · 수동 ${manTotal}/8 | **${c.score.total + manTotal}** |\n`;
+  const manN = D.manual_items.filter(m => man[m.k] !== undefined && man[m.k] !== null && man[m.k] !== '').length;
+  const maxPts = 30 + manN * 2, finalPts = adj + manTotal;
+  md += `| | **합계** | 자동 ${c.score.total}${adj !== c.score.total ? ` → 조정 ${adj}` : ''}/30 · 수동 ${manTotal}/${manN * 2} = ${finalPts}/${maxPts} | **${Math.round(finalPts / maxPts * 100)}/100** |\n`;
   navigator.clipboard.writeText(md).then(() => { $('#copyMsg').textContent = '복사됨'; setTimeout(() => $('#copyMsg').textContent = '', 1500); })
     .catch(() => { $('#copyMsg').textContent = '복사 실패 — 브라우저 권한 확인'; });
 }
