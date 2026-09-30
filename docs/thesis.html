@@ -188,7 +188,7 @@
   <!-- ① 관찰: 주도 그룹 -->
   <div class="card" id="secGroups">
     <h2>주도 그룹 <span class="cnt" id="cntGroups"></span><button class="fold" data-sec="secGroups" onclick="toggleFold(this)">접기 ▲</button></h2>
-    <div class="meta">종합 RS(1M 20%·3M 40%·6M 20%·12M 20%) 순. 확산 = 그룹 내 RS≥70 종목 비중, 4주Δ = 4주 전 스냅샷 대비 그룹 평균 RS 변화.
+    <div class="meta">종합 RS(1M 20%·3M 40%·6M 20%·12M 20%) 순. 확산 = 그룹 내 RS≥70 종목 비중, 4주Δ = 4주 전 스냅샷 대비 그룹 평균 RS 변화. 평균점수 = 멤버(시총 상위 40)의 100점 점수 평균(자동 75 + 이 브라우저의 수동·조정 입력), 아래 Δ는 자동 부분의 전회 대비 변화.
       EPS↑ = 커버리지 종목 중 4주간 EPS(E) 상향 비중, OPM↑ = 최근 분기 영업이익률이 전년동기보다 높은 종목 비중. 행을 누르면 재료·기업 비교로 내려갑니다.</div>
     <div class="tblwrap"><table id="tblGroups"></table></div>
   </div>
@@ -349,10 +349,17 @@ function setFold(sec, folded) {
 function toggleFold(btn) { const sec = btn.dataset.sec; setFold(sec, !$('#' + sec).classList.contains('folded')); }
 (function(){ ['secDeepList','secGroups','secGroup'].forEach(sec => { try { if (localStorage.getItem('thesis:fold:' + sec) === '1') setFold(sec, true); } catch(e) {} }); })();
 
+// 그룹 멤버 평균 100점 (기업 비교 표와 같은 계산: 자동 + 이 브라우저의 수동·조정 입력)
+function groupAvg100(g) {
+  const vals = (g.members || []).map(m => { const c = C[m.code]; if (!c) return null; const man = LS(m.code);
+    return calc100(c, man, (man && Object.keys(man).some(x => x.startsWith('o_'))) ? null : m.total).final100; }).filter(v => v != null);
+  return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 10) / 10 : null;
+}
+
 // ---------------- ① groups
 function renderGroups() {
   const deepOnly = $('#deepOnly').checked;
-  let rows = G.filter(g => g.kind === kind && (!deepOnly || g.deep)).map((g,i) => ({...g, __id: g.kind + '|' + g.name, __rank: i+1}));
+  let rows = G.filter(g => g.kind === kind && (!deepOnly || g.deep)).map((g,i) => ({...g, __id: g.kind + '|' + g.name, __rank: i+1, avg100: groupAvg100(g)}));
   $('#cntGroups').textContent = `${rows.length}개 · ${kind}`;
   const cols = [
     {h:'#', v:r=>r.__rank},
@@ -366,7 +373,7 @@ function renderGroups() {
     {h:'EPS↑ 비중', v:r=>r.eps_up_share, f:r=>nz(r.eps_up_share,0,'%')},
     {h:'OPM↑ 비중', v:r=>r.margin_up_share, f:r=>nz(r.margin_up_share,0,'%')},
     {h:'PER(E) 중앙', v:r=>r.per_e_med, f:r=>nz(r.per_e_med,1,'x')},
-    {h:'평균 자동점수 /75', v:r=>r.score_avg, f:r=>r.score_avg == null ? '-' : `${r.score_avg}${r.score_avg_chg == null ? '<span class="sub">-</span>' : `<span class="sub ${cls(r.score_avg_chg)}">${chgTxt(r.score_avg_chg)} · ↑${r.n_up} ↓${r.n_down}</span>`}`},
+    {h:'평균점수 /100', v:r=>r.avg100, f:r=>r.avg100 == null ? '-' : `${r.avg100}${r.score_avg_chg == null ? '<span class="sub">-</span>' : `<span class="sub ${cls(r.score_avg_chg)}">${chgTxt(r.score_avg_chg)} 전회 · ↑${r.n_up} ↓${r.n_down}</span>`}`},
     {h:'리포트30일', v:r=>r.rep30 ?? null, f:r=>r.deep ? `${r.rep30}건<span class="sub">${r.rep_codes30}종목</span>` : '-'},
     {h:'공급계약 공시60일', v:r=>r.dart60 ?? null, f:r=>r.deep ? (r.dart60 ? `${r.dart60}건<span class="sub">${r.dart_codes60}종목</span>` : '0') : '-'},
     {h:'뉴스7일', v:r=>r.news7 ?? null, f:r=>r.deep ? r.news7 : '-'},
@@ -387,7 +394,7 @@ function showGroup(id) {
     ['확산 (RS≥70)', nz(g.breadth70,0,'%'), `RS≥90 ${nz(g.p90,0,'%')}`], ['OP YoY(E) 중앙값', sg(g.op_yoy_e_med,0,'%'), `커버 ${g.n_cov}종목`],
     ['EPS(E) 4주 상향 비중', nz(g.eps_up_share,0,'%'), ''], ['OPM 확대 종목 비중', nz(g.margin_up_share,0,'%'), '최근분기 vs 전년동기'],
     ['PER(E) 중앙값', nz(g.per_e_med,1,'x'), ''], ['리포트 30일', g.deep ? `${g.rep30}건` : '-', g.deep ? `${g.rep_codes30}종목` : ''],
-    ['멤버 평균 자동점수 /75', g.score_avg ?? '-', g.score_avg_chg == null ? '전회 기록 없음' : `${chgTxt(g.score_avg_chg)} 전회 · 상승 ${g.n_up} / 하락 ${g.n_down}`],
+    ['멤버 평균점수 /100', groupAvg100(g) ?? '-', `자동 ${g.score_avg ?? '-'}/75${g.score_avg_chg == null ? ' · 전회 기록 없음' : ` · ${chgTxt(g.score_avg_chg)} 전회 · 상승 ${g.n_up} / 하락 ${g.n_down}`}`],
   ].map(([k,v,s]) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}${s?` <small>${s}</small>`:''}</div></div>`).join('');
   $('#gChain').innerHTML = (g.chain || ['심화 분석 대상 그룹이 아닙니다. build_thesis.py --top 값을 늘리면 포함됩니다.']).map(s => `<li>${esc(s)}</li>`).join('');
   // evidence
@@ -559,7 +566,7 @@ function spark(vals, fixMin, fixMax, w = 70, hgt = 20) {
   const last = v[v.length-1], lx = (w-2).toFixed(1), ly = (hgt - 2 - (last-mn)/rng*(hgt-4)).toFixed(1);
   return `<svg class="spark" width="${w}" height="${hgt}" viewBox="0 0 ${w} ${hgt}"><polyline fill="none" stroke="var(--accent)" stroke-width="1.6" points="${pts}"/><circle cx="${lx}" cy="${ly}" r="2" fill="var(--accent)"/></svg>`;
 }
-function refreshMemRow(code) { if (curG && $('#tblMem').querySelector(`tr[data-id="${code}"]`)) { const keep = curC; showGroup(curG.kind + '|' + curG.name); curC = keep; const tr = $('#tblMem').querySelector(`tr[data-id="${code}"]`); if (tr) tr.classList.add('sel'); } }
+function refreshMemRow(code) { renderGroups(); if (curG && $('#tblMem').querySelector(`tr[data-id="${code}"]`)) { const keep = curC; showGroup(curG.kind + '|' + curG.name); curC = keep; const tr = $('#tblMem').querySelector(`tr[data-id="${code}"]`); if (tr) tr.classList.add('sel'); } }
 function resetManual() { if (!curC) return; try { localStorage.removeItem('thesis:' + curC); } catch(e) {} showCompany(curC, false); }
 function copyMd() {
   const c = C[curC]; if (!c) return; const g = G.find(x => x.kind === '업종' && x.name === c.ind) || {}; const at = autoText(c, g); const man = LS(curC);
