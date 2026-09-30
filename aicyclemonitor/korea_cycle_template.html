@@ -150,7 +150,8 @@
 
   <section>
     <h2>Market Regime Score</h2>
-    <p class="desc">5개 팩터 가중 합산 (Global 25 · 반도체/이익 25 · Breadth 20 · 유동성 15 · Euphoria 15)
+    <p class="desc">4개 팩터 가중평균 (Global 25 · 반도체/이익 25 · Breadth 20 · 유동성 15)에서
+      과열 감점을 뺀 뒤 50 기준 <span id="stretchX"></span>배 확대
       — 80↑ Strong Bull · 65↑ Bull · 50↑ Neutral · 35↑ Risk-off · 35↓ Bear</p>
     <div class="cards">
       <div class="card"><h3>종합 스코어 추이 (0~100)</h3>
@@ -160,7 +161,8 @@
         <p class="note">스코어와 지수를 나란히 — "지수가 올라도 스코어가 꺾이면 내부가 약해지는 것"</p>
         <div id="ch-kospi"></div></div>
       <div class="card"><h3>팩터별 현재 점수</h3>
-        <p class="note">0~100, 높을수록 우호적 (Euphoria 는 과열이 없을수록 높음)</p>
+        <p class="note">0~100, 높을수록 우호적. 팩터 점수는 확대 전 값 — Euphoria 는 종합에
+          평균으로 들어가지 않고 30 아래(과열 70 초과)일 때만 감점</p>
         <div id="ch-factors"></div></div>
       <div class="card"><h3>팩터 점수 추이</h3>
         <p class="note">Global · 반도체/이익 · Breadth · 유동성 (Euphoria 는 별도 섹션)</p>
@@ -272,6 +274,8 @@
     market_leverage_collector(신용융자·예탁금·반대매매) · 퀀트데이터 주간 스냅샷(영업이익 컨센서스) ·
     memory-cycle(삼전·하이닉스 분기 OPM 국면)<br>
     IPO 청약경쟁률·공모주 수익률은 무료 시계열 소스가 없어 Euphoria 팩터에서 제외 (저가주·상한가·회전율·신용증가율로 근사).<br>
+    2026-09-30 종합 산식 변경: Euphoria 를 평균에서 빼 극단 감점형으로 바꾸고 50 기준으로 확대 —
+    순서는 그대로라 예측력은 같고, 급락 직후의 낮은 점수 뒤에는 반등이 잦았으므로 권장 주식비중은 참고용.<br>
     <span id="histNote"></span> 시장 국면의 기록이며 투자 판단·권유가 아님.
   </footer>
 </div>
@@ -471,6 +475,7 @@ function badge(st,txt){const m=STATUS_META[st]||STATUS_META.good;
   return `<span class="status ${st}"><span class="ic">${m.ic}</span>${txt||m.t}</span>`;}
 
 const FACTOR_KO={global:'① Global',semi:'② 반도체·이익',breadth:'③ Breadth',liq:'④ 유동성',euphoria:'⑤ Euphoria'};
+const FACTOR_KEYS=['global','semi','breadth','liq','euphoria'];
 
 /* ── 날짜 선택(타임머신) 상태 ── */
 const DTS=DATA.series.dates;
@@ -518,21 +523,26 @@ function renderAll(){
   const rg=regimeOf(score);
   const phase=(DATA.phase_labels||[])[idx];
   const kospi=atOrBefore(S.kospi,idx);
+  const rawScore=atOrBefore(S.composite_raw,idx);
+  const pen=atOrBefore(S.penalty,idx)||0;
   let tiles=`<div class="tile hero"><div class="label">Market Regime${isPast?' · '+selDate:''} ${badge(rg.cls,rg.label)}</div>
     <div class="value">${fmt(score)}</div>
-    <div class="delta">권장 주식비중 ${rg.band}${kospi!=null?' · KOSPI '+fmt(kospi,0):''}${phase?' · '+phase:''}</div></div>`;
+    <div class="delta">권장 주식비중 ${rg.band}${kospi!=null?' · KOSPI '+fmt(kospi,0):''}${phase?' · '+phase:''}
+      · 확대 전 ${fmt(rawScore)}</div></div>`;
   const weights=DATA.meta.weights;
-  for(const k in weights){
+  for(const k of FACTOR_KEYS){
     const sc=atOrBefore(S.factors[k],idx);
+    const sub=(k in weights)?`가중치 ${weights[k]}`:(pen>0?`감점 −${fmt(pen)}`:'감점 없음');
     tiles+=`<div class="tile"><div class="label">${FACTOR_KO[k]}</div>
-      <div class="value">${fmt(sc)}</div><div class="delta">가중치 ${weights[k]} ${sc==null?'':badge(scoreStatus(sc))}</div></div>`;
+      <div class="value">${fmt(sc)}</div><div class="delta">${sub} ${sc==null?'':badge(scoreStatus(sc))}</div></div>`;
   }
   document.getElementById('tiles').innerHTML=tiles;
+  document.getElementById('stretchX').textContent=DATA.meta.stretch;
 
   lineChart('ch-composite',[{name:'종합',dates:dts,values:S.composite}],
     {ymin:0,ymax:100,hlines:[{y:35,label:'Bear'},{y:50,label:'R-off'},{y:65,label:'Bull'},{y:80,label:'S.Bull'}],...mark});
   lineChart('ch-kospi',[{name:'KOSPI',dates:dts,values:S.kospi}],{...mark});
-  hbarChart('ch-factors',Object.keys(weights).map((k,i)=>({
+  hbarChart('ch-factors',FACTOR_KEYS.map((k,i)=>({
     label:FACTOR_KO[k],value:atOrBefore(S.factors[k],idx),color:SLOT[i%4]})),'',[0,100]);
   lineChart('ch-factorline',[
     {name:'Global',dates:dts,values:S.factors.global},

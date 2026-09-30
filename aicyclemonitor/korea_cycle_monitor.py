@@ -16,11 +16,14 @@ Global → 반도체 → Breadth → Euphoria 순서로 5개 팩터를 0~100점�
                                — MA200/MA50 위 비율·ADR20·신고/신저·맥클렐런
   ④ 신용·유동성       (15)     market_leverage_collector(예탁금·반대매매·신용/예탁금),
                                FRED 하이일드 OAS(레벨+90일 변화, allorigins 폴백)
-  ⑤ Euphoria          (15)     저가주 거래대금 비중·상한가 수·회전율·신용융자 20일 증가율
-                               — 과열일수록 감점(100-heat)
+  ⑤ Euphoria       (감점형)     저가주 거래대금 비중·상한가 수·회전율·신용융자 20일 증가율
+                               — 평균에 넣지 않고 과열 게이지 70 초과분만 최대 20점 감점
 
   채점: 각 하위지표를 자기 히스토리 대비 백분위(0~100)로 변환(방향 통일) 후 평균.
         목표주가 기울기·사이클 국면은 규칙 기반 매핑(히스토리가 짧아 백분위 부적합).
+  종합: (①~④ 가중평균 − 과열 감점) 을 50 기준 1.6배 확대 후 0~100 으로 자름.
+        2026-09-30 이전 방식(5팩터 단순 가중평균)은 점수가 28~67 에 몰려 국면
+        경계에 닿지 못했다 — 확대는 읽기 쉽게 할 뿐 예측력을 바꾸지 않는다.
   국면: ≥80 Strong Bull(주식 90~100%) / 65~80 Bull(75~90%) / 50~65 Neutral(50~75%)
         / 35~50 Risk-off(30~50%) / <35 Bear(현금·헤지 확대)
 
@@ -71,7 +74,15 @@ OUTPUT = os.path.join(BASE, "korea_cycle.html")
 DEPLOY = os.path.join(ROOT, "docs", "korea_cycle.html")   # 알파노트 배포 사본
 
 FIRMS = {"005930": "삼성전자", "000660": "SK하이닉스"}
-WEIGHTS = {"global": 25, "semi": 25, "breadth": 20, "liq": 15, "euphoria": 15}
+WEIGHTS = {"global": 25, "semi": 25, "breadth": 20, "liq": 15}   # 가중평균 대상(4팩터)
+FACTOR_KEYS = list(WEIGHTS) + ["euphoria"]                       # 표시·기록 대상(5팩터)
+# Euphoria 는 평균에 넣지 않는다 — 나머지 팩터와 음의 상관이라 평균에 섞으면 강세·약세를
+# 모두 50쪽으로 상쇄했다(2026-09 진단: 표준편차 11.1→9.0). 도취는 고점에서만 의미가
+# 있으므로 과열 게이지가 EUPH_START 를 넘는 구간에서만 최대 EUPH_MAX 점 감점한다.
+EUPH_START, EUPH_MAX = 70, 20
+# 50 기준 확대 배율. 독립적인 팩터를 평균하면 점수가 가운데로 몰려 국면 경계(65·80)에
+# 닿지 못한다. 고정 상수로 둔다 — 표본에서 재추정하면 과거 점수가 매일 흔들린다.
+STRETCH = 1.6
 PHASE_SCORE = {"확장": 85, "회복": 65, "피크권": 35, "수축": 15}
 REGIMES = [  # (하한, 라벨, 권장 주식비중, 색 클래스)
     (80, "Strong Bull", "90~100%", "good"),
@@ -473,14 +484,19 @@ def build_model(mh, glob_df, lev, rev, phase_sc, phase_latest, revb):
     raw["euphoria_heat"] = heat
 
     # ── 평활: 일별 백분위 노이즈로 국면이 하루 단위로 뒤집히지 않도록 5일 이동평균
-    for k in WEIGHTS:
+    for k in FACTOR_KEYS:
         factors[k] = factors[k].rolling(5, min_periods=1).mean()
 
-    # ── 종합 (가용 팩터 가중 재정규화)
+    # ── 종합 = (4팩터 가중평균 − 과열 감점) 을 50 기준으로 STRETCH 배 확대
     w = pd.Series(WEIGHTS, dtype=float)
     fv = factors[list(WEIGHTS)]
     wsum = fv.notna().mul(w, axis=1).sum(axis=1)
-    factors["composite"] = fv.mul(w, axis=1).sum(axis=1, min_count=1) / wsum.replace(0, np.nan)
+    core = fv.mul(w, axis=1).sum(axis=1, min_count=1) / wsum.replace(0, np.nan)
+    heat_s = 100 - factors["euphoria"]
+    factors["penalty"] = ((heat_s - EUPH_START).clip(lower=0)
+                          / (100 - EUPH_START) * EUPH_MAX).fillna(0)
+    factors["composite_raw"] = core - factors["penalty"]
+    factors["composite"] = (50 + STRETCH * (factors["composite_raw"] - 50)).clip(0, 100)
     return factors, sub, raw
 
 
@@ -541,9 +557,11 @@ def assemble(mh, factors, sub, raw, rev, phase_latest, phase_labels, revb, lev):
         {"label": "—", "band": "—", "cls": "warning"}
 
     factor_last = {}
-    for k in WEIGHTS:
+    for k in FACTOR_KEYS:
         s = recent[k].dropna()
         factor_last[k] = round(float(s.iloc[-1]), 1) if len(s) else None
+    raw_last = recent["composite_raw"].dropna()
+    pen_last = recent["penalty"].dropna()
 
     # 목표주가 평활(시작=100 인덱스) — 종목별 시작일이 달라도 공통 날짜축으로
     # 정렬해서 내보낸다 (축이 어긋나면 차트가 선을 잇지 못하고 점만 남는다)
@@ -563,14 +581,18 @@ def assemble(mh, factors, sub, raw, rev, phase_latest, phase_labels, revb, lev):
         "generated_at": f"{dt.datetime.now():%Y-%m-%d %H:%M}",
         "asof": dates[-1] if dates else "—",
         "regime": {"score": score_now, **reg,
-                   "factors": {k: {"score": factor_last[k], "weight": WEIGHTS[k]}
-                               for k in WEIGHTS},
+                   "raw": round(float(raw_last.iloc[-1]), 1) if len(raw_last) else None,
+                   "penalty": round(float(pen_last.iloc[-1]), 1) if len(pen_last) else None,
+                   "factors": {k: {"score": factor_last[k], "weight": WEIGHTS.get(k)}
+                               for k in FACTOR_KEYS},
                    "phase": phase_latest},
         "series": {
             "dates": dates,
             "composite": ser(recent["composite"]),
+            "composite_raw": ser(recent["composite_raw"]),
+            "penalty": ser(recent["penalty"]),
             "kospi": ser(mhr.get("kospi_close"), 2),
-            "factors": {k: ser(recent[k]) for k in WEIGHTS},
+            "factors": {k: ser(recent[k]) for k in FACTOR_KEYS},
         },
         "global": {
             "spx_d200": ser(raw.get("spx_d200")), "sox_d200": ser(raw.get("sox_d200")),
@@ -614,6 +636,8 @@ def assemble(mh, factors, sub, raw, rev, phase_latest, phase_labels, revb, lev):
                          for v in phase_labels.reindex(recent.index).tolist()],
         "meta": {
             "weights": WEIGHTS,
+            "stretch": STRETCH,
+            "euph": {"start": EUPH_START, "max": EUPH_MAX},
             "history_note": ("백분위 기준: 글로벌 3년 · Breadth 2025-02~ · "
                              "레버리지 약 3개월 — 히스토리가 짧은 지표는 점수 변동이 클 수 있음"),
         },
@@ -668,9 +692,11 @@ def main():
     render(data)
 
     r = data["regime"]
-    log(f"종합 {r['score']} → {r['label']} (권장 주식비중 {r['band']})")
+    log(f"종합 {r['score']} → {r['label']} (권장 주식비중 {r['band']}) "
+        f"· 확대 전 {r['raw']} · 과열 감점 {r['penalty']}")
     for k, v in r["factors"].items():
-        log(f"  {k:<9} {v['score']} (w{v['weight']})")
+        w = f"w{v['weight']}" if v["weight"] is not None else "감점형"
+        log(f"  {k:<9} {v['score']} ({w})")
 
 
 if __name__ == "__main__":

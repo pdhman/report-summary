@@ -5,7 +5,7 @@ korea_cycle_monitor.py(평일 17:45)가 aicyclemonitor/kc_cache/score_log.csv �
 일별 점수를 기록한 뒤, run_korea_cycle.bat 이 마지막 단계로 이 스크립트를 호출한다.
 
 발송 조건 (하나라도 충족, 직전 기록 대비):
-  - 종합 스코어가 DROP_PT(2.0)점 이상 하락
+  - 종합 스코어가 DROP_PT(3.2)점 이상 하락
   - 국면 밴드 하향 전환 (예: Bull → Neutral)
   - 국면 밴드 상향 전환 (예: Neutral → Bull)
 채널(@daily_alphanote)에는 보내지 않고 기본 DM(알파노트 봇 개인 대화)으로만 발송.
@@ -30,7 +30,9 @@ SCORE_LOG = HERE.parent / "aicyclemonitor" / "kc_cache" / "score_log.csv"
 STATE_PATH = HERE / "cycle_alert_state.json"
 DASH_URL = "https://pdhman.github.io/report-summary/korea_cycle.html"
 
-DROP_PT = 2.0                       # 전 기록 대비 이 폭 이상 하락하면 알림
+# 전 기록 대비 이 폭 이상 하락하면 알림. 종합이 50 기준 1.6배 확대 척도라
+# (korea_cycle_monitor.STRETCH) 옛 기준 2.0 × 1.6 — 배율을 바꾸면 여기도 맞춘다.
+DROP_PT = 3.2
 FACTOR_KO = {"global": "Global", "semi": "반도체", "breadth": "Breadth",
              "liq": "유동성", "euphoria": "Euphoria"}
 REGIMES = [  # (하한, 라벨, 권장 주식비중) — korea_cycle_monitor.py 와 동일
