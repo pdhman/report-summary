@@ -529,7 +529,7 @@ function showCompany(code, scroll) {
     const sel = `<select class="ovSel ${pc}" data-i="${i}" title="자동 ${p === null ? '-' : p}점 · 바꾸면 조정치로 저장">${[0,1,2,3,4,5].map(v => `<option value="${v}" ${shown === v ? 'selected' : ''}>${v}</option>`).join('')}${p === null && o === null ? '<option value="" selected>-</option>' : ''}</select>`;
     h += `<tr class="${changed ? 'ovrow' : ''}"><td class="cat">${it.cat}</td><td><b>${esc(it.q)}</b><div class="why">${esc(it.how)}</div></td><td class="why">${esc(r[1])}</td><td class="p">${sel}${changed ? `<div class="sub" style="font-size:10.5px">자동 ${p === null ? '-' : p} → 조정</div>` : ''}${dh}</td></tr>`; });
   D.manual_items.forEach(m => { const v = man[m.k]; const mx = m.max || 2; const has = v !== undefined && v !== null && v !== '';
-    const guide = m.k === 'm_tech' ? '직접 판단 0~5 (추세·패턴·거래량·수급을 종합, 5 = 매우 좋음)' : '직접 판단 0~5 (0 나쁨 · 3 보통 · 5 매우 좋음)';
+    const guide = m.how ? `직접 판단 · ${esc(m.how)}` : '직접 판단 0~5 (0 나쁨 · 3 보통 · 5 매우 좋음)';
     h += `<tr><td class="cat">${m.cat}</td><td><b>${esc(m.q)}</b><div class="why">수동 판단 · ${mx}점 만점</div></td><td class="why">${guide}</td><td class="p"><select data-k="${m.k}" class="manSel"><option value="" ${has ? '' : 'selected'}>-</option>${Array.from({length: mx + 1}, (_, k) => `<option value="${k}" ${has && +v === k ? 'selected' : ''}>${k}</option>`).join('')}</select></td></tr>`; });
   h += `<tr><td></td><td><b>합계 (20항목 × 0~5점)</b></td><td class="why">자동 15항목 ${adjTotal}/75${nOv ? ` (${nOv}항목 조정)` : ''} · 수동 4항목 ${f1(man100)}/20${manN ? '' : ' (미입력)'} · 기술적 분석 ${f1(tech100)}/5 → <b>${final100}/100</b> (${finalGrade100})</td><td class="p">${final100}</td></tr></tbody>`;
   $('#cChk').innerHTML = h;
@@ -576,7 +576,7 @@ function copyMd() {
   let adj = 0;
   D.items.forEach((it, i) => { const r = c.score.items[i]; const o = man['o_' + i]; const has = o !== undefined && o !== null && o !== ''; const v = has ? +o : (r[0] || 0); adj += v;
     md += `| ${it.cat} | ${it.q} | ${r[1]}${has && +o !== (r[0] || 0) ? ` (자동 ${r[0] === null ? '-' : r[0]} → 조정)` : ''} | ${has ? +o : (r[0] === null ? '-' : r[0])} |\n`; });
-  D.manual_items.forEach(m => { md += `| ${m.cat} | ${m.q} | 수동 (0~${m.max || 2}) | ${man[m.k] ?? '-'} |\n`; });
+  D.manual_items.forEach(m => { md += `| ${m.cat} | ${m.q} | 수동 (0~${m.max || 5})${m.how ? ' · ' + m.how : ''} | ${man[m.k] ?? '-'} |\n`; });
   const mv = m => (man[m.k] === undefined || man[m.k] === null || man[m.k] === '') ? 0 : +man[m.k];
   const a100 = adj, m100 = D.manual_items.filter(m => m.k !== 'm_tech').reduce((s, m) => s + mv(m), 0);
   const tItem = D.manual_items.find(m => m.k === 'm_tech'), t100 = tItem ? mv(tItem) : 0;
