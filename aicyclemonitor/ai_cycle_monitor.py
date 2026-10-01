@@ -632,7 +632,13 @@ def revenue_yoy_series(cache, tickers=HYPERSCALER):
             prev = [pv for pq, pv in items
                     if abs((d - datetime.strptime(pq, "%Y-%m-%d").date()).days - 365) <= 20]
             if prev:
-                yoy_q.append(f"{d.year}Q{(d.month - 1)//3 + 1}")
+                lb = f"{d.year}Q{(d.month - 1)//3 + 1}"
+                # yfinance 가 같은 분기를 실제 마감일(5-28)과 월말(5-31) 두 키로 줄 때가 있어
+                # 라벨이 겹치면 나중 날짜로 덮는다 — 중복이 남으면 '연속 둔화' 집계가 끊긴다
+                if yoy_q and yoy_q[-1] == lb:
+                    yoy_v[-1] = pct(v, prev[0])
+                    continue
+                yoy_q.append(lb)
                 yoy_v.append(pct(v, prev[0]))
         out[t] = {"quarters": yoy_q, "yoy": yoy_v}
     return out
