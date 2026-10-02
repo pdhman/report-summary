@@ -897,6 +897,7 @@ def collect_live():
         "mode": "live",
         "supply": {
             "gpu_rental": gpu,
+            "gpu_ref": manual.get("gpu_index_ref") or {},   # 업계 지수 참고값(수동 인용)
             "dc_reit_indexed": indexed(DC_REIT),
             "vacancy": manual.get("datacenter_vacancy", []),
         },
@@ -1389,7 +1390,7 @@ TEMPLATE = r"""<!DOCTYPE html>
     <p class="desc">인프라가 실수요보다 많이 깔리고 있는가: GPU 임대가격, 데이터센터 REIT, 공실률</p>
     <div class="cards">
       <div class="card"><h3>GPU 시간당 임대가 ($/hr, 임대중 중앙값)</h3>
-        <p class="note">500.farm(vast.ai 미러) 체결가 근사 — B200 하락 = 순수 공급과잉 신호, H100은 세대교체 감가 포함</p>
+        <p class="note">실선 = vast.ai(개인·소형 업체의 단기 임대 장터, 500.farm 미러) 임대중 중앙값. 장터라 가격 수준은 업계 지수와 다르다(신형은 더 비싸고 구형은 더 쌈) — 신호는 수준이 아니라 90일 변화(방향)로 본다. 점선 = Silicon Data 업계 지수(전문 클라우드 기준, 공개 블로그 수치 수동 인용). B200 하락 = 순수 공급과잉 신호, H100은 세대교체 감가 포함</p>
         <div id="ch-gpu"></div></div>
       <div class="card"><h3>데이터센터 REIT 주가 (시작=100)</h3>
         <p class="note">DLR·EQIX — 임대수요·공실 기대를 선반영하는 프록시</p>
@@ -1535,7 +1536,7 @@ function lineChart(elId, series, opts={}){
   if(series.length>1){
     const lg=document.createElement('div');lg.className='legend';
     series.forEach((s,i)=>{lg.insertAdjacentHTML('beforeend',
-      `<span class="key"><span class="sw" style="background:${SLOT[i]}"></span>${s.name}</span>`);});
+      `<span class="key"><span class="sw" style="${s.dash?`background:none;border-top:2px dashed ${s.color||SLOT[i]};border-radius:0;height:0;width:14px`:`background:${s.color||SLOT[i]}`}"></span>${s.name}</span>`);});
     host.appendChild(lg);
   }
   const wrap=document.createElement('div');wrap.className='chart';host.appendChild(wrap);
@@ -1550,7 +1551,11 @@ function lineChart(elId, series, opts={}){
   let ticks=niceTicks(Math.min(...allV),Math.max(...allV),4);
   const ymin=ticks[0], ymax=ticks[ticks.length-1];
   const tstep=ticks.length>1?ticks[1]-ticks[0]:1, tdec=tstep>=1?0:(tstep>=0.1?1:2);
-  const X=i=>M.l+(n<=1?0:(W-M.l-M.r)*i/(n-1));
+  // opts.time: 날짜 라벨을 실제 시간 간격대로 배치 — 관측 간격이 고르지 않은 시계열(월말 백필 + 일별 수집 등)
+  const tms=opts.time?labels.map(l=>Date.parse(String(l).slice(0,10))):null;
+  const t0=tms?Math.min(...tms):0, t1=tms?Math.max(...tms):0;
+  const XT=t=>M.l+(W-M.l-M.r)*(t-t0)/((t1-t0)||1);
+  const X=i=>tms?XT(tms[i]):M.l+(n<=1?0:(W-M.l-M.r)*i/(n-1));
   const Y=v=>M.t+(H-M.t-M.b)*(1-(v-ymin)/(ymax-ymin));
   // 그리드 + y축 눈금 (헤어라인, 점선 금지)
   ticks.forEach(t=>{
@@ -1560,20 +1565,36 @@ function lineChart(elId, series, opts={}){
     tx.textContent=fmt(t,tdec); svg.appendChild(tx);
   });
   svg.appendChild(svgEl('line',{x1:M.l,x2:W-M.r,y1:Y(ymin),y2:Y(ymin),stroke:INK.baseline,'stroke-width':1}));
-  // x축 눈금 ~6개
-  const xtick=Math.max(1,Math.round(n/6));
-  for(let i=0;i<n;i+=xtick){
-    const t=svgEl('text',{x:X(i),y:H-8,'text-anchor':'middle','font-size':10.5,fill:INK.muted});
-    t.textContent=String(labels[i]).slice(0,7); svg.appendChild(t);
+  // x축 눈금 ~6개 (time 모드는 매월 1일 위치)
+  const xLabel=(x,txt)=>{const t=svgEl('text',{x,y:H-8,'text-anchor':'middle','font-size':10.5,fill:INK.muted});
+    t.textContent=txt; svg.appendChild(t);};
+  if(tms){
+    const a=new Date(t0), b=new Date(t1);
+    const months=(b.getUTCFullYear()-a.getUTCFullYear())*12+b.getUTCMonth()-a.getUTCMonth();
+    const mstep=Math.max(1,Math.ceil(months/6));
+    for(let k=0;k<=months;k+=mstep){
+      const d=Date.UTC(a.getUTCFullYear(),a.getUTCMonth()+k,1);
+      if(d<t0) continue;
+      const dd=new Date(d);
+      xLabel(XT(d),dd.getUTCFullYear()+'-'+String(dd.getUTCMonth()+1).padStart(2,'0'));
+    }
+  }else{
+    const xtick=Math.max(1,Math.round(n/6));
+    for(let i=0;i<n;i+=xtick) xLabel(X(i),String(labels[i]).slice(0,7));
   }
   // 시리즈 (끝 레이블: 겹치면 생략 — 범례·툴팁이 대신함 / 넘치면 생략)
   const usedLabelY=[];
   series.forEach((s,si)=>{
-    const col=SLOT[si];
-    const pts=s.values.map((v,i)=>v==null?null:[X(i),Y(v)]);
-    const d=pts.map((p,i)=>p?(i&&pts[i-1]?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1):'').join('');
-    svg.appendChild(svgEl('path',{d,fill:'none',stroke:col,'stroke-width':2,
-      'stroke-linejoin':'round','stroke-linecap':'round'}));
+    const col=s.color||SLOT[si];
+    // 값 undefined = 이 시리즈에 없는 날짜(다른 시리즈의 관측일) → 건너뛰고 잇는다 / null = 값 없음 → 선을 끊는다
+    const pts=s.values.map((v,i)=>v===undefined?undefined:v==null?null:[X(i),Y(v)]);
+    let d='', pen=false;
+    pts.forEach(p=>{if(p===undefined) return; if(p===null){pen=false;return;}
+      d+=(pen?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1); pen=true;});
+    const pa={d,fill:'none',stroke:col,'stroke-width':s.dash?1.5:2,'stroke-linejoin':'round','stroke-linecap':'round'};
+    if(s.dash) pa['stroke-dasharray']='5 4';
+    svg.appendChild(svgEl('path',pa));
+    if(s.dots) pts.forEach(p=>{if(p) svg.appendChild(svgEl('circle',{cx:p[0],cy:p[1],r:2.5,fill:col}));});
     const last=pts.filter(Boolean).pop();
     if(last){
       svg.appendChild(svgEl('circle',{cx:last[0],cy:last[1],r:4,fill:col,stroke:INK.surface,'stroke-width':2}));
@@ -1595,11 +1616,11 @@ function lineChart(elId, series, opts={}){
   svg.addEventListener('mousemove',ev=>{
     const r=svg.getBoundingClientRect();
     const x=(ev.clientX-r.left)*W/r.width;
-    const i=Math.max(0,Math.min(n-1,Math.round((x-M.l)/((W-M.l-M.r)/Math.max(1,n-1)))));
+    let i=0; for(let k=1;k<n;k++) if(Math.abs(X(k)-x)<Math.abs(X(i)-x)) i=k;
     cross.setAttribute('x1',X(i));cross.setAttribute('x2',X(i));cross.setAttribute('visibility','visible');
     tip.style.display='block';
-    tip.innerHTML=`<div class="tx">${labels[i]}</div>`+series.map((s,si)=>
-      `<div class="row"><span class="key"><span class="sw" style="background:${SLOT[si]};width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px"></span>${s.name}</span><b>${fmt(s.values[i])}${unit}</b></div>`).join('');
+    tip.innerHTML=`<div class="tx">${labels[i]}</div>`+series.map((s,si)=>s.values[i]===undefined?'':
+      `<div class="row"><span class="key"><span class="sw" style="background:${s.color||SLOT[si]};width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px"></span>${s.name}</span><b>${fmt(s.values[i])}${unit}</b></div>`).join('');
     const px=X(i)*r.width/W;
     tip.style.left=(px>r.width*0.6?px-tip.offsetWidth-12:px+12)+'px';
     tip.style.top='14px';
@@ -1693,9 +1714,12 @@ function renderAll(){
 
   // ① 공급 — 모델별 임대중 중앙값 (공통 날짜축 정렬, H100 가용 호가는 참고선)
   const g=DATA.supply.gpu_rental||{};
-  const gDates=[...new Set([].concat(...Object.keys(g).map(mo=>g[mo].dates)))].sort();
-  const gAlign=(mo,key)=>{const idx={};g[mo].dates.forEach((d,i)=>idx[d]=g[mo][key][i]);
-    return gDates.map(d=>idx[d]??null);};
+  // 업계 지수 참고값(Silicon Data 공개 글 수동 인용) — {모델: {날짜: 값}}, 문자열 키(source 등)는 제외
+  const gr=DATA.supply.gpu_ref||{}, grModels=Object.keys(gr).filter(k=>gr[k]&&typeof gr[k]==='object');
+  const gDates=[...new Set([].concat(...Object.keys(g).map(mo=>g[mo].dates),...grModels.map(k=>Object.keys(gr[k]))))].sort();
+  // 그 시리즈에 없는 날짜는 undefined(선을 잇고 건너뜀), 있는데 값이 비면 null(선을 끊음)
+  const gAlign=(mo,key)=>{const idx={};g[mo].dates.forEach((d,i)=>idx[d]=g[mo][key][i]??null);
+    return gDates.map(d=>idx[d]);};
   const gSeries=[];
   Object.keys(g).forEach(mo=>{
     if((g[mo].rented||[]).some(v=>v!=null))
@@ -1703,7 +1727,13 @@ function renderAll(){
   });
   if(g['H100 SXM']&&(g['H100 SXM'].avail||[]).some(v=>v!=null))
     gSeries.push({name:'H100 가용 호가',dates:gDates,values:gAlign('H100 SXM','avail')});
-  lineChart('ch-gpu',gSeries,{labels:gDates,unit:'$'});
+  const gModels=Object.keys(g);   // 같은 GPU 는 같은 색: 임대중 실선 ↔ 업계 지수 점선
+  grModels.forEach(k=>{
+    const mo=gModels.find(m=>m.startsWith(k));
+    gSeries.push({name:k+' 업계 지수',dates:gDates,values:gDates.map(d=>gr[k][d]),
+      color:SLOT[Math.max(0,gModels.indexOf(mo))],dash:true,dots:true});
+  });
+  lineChart('ch-gpu',gSeries,{labels:gDates,unit:'$',time:true});
   const reit=DATA.supply.dc_reit_indexed||{};
   lineChart('ch-reit', Object.keys(reit).map(k=>({name:k,dates:reit[k].dates,values:reit[k].values})));
   const vac=DATA.supply.vacancy||[];
