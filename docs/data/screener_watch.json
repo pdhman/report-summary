@@ -1,33 +1,69 @@
 {
- "date": "2026-10-01",
+ "date": "2026-10-02",
  "high_52w_ratio": 0.65,
  "items": [
+  {
+   "name": "삼성전기",
+   "ticker": "009150",
+   "close": 1581000.0,
+   "change_ratio": 1.74,
+   "rs_score": 96.7,
+   "vol_ratio": 81.2,
+   "from_high": -34.6
+  },
+  {
+   "name": "삼화콘덴서",
+   "ticker": "001820",
+   "close": 156500.0,
+   "change_ratio": -1.51,
+   "rs_score": 86.2,
+   "vol_ratio": 58.1,
+   "from_high": -20.5
+  },
+  {
+   "name": "테스",
+   "ticker": "095610",
+   "close": 177400.0,
+   "change_ratio": -2.31,
+   "rs_score": 84.6,
+   "vol_ratio": 76.1,
+   "from_high": -25.0
+  },
   {
    "name": "삼성전자",
    "ticker": "005930",
    "close": 276000.0,
-   "change_ratio": 2.41,
-   "rs_score": 83.3,
-   "vol_ratio": 74.7,
+   "change_ratio": 0.55,
+   "rs_score": 81.3,
+   "vol_ratio": 70.8,
    "from_high": -26.3
   },
   {
    "name": "삼성전자우",
    "ticker": "005935",
-   "close": 204500.0,
-   "change_ratio": 4.12,
-   "rs_score": 80.6,
-   "vol_ratio": 53.5,
-   "from_high": -16.0
+   "close": 201000.0,
+   "change_ratio": -0.5,
+   "rs_score": 78.9,
+   "vol_ratio": 56.7,
+   "from_high": -17.5
+  },
+  {
+   "name": "후성",
+   "ticker": "093370",
+   "close": 16390.0,
+   "change_ratio": 4.73,
+   "rs_score": 67.5,
+   "vol_ratio": 92.6,
+   "from_high": -30.4
   },
   {
    "name": "SK",
    "ticker": "034730",
-   "close": 587000.0,
+   "close": 584000.0,
    "change_ratio": -0.17,
-   "rs_score": 70.4,
-   "vol_ratio": 64.4,
-   "from_high": -33.5
+   "rs_score": 65.9,
+   "vol_ratio": 72.7,
+   "from_high": -33.9
   }
  ]
 }
