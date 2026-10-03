@@ -1,5 +1,5 @@
 {
- "date": "2026-10-03 22:33",
+ "date": "2026-10-04 04:19",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -11,7 +11,7 @@
    "d24": 0.01
   },
   "mean": 4.313,
-  "mean_d24": -0.014,
+  "mean_d24": -0.043,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
@@ -20,18 +20,18 @@
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "October 31 · US x Iran ceasefire continues through October 31?",
-  "pmss": 62.1,
-  "band": "Interest",
-  "d24": 0.02,
-  "prob": 0.625
+  "q": "October 7 · US x Iran ceasefire continues through October 7?",
+  "pmss": 72.0,
+  "band": "Tactical Signal",
+  "d24": 0.045,
+  "prob": 0.94
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 62.1
+  "top_pmss": 72.0
  },
  "alerts": 0,
- "n_markets": 366,
+ "n_markets": 393,
  "source": "direct"
 }
