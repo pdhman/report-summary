@@ -1,5 +1,5 @@
 {
- "date": "2026-10-04 15:05",
+ "date": "2026-10-04 23:10",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk ↓",
@@ -10,8 +10,8 @@
    "prob": 0.825,
    "d24": 0.0
   },
-  "mean": 4.313,
-  "mean_d24": 0.0,
+  "mean": 4.106,
+  "mean_d24": -0.207,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
@@ -23,8 +23,8 @@
   "q": "October 12 · US x Iran ceasefire continues through October 12?",
   "pmss": 83.0,
   "band": "Strong Signal",
-  "d24": 0.59,
-  "prob": 0.86
+  "d24": 0.605,
+  "prob": 0.875
  },
  "exposure": {
   "base": 0.5,
@@ -32,6 +32,6 @@
   "top_pmss": 83.0
  },
  "alerts": 0,
- "n_markets": 394,
+ "n_markets": 413,
  "source": "direct"
 }
