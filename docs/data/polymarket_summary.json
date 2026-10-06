@@ -1,5 +1,5 @@
 {
- "date": "2026-10-06 10:21",
+ "date": "2026-10-06 20:24",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -8,30 +8,30 @@
   "top": {
    "label": "No change",
    "prob": 0.805,
-   "d24": -0.02
+   "d24": -0.03
   },
-  "mean": 4.846,
-  "mean_d24": 0.74,
+  "mean": 4.832,
+  "mean_d24": 0.766,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
   "prob": 0.075,
-  "d24": -0.005,
+  "d24": 0.0,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "October 31 · Bab el-Mandeb Strait effectively closed by October 31?",
-  "pmss": 64.0,
+  "q": "25 bps increase · Will the Fed increase interest rates by 25 bps after the January 2027 meeting?",
+  "pmss": 61.5,
   "band": "Interest",
-  "d24": -0.03,
-  "prob": 0.055
+  "d24": 0.05,
+  "prob": 0.365
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 64.0
+  "top_pmss": 61.5
  },
- "alerts": 2,
- "n_markets": 431,
+ "alerts": 0,
+ "n_markets": 456,
  "source": "direct"
 }
