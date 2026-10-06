@@ -87,7 +87,11 @@ def block_html(cur, prev):
     items = ""
     for it in sorted(cur["items"], key=lambda i: i["rank"]):
         icon = DIR_ICON.get(it.get("direction", ""), "")
-        why = f'<div class="gz-why">{esc(it["why"])}</div>' if it.get("why") else ""
+        # 2026-10-06: points(불릿) 우선, 구 파일은 why(문단)
+        if it.get("points"):
+            why = '<ul class="gz-pts">' + "".join(f"<li>{esc(pt)}</li>" for pt in it["points"]) + "</ul>"
+        else:
+            why = f'<div class="gz-why">{esc(it["why"])}</div>' if it.get("why") else ""
         trg = (f'<div class="gz-trg"><b>다음 트리거</b> {esc(it["trigger"])}</div>'
                if it.get("trigger") else "")
         items += (f'<div class="gz-item"><div class="gz-row">'
@@ -108,7 +112,13 @@ def block_html(cur, prev):
         lis = "".join(f"<li>{esc(w)}</li>" for w in cur["watch"])
         extra += f'<div class="gz-sub">관찰 목록</div><ul class="gz-watch">{lis}</ul>'
     mix = cur.get("source_mix") or {"base": 80, "x": 20}
-    head = f'<p class="gz-head">{esc(cur["headline"])}</p>' if cur.get("headline") else ""
+    # 2026-10-06: summary(한 줄) + changes(불릿) 우선, 구 파일은 headline(문단)
+    if cur.get("summary") or cur.get("changes"):
+        head = f'<p class="gz-head"><b>{esc(cur["summary"])}</b></p>' if cur.get("summary") else ""
+        if cur.get("changes"):
+            head += '<ul class="gz-chg">' + "".join(f"<li>{esc(c)}</li>" for c in cur["changes"]) + "</ul>"
+    else:
+        head = f'<p class="gz-head">{esc(cur["headline"])}</p>' if cur.get("headline") else ""
     return (f'<section class="gaze"><div class="gz-title">👁 시장의 시선'
             f'<span class="gz-date">{esc(cur["date"])} 기준</span></div>{head}{items}{extra}'
             f'<p class="gz-foot">시장 가격이 지금 어떤 변수에 가장 민감한지 매긴 웨이트(합 100)입니다. '
@@ -150,5 +160,7 @@ GAZE_CSS = """<style>
   .gz-chip { font-size:12.5px; border:1px solid var(--line); border-radius:999px; padding:3px 10px; }
   .gz-chip em { font-style:normal; color:var(--muted); font-size:11.5px; }
   .gz-watch { margin:0; padding-left:18px; font-size:13px; }
+  .gz-chg { margin:4px 0 10px; padding-left:18px; font-size:13px; }
+  .gz-pts { margin:4px 0 2px; padding-left:18px; font-size:13px; }
   .gz-foot { margin:12px 0 0; color:var(--muted); font-size:11.5px; }
 </style>"""

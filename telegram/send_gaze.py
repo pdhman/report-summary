@@ -48,44 +48,49 @@ def delta(item, prev):
     if dw:
         parts.append(f"{dw:+d}")
     if dr:
-        parts.append(f"{'▲' if dr > 0 else '▼'}{abs(dr)}계단")
+        parts.append(f"{'▲' if dr > 0 else '▼'}{abs(dr)}")
     return f" ({', '.join(parts)})" if parts else " (=)"
 
 
 def build_message(cur, prev):
-    e = lambda s: html.escape(s, quote=False)   # 텔레그램 HTML 은 < > & 만 이스케이프하면 된다
+    """2026-10-06 가독성 개편: 긴 문단 대신 '한 줄 요약' + 불릿. 새 필드(summary·changes·points)가
+    없는 구 파일은 headline·why 로 그대로 조립한다. 꼬리말(웨이트 합·소스 배합)은 같은 날 사용자
+    요청으로 뺐다."""
+    e = lambda s: html.escape(str(s), quote=False)   # 텔레그램 HTML 은 < > & 만 이스케이프하면 된다
     y, m, d = (int(x) for x in cur["date"].split("-"))
     import datetime
     wd = WEEKDAYS[datetime.date(y, m, d).weekday()]
     lines = [f"👁 <b>시장의 시선</b> — {cur['date']} ({wd})", ""]
-    if cur.get("headline"):
+    if cur.get("summary"):
+        lines += ["<b>■ 한 줄 요약</b>", e(cur["summary"]), ""]
+    if cur.get("changes"):
+        lines += ["<b>■ 전일 대비 바뀐 것</b>"] + [f"· {e(c)}" for c in cur["changes"]] + [""]
+    elif cur.get("headline") and not cur.get("summary"):
         lines += [e(cur["headline"]), ""]
     for it in sorted(cur["items"], key=lambda i: i["rank"]):
         icon = DIR_ICON.get(it.get("direction", ""), "▫️")
-        lines.append(f"<b>{it['rank']}. {e(it['name'])} — {it['weight']}</b>{delta(it, prev)} {icon}{e(it.get('direction', ''))}")
-        if it.get("why"):
-            lines.append(f"· {e(it['why'])}")
+        lines.append(f"<b>{it['rank']}. {e(it['name'])} — {it['weight']}</b>{delta(it, prev)} "
+                     f"{icon} {e(it.get('direction', ''))}")
+        points = it.get("points") or ([it["why"]] if it.get("why") else [])
+        lines += [f"· {e(pt)}" for pt in points]
         if it.get("trigger"):
-            lines.append(f"· 다음 트리거: {e(it['trigger'])}")
+            lines.append(f"▶ 트리거: {e(it['trigger'])}")
         lines.append("")
     if prev:
-        gone = {i["key"]: i["name"] for i in prev.get("items", [])}.keys() - {i["key"] for i in cur["items"]}
+        gone = {i["key"] for i in prev.get("items", [])} - {i["key"] for i in cur["items"]}
         if gone:
             names = [i["name"] for i in prev["items"] if i["key"] in gone]
             lines += [f"➖ 목록에서 빠짐: {e(', '.join(names))}", ""]
     if cur.get("indicators"):
-        lines.append("📍 <b>체크 지표</b>")
-        lines += [f"· {e(i['name'])}: {e(str(i['value']))}" + (f" (기준 {e(str(i['line']))})" if i.get("line") else "")
+        lines.append("<b>📍 체크 지표</b>")
+        lines += [f"· {e(i['name'])} {e(i['value'])}" + (f" · 기준 {e(i['line'])}" if i.get("line") else "")
                   for i in cur["indicators"]]
         lines.append("")
     if cur.get("watch"):
-        lines.append("👀 <b>관찰 목록</b>")
+        lines.append("<b>👀 관찰 목록</b>")
         lines += [f"· {e(w)}" for w in cur["watch"]]
         lines.append("")
-    mix = cur.get("source_mix") or {"base": 80, "x": 20}
-    lines += [f'<a href="{PAGE_URL}">뉴스 브리핑과 함께 보기</a>', ""]
-    note = f" + 모닝노트 {mix['note']}%" if mix.get("note") else ""
-    lines.append(f"<i>웨이트 합 100 · 뉴스·가격반응·폴리마켓 {mix['base']}% + X모니터링 {mix['x']}%{note} · 판단 추정치</i>")
+    lines.append(f'<a href="{PAGE_URL}">뉴스 브리핑과 함께 보기</a>')
     return "\n".join(lines)
 
 
@@ -104,7 +109,7 @@ def main():
         raise SystemExit(f"웨이트 합이 100이 아닙니다: {total}")
     msg = build_message(cur, prev)
     if len(msg) > 4000:
-        raise SystemExit(f"메시지가 너무 깁니다({len(msg)}자). why/trigger 를 줄이세요.")
+        raise SystemExit(f"메시지가 너무 깁니다({len(msg)}자). points/trigger 를 줄이세요.")
     if args.dry_run:
         print(msg)
         return
