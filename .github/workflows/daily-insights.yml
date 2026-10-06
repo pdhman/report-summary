@@ -59,6 +59,10 @@ jobs:
       # 야후가 러너 IP를 일시 차단해도 스크립트가 기존 데이터를 유지하므로,
       # 실패해도 커밋은 계속한다(continue-on-error).
       - name: Build market data (분석 탭 정적 데이터)
+        # 크롤러 후속 실행(workflow_run)에서는 건너뛴다 — 하루 3~4회 실행마다 종목 파일
+        # 472개가 전부 다시 쓰여 저장소 이력만 불필요하게 커졌다(2026-10). 스케줄
+        # 2회(10:37·16:33 KST)와 수동 실행에서만 굽는다.
+        if: github.event_name != 'workflow_run'
         continue-on-error: true
         env:
           PYTHONUTF8: "1"

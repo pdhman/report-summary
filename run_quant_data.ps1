@@ -16,13 +16,12 @@ $py   = 'C:\Users\SAMSUNG\AppData\Local\Programs\Python\Python311\python.exe'
 Set-Location $proj
 
 # --- git 용량 관리 ---
-# 종목별 데이터 파일이 매일 바뀌어 loose object 가 빠르게 쌓인다.
-# git 의 자동 gc 는 '객체 6,700개' 기준이라 파일이 큰 이 저장소에서는
-# 1.5GB 가 쌓이도록 안 돈다. 임계치를 낮춰 자주 압축되게 한다(재클론 대비).
-if ((git config gc.auto) -ne '400') {
-    git config gc.auto 400
-    git config gc.autoPackLimit 20
-    git config gc.bigPackThreshold 256m
+# 종목별 데이터 파일이 매일 바뀌어 pack 이 빠르게 쌓인다. 자동 gc(gc.auto 400)는
+# 자동화 스크립트가 끝날 때 백그라운드 gc 도 같이 죽어 tmp_pack 찌꺼기만 남기고
+# 압축이 안 됐다(2026-10-06: 로컬 1.9GB vs GitHub 510MB). 자동 gc 는 끄고
+# 주 1회 예약 작업(GitGcWeekly, 일 03:00 → run_git_gc.ps1)이 끝까지 돌린다.
+if ((git config gc.auto) -ne '0') {
+    git config gc.auto 0
 }
 
 # --- branch guard: automation always runs on main ---
