@@ -40,12 +40,19 @@ BASE = Path(__file__).parent
 OUT_DIR = BASE.parent / "docs" / "data"
 INDEX_FILE = OUT_DIR / "index.js"
 
-# 야후 데이터에 공백이 있는 종목을, 그 종목이 추종하는 지수로 메운다.
-# (KODEX 200 은 2009-04-17 이전이 거의 비어 있다 — 2007년 8일·2008년 0일)
-# FinanceDataReader 심볼 / 메우기 시작일 / 화면 표기용 설명
+# 야후 데이터의 앞쪽 공백(또는 시작 이전)을 다른 원천으로 메운다.
+#   fdr: FinanceDataReader 심볼 (KODEX 200 은 2009-04-17 이전이 거의 비어 있다 — 2007년 8일·2008년 0일)
+#   csv: seasonality/ 기준 상대경로, date·close 열 (build_crypto_backfill.py 가 생성)
+# start 는 메우기 시작일, label 은 화면 표기용, reason 은 대체 사유(기본: 원본 공백)
 BACKFILL = {
     "069500.KS": {"fdr": "KS200", "start": "2002-10-14",   # KODEX 200 상장일
                   "label": "코스피200 지수"},
+    # 야후 암호화폐는 BTC 2014-09-17·ETH 2017-11-09 부터라, 그 앞은 CoinMetrics 커뮤니티
+    # 기준가(PriceUSD, 주요 거래소 합산 일별 기준가)를 정적 CSV 로 두고 이어 붙인다.
+    "BTC-USD": {"csv": "backfill/btc_coinmetrics.csv", "start": "2010-07-18",
+                "label": "CoinMetrics 기준가", "reason": "야후 데이터 시작 전"},
+    "ETH-USD": {"csv": "backfill/eth_coinmetrics.csv", "start": "2015-08-08",
+                "label": "CoinMetrics 기준가", "reason": "야후 데이터 시작 전"},
 }
 GAP_DAYS = 30       # 이보다 긴 공백이 있으면 그 이전 구간은 신뢰하지 않는다
 
@@ -139,29 +146,37 @@ def _date(n: int) -> datetime.date:
     return datetime.date(n // 10000, n // 100 % 100, n % 100)
 
 
+def _backfill_source(cfg: dict, end: datetime.date):
+    """백필 원천을 날짜 인덱스 DataFrame 으로 읽는다(Close 필수, Open/High/Low 선택)."""
+    if "csv" in cfg:
+        import pandas as pd
+        df = pd.read_csv(BASE / cfg["csv"], parse_dates=["date"], index_col="date")
+        return df.rename(columns={"close": "Close"}).loc[cfg["start"]:str(end)]
+    import FinanceDataReader as fdr
+    return fdr.DataReader(cfg["fdr"], cfg["start"], str(end))
+
+
 def backfill(sym: str, bars: list):
-    """야후 데이터의 앞쪽 공백을 추종 지수로 메운다. (메운 봉수, 시작일) 반환."""
+    """야후 데이터의 앞쪽 공백(또는 시작 이전)을 다른 원천으로 메운다. (메운 봉수, 시작일, 접합일) 반환."""
     cfg = BACKFILL.get(sym)
     if not cfg:
         return bars, None
 
-    # 마지막 큰 공백 지점(J) 이후만 신뢰한다. 그 앞은 지수로 대체.
+    # 마지막 큰 공백 지점(J) 이후만 신뢰하고 그 앞은 대체한다.
+    # 공백이 없으면 J=0 — 야후 첫 봉 앞에 이어 붙인다(암호화폐처럼 야후 이력이 짧은 경우).
     j = 0
     for i in range(1, len(bars)):
         if (_date(bars[i][0]) - _date(bars[i - 1][0])).days > GAP_DAYS:
             j = i
-    if j == 0:
-        return bars, None
 
     junction = bars[j]
     try:
-        import FinanceDataReader as fdr
-        idx = fdr.DataReader(cfg["fdr"], cfg["start"], str(_date(junction[0])))
+        idx = _backfill_source(cfg, _date(junction[0]))
     except Exception as e:
-        print(f"    [{sym}] 지수 백필 실패({e.__class__.__name__}) — 야후 데이터만 사용")
+        print(f"    [{sym}] 백필 실패({e.__class__.__name__}) — 야후 데이터만 사용")
         return bars, None
     if idx.empty or junction[0] not in [int(t.strftime("%Y%m%d")) for t in idx.index]:
-        print(f"    [{sym}] 지수 백필: 접합일 데이터 없음 — 야후 데이터만 사용")
+        print(f"    [{sym}] 백필: 접합일 데이터 없음 — 야후 데이터만 사용")
         return bars, None
 
     # 접합일에서 수준을 맞춰 이어 붙인다(수익률 연속). 종가용/수정종가용 배율을 따로 둔다.
@@ -283,8 +298,9 @@ def main() -> None:
                 bars = stabilize(prev["bars"], bars)
             if bf:
                 ymd = str(bf[2])
-                note = (f"{ymd[:4]}-{ymd[4:6]} 이전 구간은 {BACKFILL[sym]['label']}로 대체 "
-                        f"(야후 원본 데이터 공백)")
+                cfg = BACKFILL[sym]
+                note = (f"{ymd[:4]}-{ymd[4:6]} 이전 구간은 {cfg['label']}로 대체 "
+                        f"({cfg.get('reason', '야후 원본 데이터 공백')})")
             n_full += 1
             tail = f" · 지수로 {bf[0]}일 백필({bf[1]}~)" if bf else " · 전체"
         else:

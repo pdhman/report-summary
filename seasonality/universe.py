@@ -143,6 +143,9 @@ UNIVERSE = [
         "ARKK": "혁신기업",
     }),
     ("암호화폐", {
+        # 현물 USD 가격: 야후(거래소 합산) + 그 이전은 CoinMetrics 기준가(fetch_data.BACKFILL)
+        "BTC-USD": "비트코인 현물 USD (2010~)",
+        "ETH-USD": "이더리움 현물 USD (2015~)",
         "BITO": "비트코인 선물",
         "IBIT": "비트코인 현물",
         "ETHE": "이더리움",
