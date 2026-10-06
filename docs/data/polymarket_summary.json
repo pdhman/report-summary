@@ -1,5 +1,5 @@
 {
- "date": "2026-10-06 02:15",
+ "date": "2026-10-06 10:21",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -7,31 +7,31 @@
   "title": "Fed Decision in October?",
   "top": {
    "label": "No change",
-   "prob": 0.785,
-   "d24": -0.04
+   "prob": 0.805,
+   "d24": -0.02
   },
-  "mean": 5.16,
-  "mean_d24": 1.054,
+  "mean": 4.846,
+  "mean_d24": 0.74,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
   "prob": 0.075,
-  "d24": 0.0,
+  "d24": -0.005,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "25 bps increase · Will the Fed increase interest rates by 25 bps after the January 2027 meeting?",
-  "pmss": 67.4,
+  "q": "October 31 · Bab el-Mandeb Strait effectively closed by October 31?",
+  "pmss": 64.0,
   "band": "Interest",
-  "d24": 0.05,
-  "prob": 0.365
+  "d24": -0.03,
+  "prob": 0.055
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 67.4
+  "top_pmss": 64.0
  },
- "alerts": 0,
- "n_markets": 427,
+ "alerts": 2,
+ "n_markets": 431,
  "source": "direct"
 }
