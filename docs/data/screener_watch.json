@@ -1,87 +1,69 @@
 {
- "date": "2026-10-06",
+ "date": "2026-10-07",
  "high_52w_ratio": 0.65,
  "items": [
   {
+   "name": "삼성전기",
+   "ticker": "009150",
+   "close": 1604000.0,
+   "change_ratio": -4.75,
+   "rs_score": 97.6,
+   "vol_ratio": 90.1,
+   "from_high": -33.6
+  },
+  {
    "name": "RF머트리얼즈",
    "ticker": "327260",
-   "close": 57800.0,
-   "change_ratio": 8.65,
-   "rs_score": 97.8,
-   "vol_ratio": 88.2,
-   "from_high": -8.9
+   "close": 53400.0,
+   "change_ratio": -9.18,
+   "rs_score": 96.0,
+   "vol_ratio": 74.4,
+   "from_high": -15.8
   },
   {
-   "name": "피에스케이",
-   "ticker": "319660",
-   "close": 154000.0,
-   "change_ratio": 1.32,
+   "name": "심텍",
+   "ticker": "222800",
+   "close": 170400.0,
+   "change_ratio": -2.01,
    "rs_score": 89.6,
-   "vol_ratio": 97.4,
-   "from_high": -29.8
-  },
-  {
-   "name": "제주반도체",
-   "ticker": "080220",
-   "close": 93600.0,
-   "change_ratio": 0.86,
-   "rs_score": 88.8,
-   "vol_ratio": 83.0,
-   "from_high": -32.2
+   "vol_ratio": 77.0,
+   "from_high": -6.7
   },
   {
    "name": "삼화콘덴서",
    "ticker": "001820",
-   "close": 158800.0,
-   "change_ratio": 0.63,
-   "rs_score": 88.1,
-   "vol_ratio": 72.8,
-   "from_high": -19.3
-  },
-  {
-   "name": "테스",
-   "ticker": "095610",
-   "close": 176400.0,
-   "change_ratio": -1.12,
-   "rs_score": 85.8,
-   "vol_ratio": 87.1,
-   "from_high": -25.4
-  },
-  {
-   "name": "삼성전자",
-   "ticker": "005930",
-   "close": 272000.0,
-   "change_ratio": -1.45,
-   "rs_score": 81.3,
-   "vol_ratio": 90.1,
-   "from_high": -27.4
+   "close": 159700.0,
+   "change_ratio": -0.56,
+   "rs_score": 88.8,
+   "vol_ratio": 83.6,
+   "from_high": -18.9
   },
   {
    "name": "삼성전자우",
    "ticker": "005935",
-   "close": 198200.0,
-   "change_ratio": -1.64,
-   "rs_score": 79.9,
-   "vol_ratio": 71.0,
-   "from_high": -18.6
+   "close": 198000.0,
+   "change_ratio": -0.4,
+   "rs_score": 78.4,
+   "vol_ratio": 81.5,
+   "from_high": -18.7
   },
   {
-   "name": "후성",
-   "ticker": "093370",
-   "close": 16290.0,
-   "change_ratio": -0.67,
-   "rs_score": 70.9,
-   "vol_ratio": 68.7,
-   "from_high": -30.8
+   "name": "S-Oil",
+   "ticker": "010950",
+   "close": 170600.0,
+   "change_ratio": 3.39,
+   "rs_score": 77.6,
+   "vol_ratio": 96.6,
+   "from_high": -3.7
   },
   {
-   "name": "삼성E&A",
-   "ticker": "028050",
-   "close": 48050.0,
-   "change_ratio": 0.42,
-   "rs_score": 50.7,
-   "vol_ratio": 84.5,
-   "from_high": -28.6
+   "name": "SK",
+   "ticker": "034730",
+   "close": 580000.0,
+   "change_ratio": -1.02,
+   "rs_score": 70.4,
+   "vol_ratio": 87.8,
+   "from_high": -34.3
   }
  ]
 }
