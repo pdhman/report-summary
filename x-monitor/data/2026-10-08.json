@@ -1,0 +1,830 @@
+{
+  "date": "2026-10-08",
+  "collected_at": "2026-10-07T23:52:00Z",
+  "posts": [
+    {
+      "handle": "TheShortBear",
+      "time": "2026-10-07T23:36:44.000Z",
+      "text": "On the issue of recent mathematics developments through AI and quantum proofing encryption.\n\nIf elliptic-curve and RSA cryptography fall, the problem isn't limited to crypto. Banks, payment rails, TLS and code signing all rest on the same public-key math. \n\nNo state, bank or Big Tech firm wants that outcome, so the migration is already funded and underway. NIST's post-quantum standards are final, and Google has set itself a 2029 deadline.\n\n2/ The difference for crypto is that the asset is the signature. A bank can rotate keys, revoke certificates and reverse a wire. A chain can't reverse a forged signature, and it can't migrate coins whose owner is gone for most projects.\n\nThat makes crypto ",
+      "url": "https://x.com/TheShortBear/status/2107978460840783932",
+      "likes": 12,
+      "views": 4227
+    },
+    {
+      "handle": "KobeissiLetter",
+      "time": "2026-10-07T23:31:38.000Z",
+      "text": "BREAKING: The US Pentagon has instructed the US Military to conclude preparations for potentially resuming \"major combat operations\" in Iran, per Axios.\n\nDetails include:\n\n1. US and Israeli sources say combat operations could happen before the midterm elections\n\n2. A White House official said President Trump \"has all options available at any time\"\n\n3. On Friday, Trump's national security team met at Camp David and discussed possible resumption of major combat operations in Iran\n\nBrent crude oil prices are trading above $101/barrel.",
+      "url": "https://x.com/KobeissiLetter/status/2107977179518644668",
+      "likes": 310,
+      "views": 48251
+    },
+    {
+      "handle": "caprioleio",
+      "time": "2026-10-07T23:05:51.000Z",
+      "text": "The market is pushing fresh highs but everyone is bearishly positioned. I wonder how this ends. [link]",
+      "url": "https://x.com/caprioleio/status/2107970688783155397",
+      "likes": 16,
+      "views": 2536
+    },
+    {
+      "handle": "TheShortBear",
+      "time": "2026-10-07T22:30:43.000Z",
+      "text": "The same is true for TOTAL3 (ex-BTC & ETH)with the 200ema about 4% lower from here as well as multi-month support.\n\nPeople seem lost, zoomed in too much. \n\nWe are seeing a major 6 years range, with a breakout on major regulatory news and adoption like never before. \n\nThis will likely look very obvious in hindsight.\n\nWe are nowhere near exuberance, we barely even began an attempt at a rise. \n\nLittle fun fact, each 3m+ consolidation breaking higher since 2023 was followed by new 52w and consolidation highs, all of them within ~1/2 the time the consolidation took to build.\n\nATH is 40% away and should it be reach this would turn this range into a 6y cup and handle with multi-trillion adoption fo",
+      "url": "https://x.com/TheShortBear/status/2107961847437472041",
+      "likes": 7,
+      "views": 2786
+    },
+    {
+      "handle": "TheShortBear",
+      "time": "2026-10-07T22:30:42.000Z",
+      "text": "Crypto pulling back is more than fine here. \n\nWe just went from multiyear lows to a reclaim of the 200ema within 1.5months and have plenty of regulatory news, on top of adoption and builders coming back to the space. \n\nWe simply retested overall resistance and are pulling back into an up-slopping 200ema right below.\n\nThere will barely be any structure left from there should we reclaim and move higher.\n\nZooming out truly helps in Crypto. \n\nit's growth is smoother than most would think, driven by the distant terminal value whichs perception is partially driven by emotions.\n\nI believe looking back we will see these times as very early overall in terms of blockchain technology and the infancy of",
+      "url": "https://x.com/TheShortBear/status/2107961844623130904",
+      "likes": 55,
+      "views": 9528
+    },
+    {
+      "handle": "TheShortBear",
+      "time": "2026-10-07T21:41:32.000Z",
+      "text": "Are we in for a similar dip as 2025? \n\nWe would be late to the party. \n\nIf the same move happens once again we would make new highs by mid October. \n\nMarkets are way scarier now to me than back then but the backwind in terms of news, regulation and overall progress in the space is way better.",
+      "url": "https://x.com/TheShortBear/status/2107949471778672674",
+      "likes": 67,
+      "views": 14755
+    },
+    {
+      "handle": "RichardMoglen",
+      "time": "2026-10-07T21:33:48.000Z",
+      "text": "Inspired by @alphatrends I made a deepvue custom indicator with our AI builder that plots a vertical line 50 bars ago so you can anticipate changes in the 50sma slope\n\nLink: [link] [link]",
+      "url": "https://x.com/RichardMoglen/status/2107947525382742070",
+      "likes": 28,
+      "views": 5575
+    },
+    {
+      "handle": "KobeissiLetter",
+      "time": "2026-10-07T21:32:07.000Z",
+      "text": "BREAKING: Broadcom, $AVGO, is seeking more than $50 billion in financing for OpenAI’s custom AI chip, which the firms are developing together, per WSJ.\n\nApollo and Blackstone are among the lenders Broadcom has talked to about participating in the deal.\n\nThe financing is intended to help Oracle bridge the gap between when it has to pay for the hardware and when its cloud computing revenue starts coming in.",
+      "url": "https://x.com/KobeissiLetter/status/2107947102009762038",
+      "likes": 892,
+      "views": 157588
+    },
+    {
+      "handle": "RichardMoglen",
+      "time": "2026-10-07T21:25:47.000Z",
+      "text": "I just made a tutorial on how to create a custom risk indicator in @Deepvue (no coding needed)\n\nThis can help you set stops, identify low risk entries, and set position sizing.\n\n[link]",
+      "url": "https://x.com/RichardMoglen/status/2107945506064498952",
+      "likes": 26,
+      "views": 6190
+    },
+    {
+      "handle": "ConnorJBates_",
+      "time": "2026-10-07T21:18:09.000Z",
+      "text": "In a few weeks Fintwit will be calling $AMZN a leader and buying the $300 breakout.",
+      "url": "https://x.com/ConnorJBates_/status/2107943585500787128",
+      "likes": 134,
+      "views": 11701
+    },
+    {
+      "handle": "McClellanOsc",
+      "time": "2026-10-07T20:34:17.000Z",
+      "text": "Walmart now rivals Amazon for online order fulfillment. But you would have been laughed out of the room in 2000 if you called Walmart an \"Internet company\". There will be a similar transition regardin",
+      "url": "https://x.com/McClellanOsc/status/2107932545828675748",
+      "likes": 42,
+      "views": 6160
+    },
+    {
+      "handle": "McClellanOsc",
+      "time": "2026-10-07T20:29:38.000Z",
+      "text": "Yes, the quoted data for the surface temps of Nino3.4 region of the equatorial Pacific is at a new high. But the # (10-year) moving average shows no trend. And the Bollinger Bands show that this is a ",
+      "url": "https://x.com/McClellanOsc/status/2107931375554961851",
+      "likes": 36,
+      "views": 6168
+    },
+    {
+      "handle": "ChrisCamillo",
+      "time": "2026-10-07T20:21:45.000Z",
+      "text": "fun day talking shop with old friends @howardlindzon @Stocktwits @obermattj [link]",
+      "url": "https://x.com/ChrisCamillo/status/2107929393616032245",
+      "likes": 114,
+      "views": 27126
+    },
+    {
+      "handle": "caprioleio",
+      "time": "2026-10-07T20:08:40.000Z",
+      "text": "It’s still pretty crazy to think just 3 years ago the world was running on software, yet today no one is writing code anymore.",
+      "url": "https://x.com/caprioleio/status/2107926102408925300",
+      "likes": 25,
+      "views": 5408
+    },
+    {
+      "handle": "Bluekurtic",
+      "time": "2026-10-07T20:07:48.000Z",
+      "text": "Finally! The S&P 500 has officially closed the first 5 trading days of Q4 in the green. This is bullish.\n\nAs noted before, when day 1 and the first 5 trading days were positive, Q4 finished higher in 29 of 32 prior cases. Median QTD max loss was just -1.7%. [link]",
+      "url": "https://x.com/Bluekurtic/status/2107925882333773983",
+      "likes": 40,
+      "views": 2411
+    },
+    {
+      "handle": "AlmanacTrader",
+      "time": "2026-10-07T19:59:41.000Z",
+      "text": "Midterm October new all-time closing highs have been uncommon, but still bullish for Q4. 2014, 1958, and 1954, average Q4 gains +8.68%. [link] [link]",
+      "url": "https://x.com/AlmanacTrader/status/2107923841335071106",
+      "likes": 32,
+      "views": 2859
+    },
+    {
+      "handle": "KobeissiLetter",
+      "time": "2026-10-07T19:31:20.000Z",
+      "text": "BREAKING: Global central banks acquired +39 tonnes of gold in August, marking their 5th consecutive monthly purchase.\n\nThis follows +23 tonnes in July and +52 tonnes in June.\n\nChina again led demand, adding +20 tonnes and bringing its year-to-date purchases to +80 tonnes.\n\nChina’s official gold reserves have now risen to a record 2,387 tonnes, or 9% of its total FX reserves.\n\nFurthermore, Poland bought +8 tonnes, lifting its year-to-date purchases to +98 tonnes and total gold reserves to a record 648 tonnes.\n\nSo far in 2026, central banks have acquired +170 tonnes of gold.\n\nCentral banks continue to aggressively accumulate gold.",
+      "url": "https://x.com/KobeissiLetter/status/2107916705603195373",
+      "likes": 1011,
+      "views": 126265
+    },
+    {
+      "handle": "TechCharts",
+      "time": "2026-10-07T19:01:23.000Z",
+      "text": "Seriously are these bots?",
+      "url": "https://x.com/TechCharts/status/2107909167772205447",
+      "likes": 57,
+      "views": 20136
+    },
+    {
+      "handle": "TechCharts",
+      "time": "2026-10-07T18:57:44.000Z",
+      "text": "26th year in business. Still we have folks who call charting astrology. [link]",
+      "url": "https://x.com/TechCharts/status/2107908249693364555",
+      "likes": 100,
+      "views": 17573
+    },
+    {
+      "handle": "TechCharts",
+      "time": "2026-10-07T18:52:09.000Z",
+      "text": "50% probability of making $2000 and 50% probability of losing $1000.\n\nFollowing the breakout, possibility of reducing the $ loss to $500 by raising initial stop. \n\nThink about that.\n\nand stop with the nonsense of yeah but its 50/50.",
+      "url": "https://x.com/TechCharts/status/2107906845906206806",
+      "likes": 175,
+      "views": 22379
+    },
+    {
+      "handle": "KennethLFisher",
+      "time": "2026-10-07T18:45:02.000Z",
+      "text": "What can history tell us about the midterms? Here’s my thoughts. [link]",
+      "url": "https://x.com/KennethLFisher/status/2107905055198159101",
+      "likes": 5,
+      "views": 4437
+    },
+    {
+      "handle": "TechCharts",
+      "time": "2026-10-07T18:40:50.000Z",
+      "text": "82.8K support. $BTC [link]",
+      "url": "https://x.com/TechCharts/status/2107903996472234076",
+      "likes": 546,
+      "views": 26992
+    },
+    {
+      "handle": "TechCharts",
+      "time": "2026-10-07T18:23:33.000Z",
+      "text": "#NASDAQ 30,700 acts as support. [link]",
+      "url": "https://x.com/TechCharts/status/2107899649055150354",
+      "likes": 126,
+      "views": 15613
+    },
+    {
+      "handle": "TechCharts",
+      "time": "2026-10-07T18:21:42.000Z",
+      "text": "$ACWI another bullish continuation. \n\nMore with the upcoming report >> [link] [link]",
+      "url": "https://x.com/TechCharts/status/2107899183562948935",
+      "likes": 24,
+      "views": 12034
+    },
+    {
+      "handle": "TechCharts",
+      "time": "2026-10-07T18:18:59.000Z",
+      "text": "#SPX re-test after the breakout. 7,840 acts as support. [link]",
+      "url": "https://x.com/TechCharts/status/2107898497554849798",
+      "likes": 160,
+      "views": 16714
+    },
+    {
+      "handle": "TechCharts",
+      "time": "2026-10-07T18:17:47.000Z",
+      "text": "#NASDAQ vs. #RUSSELL Nasdaq continues to outperform. \n\nMore on this > [link] [link]",
+      "url": "https://x.com/TechCharts/status/2107898196223512959",
+      "likes": 45,
+      "views": 12486
+    },
+    {
+      "handle": "KobeissiLetter",
+      "time": "2026-10-07T18:03:09.000Z",
+      "text": "BREAKING: September Fed Meeting Minutes show that most Fed officials expect another interest rate hike by year-end.\n\nAll 19 Fed officials backed the September interest rate hike.\n\nAlmost all Fed officials see inflation risks tilted upward, with some warning AI could push demand above supply and increase inflation.",
+      "url": "https://x.com/KobeissiLetter/status/2107894513662661110",
+      "likes": 2152,
+      "views": 243634
+    },
+    {
+      "handle": "RyanDetrick",
+      "time": "2026-10-07T17:43:36.000Z",
+      "text": "Good stuff between @philrosenn and @_JoshSchafer (aka Josh Jr) 👏👏👏",
+      "url": "https://x.com/RyanDetrick/status/2107889593651466444",
+      "likes": 23,
+      "views": 8663
+    },
+    {
+      "handle": "RyanDetrick",
+      "time": "2026-10-07T17:42:27.000Z",
+      "text": "Thanks @CMTAssociation!",
+      "url": "https://x.com/RyanDetrick/status/2107889304244457529",
+      "likes": 74,
+      "views": 10083
+    },
+    {
+      "handle": "RyanDetrick",
+      "time": "2026-10-07T17:35:19.000Z",
+      "text": "🤔🤔",
+      "url": "https://x.com/RyanDetrick/status/2107887509065613536",
+      "likes": 25,
+      "views": 9381
+    },
+    {
+      "handle": "KobeissiLetter",
+      "time": "2026-10-07T17:25:00.000Z",
+      "text": "BREAKING: Since the start of 2025, US jobs numbers have now been revised down in 16 out of 20 months by a total of -793,000 jobs.\n\nThis means that, on average, -39,650 jobs have been revised out of previously reported data each month during this period.\n\nThe most recent August and July jobs numbers were revised down by a total of -60,000.\n\nRevisions to nonfarm payrolls have consistently occurred since the start of 2023.\n\nIf we apply this average to the +29,000 jobs add in September's report, it would imply a -10,650 contraction in nonfarm payrolls last month.\n\nThis would also mark their 3rd monthly decline of 2026, following a -156,000 drop in February and -10,000 in July.\n\nWhat is happening",
+      "url": "https://x.com/KobeissiLetter/status/2107884911801614432",
+      "likes": 1074,
+      "views": 145016
+    },
+    {
+      "handle": "markminervini",
+      "time": "2026-10-07T17:10:58.000Z",
+      "text": "I've learned from many people throughout my life, but there is one man I admire and love above most—my dear friend Larry Hite, author of The Rule.\nI was a fan of Larry long before I had the privilege of calling him my friend. Years later, he became a fan of mine after he read my book. During all the time we spent  together, all he ever wanted to talk about was stocks. \nThere are few greater honors than earning the recognition and respect of someone you have admired and learned from.\nI suggest reading Larry's chapter in Market Wizards and buying his book.",
+      "url": "https://x.com/markminervini/status/2107881381162316108",
+      "likes": 436,
+      "views": 45626
+    },
+    {
+      "handle": "RyanDetrick",
+      "time": "2026-10-07T16:42:36.000Z",
+      "text": "New highs are here, but we don't think the party is over yet. I discuss more in our latest @CarsonResearch blog.\n\n[link]",
+      "url": "https://x.com/RyanDetrick/status/2107874241534439727",
+      "likes": 65,
+      "views": 8957
+    },
+    {
+      "handle": "LindaRaschke",
+      "time": "2026-10-07T16:38:23.000Z",
+      "text": "A colleague wished for Paul Krugman to interview Scott Bessent.  AI delivered, (even inserting a bit of humor!) Fictional interview:\nKrugman: “Scott, you want lower taxes, higher tariffs, a smaller de",
+      "url": "https://x.com/LindaRaschke/status/2107873180564021506",
+      "likes": 58,
+      "views": 10928
+    },
+    {
+      "handle": "KobeissiLetter",
+      "time": "2026-10-07T16:25:00.000Z",
+      "text": "Executives in the Financials sector are turning cautious:\n\nThe unique seller/buyer ratio for Financials stood at 2.10x above its long-term average in Q3 2026, the highest reading across all major sectors.\n\nThis ratio compares the number of individual insiders who sold shares with the number who bought, regardless of how many times they sold.\n\nThe number of financial executives buying their own stocks in the sector fell to its lowest level in almost 23 years, while the number of sellers was not unusually high.\n\nEnergy and Technology followed, with ratios of 1.30x and 1.24x, respectively.\n\nAt the same time, the broader market seller/buyer ratio stood at 1.20x its long-term average last quarter",
+      "url": "https://x.com/KobeissiLetter/status/2107869812449771831",
+      "likes": 346,
+      "views": 106107
+    },
+    {
+      "handle": "Bluekurtic",
+      "time": "2026-10-07T16:20:23.000Z",
+      "text": "Mr. H is back. Two consecutive Hindenburg Omens triggered across Nasdaq stocks. Next few days have been rough.\n\nBut when this happened near new highs, the weakness didn’t last. One month out, the $NDX was higher in every prior case. [link]",
+      "url": "https://x.com/Bluekurtic/status/2107868650397216959",
+      "likes": 52,
+      "views": 3434
+    },
+    {
+      "handle": "KennethLFisher",
+      "time": "2026-10-07T16:10:12.000Z",
+      "text": "My latest column in @TheNationalNews is out now [ENGLISH, PAYWALL]: Monetary Policymakers Should Not Raise Rates Higher\n[link]",
+      "url": "https://x.com/KennethLFisher/status/2107866090038550578",
+      "likes": 7,
+      "views": 3392
+    },
+    {
+      "handle": "markminervini",
+      "time": "2026-10-07T16:02:46.000Z",
+      "text": "Had a great time at VIR this week. Here I am having some fun chasing a very fast Ferrari. [link]",
+      "url": "https://x.com/markminervini/status/2107864219206946887",
+      "likes": 99,
+      "views": 34920
+    },
+    {
+      "handle": "ConnorJBates_",
+      "time": "2026-10-07T16:00:41.000Z",
+      "text": "$IWM Potential higher low off the 200-DMA",
+      "url": "https://x.com/ConnorJBates_/status/2107863692377288975",
+      "likes": 41,
+      "views": 6323
+    },
+    {
+      "handle": "quantpedia",
+      "time": "2026-10-07T15:55:38.000Z",
+      "text": "Trading the Multi-Asset Drift Around U.S. Elections\n\nWe analyze a multi-asset calendar anomaly around U.S. federal elections that is consistent across assets and simple to trade. While our previous st",
+      "url": "https://x.com/quantpedia/status/2107862422581039293",
+      "likes": 3,
+      "views": 317
+    },
+    {
+      "handle": "markminervini",
+      "time": "2026-10-07T15:52:21.000Z",
+      "text": "Don't just trade. BUILD A LEGACY! 👇\n[link] [link]",
+      "url": "https://x.com/markminervini/status/2107861595112316979",
+      "likes": 38,
+      "views": 27022
+    },
+    {
+      "handle": "RyanDetrick",
+      "time": "2026-10-07T15:41:31.000Z",
+      "text": "Bull markets that made it to their fourth birthday have historically done quite well in year 5. This one turns four next week. \n\nThe bull market ended only once in year 5 and that was more than 50 yea",
+      "url": "https://x.com/RyanDetrick/status/2107858871314194860",
+      "likes": 351,
+      "views": 13225
+    },
+    {
+      "handle": "afzal_57",
+      "time": "2026-10-07T15:32:11.000Z",
+      "text": "The S&P500 is at new highs. The Equal Weight chart is pulling back to its averages on the weekly. Same market, same week.\n\nSo what is going on?\n\nYou see, the S&P500 gives more weight to the big compan",
+      "url": "https://x.com/afzal_57/status/2107856521363341380",
+      "likes": 7,
+      "views": 7191
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T15:27:09.000Z",
+      "text": "@KobeissiLetter Even if European money is helping build US AI, Europe can still build its own AI industry. 😎",
+      "url": "https://x.com/ISABELNET_SA/status/2107855255333687447",
+      "likes": 0,
+      "views": 699
+    },
+    {
+      "handle": "KobeissiLetter",
+      "time": "2026-10-07T15:13:00.000Z",
+      "text": "This chart says it all.\n\nEurope is quite literally financing the US’ AI buildout.\n\nThe AI arms race is now exclusively happening between the US and China. [link]",
+      "url": "https://x.com/KobeissiLetter/status/2107851692997775427",
+      "likes": 986,
+      "views": 165087
+    },
+    {
+      "handle": "charliebilello",
+      "time": "2026-10-07T15:04:03.000Z",
+      "text": "Global Central Bank Update:\n-India hiked rates for the first time since 2023, 25 bp increase up to 5.50%. [link]",
+      "url": "https://x.com/charliebilello/status/2107849440585552213",
+      "likes": 93,
+      "views": 19999
+    },
+    {
+      "handle": "RyanDetrick",
+      "time": "2026-10-07T15:03:23.000Z",
+      "text": "Our proprietary @CarsonResearch LEI correctly said we would avoid a recession in 2023, even though many other popular models said we would.\n\nIt has accurately said we are in a period of inflationary g",
+      "url": "https://x.com/RyanDetrick/status/2107849272519803257",
+      "likes": 123,
+      "views": 10124
+    },
+    {
+      "handle": "jfsrev",
+      "time": "2026-10-07T14:50:35.000Z",
+      "text": "Keep going, stay resilient, learn from every loss, adapt to changing market conditions, and keep refining your process.",
+      "url": "https://x.com/jfsrev/status/2107846054448373783",
+      "likes": 161,
+      "views": 8386
+    },
+    {
+      "handle": "MarkRitchie_II",
+      "time": "2026-10-07T14:43:25.000Z",
+      "text": "I'm traveling for the MPA Gala next day/two but right now I'd say this area is still key to watch (AI, semi, memory).  Some of these stocks have tried to move but albeit a bit lumpy.  I've added some exposure but partying with one foot right near the exit if we don't get follow through.  Still selective for sure and IF (big IF as all the news is bad) we get any good news (backup in rates, oil, peace somewhere 🙏) do these names sell off (more rotational chop) vs hold and move higher.",
+      "url": "https://x.com/MarkRitchie_II/status/2107844248712130951",
+      "likes": 64,
+      "views": 6204
+    },
+    {
+      "handle": "RichardMoglen",
+      "time": "2026-10-07T14:41:19.000Z",
+      "text": "$MU not dead yet. Strong action off the open [link]",
+      "url": "https://x.com/RichardMoglen/status/2107843720791892023",
+      "likes": 79,
+      "views": 7767
+    },
+    {
+      "handle": "MarkRitchie_II",
+      "time": "2026-10-07T14:37:07.000Z",
+      "text": "Great interview from two MW.",
+      "url": "https://x.com/MarkRitchie_II/status/2107842665660194817",
+      "likes": 56,
+      "views": 5441
+    },
+    {
+      "handle": "jfsrev",
+      "time": "2026-10-07T14:24:40.000Z",
+      "text": "$BE via $BEX (Update) \n\nTough week. Close to stopping out on the final tranche within a single session. Also stopped out on $NET on T+2 on loss this week. If you’ve been struggling with recent entries",
+      "url": "https://x.com/jfsrev/status/2107839529482899715",
+      "likes": 96,
+      "views": 10885
+    },
+    {
+      "handle": "RichardMoglen",
+      "time": "2026-10-07T14:10:33.000Z",
+      "text": "$PENG very strong [link]",
+      "url": "https://x.com/RichardMoglen/status/2107835978249322967",
+      "likes": 72,
+      "views": 7566
+    },
+    {
+      "handle": "KobeissiLetter",
+      "time": "2026-10-07T14:01:26.000Z",
+      "text": "BREAKING: The Nasdaq 100 extends losses to -200 points on the day as US Treasury yields hit their highest level since 2002 and oil prices rise. [link]",
+      "url": "https://x.com/KobeissiLetter/status/2107833682199302165",
+      "likes": 2265,
+      "views": 211472
+    },
+    {
+      "handle": "McClellanOsc",
+      "time": "2026-10-07T14:00:06.000Z",
+      "text": "The oversold McClellan Oscillator low was the precondition. The bullish divergence was the setup. The crossing above the Oscillator's declining tops line was the signal, and the crossing up above zero",
+      "url": "https://x.com/McClellanOsc/status/2107833347162493136",
+      "likes": 299,
+      "views": 20310
+    },
+    {
+      "handle": "LeifSoreide",
+      "time": "2026-10-07T13:56:56.000Z",
+      "text": "$PENG Earnings\n\nAI servers and memory modules. Up double digits on earnings while $SMH is red.\n\nThat's how I favor a group. Find the name with the story, gaps higher, and holds when the broad chip tap",
+      "url": "https://x.com/LeifSoreide/status/2107832552933175364",
+      "likes": 71,
+      "views": 6730
+    },
+    {
+      "handle": "RichardMoglen",
+      "time": "2026-10-07T13:54:30.000Z",
+      "text": "Stress test",
+      "url": "https://x.com/RichardMoglen/status/2107831939499753608",
+      "likes": 83,
+      "views": 9007
+    },
+    {
+      "handle": "jfsrev",
+      "time": "2026-10-07T13:53:36.000Z",
+      "text": "US10Y (Update) 5.33%, 24-year high today [link]",
+      "url": "https://x.com/jfsrev/status/2107831710906024173",
+      "likes": 18,
+      "views": 6508
+    },
+    {
+      "handle": "Bluekurtic",
+      "time": "2026-10-07T13:47:04.000Z",
+      "text": "This weakness is not unexpected. We highlighted this yesterday before close.\n\nBear trap 🐻 [link]",
+      "url": "https://x.com/Bluekurtic/status/2107830069255364911",
+      "likes": 3,
+      "views": 813
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T13:37:46.000Z",
+      "text": "@KobeissiLetter At these rates, housing gets squeezed from both sides: buyers pull back, owners hang onto their cheap mortgages, and sales take the hit before prices do! 🤔",
+      "url": "https://x.com/ISABELNET_SA/status/2107827728422428896",
+      "likes": 2,
+      "views": 637
+    },
+    {
+      "handle": "KennethLFisher",
+      "time": "2026-10-07T13:30:08.000Z",
+      "text": "Quote for the Day: “Knowledge will give you power, but character respect.” -Bruce Lee\n#KFQuoteForTheDay [link]",
+      "url": "https://x.com/KennethLFisher/status/2107825806307172463",
+      "likes": 38,
+      "views": 4330
+    },
+    {
+      "handle": "KobeissiLetter",
+      "time": "2026-10-07T13:18:44.000Z",
+      "text": "BREAKING: The US 10Y Note Yield rises above 5.35% for the first time in 24 years.\n\nThat brings the total move since the pre-Iran War low to +143 basis points.\n\nMortgage rates are at fresh 3-year highs. [link]",
+      "url": "https://x.com/KobeissiLetter/status/2107822936728219682",
+      "likes": 4708,
+      "views": 309442
+    },
+    {
+      "handle": "Bluekurtic",
+      "time": "2026-10-07T13:00:02.000Z",
+      "text": "Market Breadth is finally showing some bullish signs. The S&P 500 McClellan Oscillator turned positive after 3+ weeks below zero as $SPX makes all time highs.\n\nThree months out, SPX was higher in 11 of 12 cases, with a median gain of 4.2%. [link]",
+      "url": "https://x.com/Bluekurtic/status/2107818229850578997",
+      "likes": 51,
+      "views": 2954
+    },
+    {
+      "handle": "jfsrev",
+      "time": "2026-10-07T12:43:44.000Z",
+      "text": "👍🏻",
+      "url": "https://x.com/jfsrev/status/2107814128199008624",
+      "likes": 21,
+      "views": 8065
+    },
+    {
+      "handle": "KobeissiLetter",
+      "time": "2026-10-07T12:37:29.000Z",
+      "text": "BREAKING: A senior Iranian official tells Reuters that Iran \"will never give up its right to enrich Uranium\" and that there are currently \"no talks\" underway with the US over Iran's nuclear program.\n\nThe Iranian official says US proposals for Iran's nuclear program are \"at odds with Iran’s demands.\"\n\nBrent crude oil rises above $102/barrel on the news.",
+      "url": "https://x.com/KobeissiLetter/status/2107812557369065801",
+      "likes": 2123,
+      "views": 269391
+    },
+    {
+      "handle": "PeterLBrandt",
+      "time": "2026-10-07T12:31:34.000Z",
+      "text": "#factormembers recent posts [link] | Join our community here [link] [link]",
+      "url": "https://x.com/PeterLBrandt/status/2107811067569254694",
+      "likes": 34,
+      "views": 28516
+    },
+    {
+      "handle": "LindaRaschke",
+      "time": "2026-10-07T12:13:31.000Z",
+      "text": "EC - on day 20 of extended run down. Weeklies provide context. [link]",
+      "url": "https://x.com/LindaRaschke/status/2107806524894806186",
+      "likes": 85,
+      "views": 11450
+    },
+    {
+      "handle": "ConnorJBates_",
+      "time": "2026-10-07T12:04:46.000Z",
+      "text": "$GOOGL $U \n\nGoogle and Unity today announced a strategic partnership for a new, integrated gaming platform coming later this year designed to revolutionize the next era of gaming.",
+      "url": "https://x.com/ConnorJBates_/status/2107804325426667717",
+      "likes": 49,
+      "views": 7856
+    },
+    {
+      "handle": "NautilusCap",
+      "time": "2026-10-07T11:59:35.000Z",
+      "text": "#USYIELDS Applying a dose good old fashioned technical analysis - caveat, which may be inappropriate.  The 'measured' move of this huge base cold extend to 10%. [link]",
+      "url": "https://x.com/NautilusCap/status/2107803017827193038",
+      "likes": 17,
+      "views": 2391
+    },
+    {
+      "handle": "ConnorJBates_",
+      "time": "2026-10-07T11:27:54.000Z",
+      "text": "Crypto pulling back into some interesting spots. See if these areas can hold & provide support. \n\nethereum:native bitcoin:native zcash:native hyperliquid:native [link]",
+      "url": "https://x.com/ConnorJBates_/status/2107795043977486428",
+      "likes": 40,
+      "views": 7095
+    },
+    {
+      "handle": "jaykaeppel",
+      "time": "2026-10-07T11:16:40.000Z",
+      "text": "What does panic in the real estate sector have to do with the Nasdaq 100 Index? Um, yeah, that’s hard to say. In fact, maybe nothing. Still, the numbers are what they are. Make of it what you will. @sentimentrader [link]",
+      "url": "https://x.com/jaykaeppel/status/2107792218991837609",
+      "likes": 81,
+      "views": 5621
+    },
+    {
+      "handle": "jaykaeppel",
+      "time": "2026-10-07T11:16:09.000Z",
+      "text": "The @Sentimentrader Micro Cap / S&P 500 Relative Ratio Rank 10-day moving average is below 1.5 for the first time in 3 months. Does it matter? History suggests that it might. A “Buy” signal? No. Favorable “weight of the evidence\"? IMO, Yes. [link]",
+      "url": "https://x.com/jaykaeppel/status/2107792087382995355",
+      "likes": 38,
+      "views": 2569
+    },
+    {
+      "handle": "jaykaeppel",
+      "time": "2026-10-07T11:15:10.000Z",
+      "text": "While I focus primarily on the trend \"right now,\" this is an important lesson. Bottom line: DO NOT assume that above average stock market returns will continue over the next 10 years. Be prepared if and when the environment changes. @sentimentrader",
+      "url": "https://x.com/jaykaeppel/status/2107791840280014888",
+      "likes": 36,
+      "views": 2538
+    },
+    {
+      "handle": "TechCharts",
+      "time": "2026-10-07T10:19:45.000Z",
+      "text": "$USDINR Strong Dollar. [link]",
+      "url": "https://x.com/TechCharts/status/2107777894722277398",
+      "likes": 107,
+      "views": 20781
+    },
+    {
+      "handle": "Bluekurtic",
+      "time": "2026-10-07T10:00:02.000Z",
+      "text": "Buying at record highs sounds risky. But the data says otherwise.\n\nAcross nearly every time frame, the drawdown after investing in the S&P 500 at a new ATH has been smaller than investing on a random day. New highs are usually a sign of strength. [link]",
+      "url": "https://x.com/Bluekurtic/status/2107772932248527045",
+      "likes": 31,
+      "views": 2879
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T09:50:19.000Z",
+      "text": "@charliebilello Another record for Wall Street, but families with mortgages are still feeling the squeeze! 🤔",
+      "url": "https://x.com/ISABELNET_SA/status/2107770489548476666",
+      "likes": 2,
+      "views": 393
+    },
+    {
+      "handle": "afzal_57",
+      "time": "2026-10-07T09:21:51.000Z",
+      "text": "#TFCILTD keeps moving up, and I am still holding it.\n\nSome of you bought it a couple of months ago and sold early. Some never had it at all.\n\nFinding it before the move takes skill. Buying at the righ",
+      "url": "https://x.com/afzal_57/status/2107763322628264110",
+      "likes": 32,
+      "views": 14448
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T09:19:13.000Z",
+      "text": "@KobeissiLetter Bitcoin just doing Bitcoin things. Still never fun to watch! 😏",
+      "url": "https://x.com/ISABELNET_SA/status/2107762660196663483",
+      "likes": 2,
+      "views": 466
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T08:54:24.000Z",
+      "text": "🇺🇸 S&P 500\n\nTuesday, our Stock Market Bull & Bear Indicator was bullish well before the opening bell, and the S&P 500 followed through, ending the day up 0.58%.\n\nThe model gauges if the ",
+      "url": "https://x.com/ISABELNET_SA/status/2107756415163187704",
+      "likes": 14,
+      "views": 2482
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T08:53:50.000Z",
+      "text": "📌 Read the Daily Blog on the Website\n\n👉 [link] [link]",
+      "url": "https://x.com/ISABELNET_SA/status/2107756273160638750",
+      "likes": 11,
+      "views": 2285
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T08:53:32.000Z",
+      "text": "🇺🇸 GDP\n\nThe New York Fed nudged its Q4 2026 US GDP nowcast down to 2.55% from 2.59%, a minor revision that leaves the growth outlook intact\n👉 [link]\n\nh/t @NewYorkFed #recession #GDP #realGDP #econo",
+      "url": "https://x.com/ISABELNET_SA/status/2107756196086300803",
+      "likes": 19,
+      "views": 2168
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T08:53:07.000Z",
+      "text": "🇺🇸 Tech\n\nThe rotation into Tech has been powerful, but the rally may still have fuel left. Continued earnings strength in AI infrastructure, cloud computing, and software could give investors reason",
+      "url": "https://x.com/ISABELNET_SA/status/2107756095183941718",
+      "likes": 31,
+      "views": 2527
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T08:52:39.000Z",
+      "text": "📌 Bonds\n\nWith bond allocation at the fourth percentile, CTAs are showing almost no appetite for rates risk. Fixed income has fallen firmly out of favor\n👉 [link]\n\nh/t @DeutscheBank #yield #yields #tr",
+      "url": "https://x.com/ISABELNET_SA/status/2107755977705459834",
+      "likes": 24,
+      "views": 3326
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T08:52:10.000Z",
+      "text": "🇺🇸 Valuations\n\nEnergy still looks underpriced, while Industrials, Healthcare, and Consumer Staples leave less room for error\n👉 [link]\n\n@GoldmanSachs $spx #spx #stocks #equity #stockmarket [link]",
+      "url": "https://x.com/ISABELNET_SA/status/2107755854372159538",
+      "likes": 22,
+      "views": 2078
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T08:51:44.000Z",
+      "text": "🇺🇸 Tech\n\nThe Nasdaq 100 turned lower in 2000, nine months before tech investment as a share of US GDP peaked. Will this time be different?\n👉 [link]\n\nh/t @SoberLook @bcaresearch #tech $spx #spx [lin",
+      "url": "https://x.com/ISABELNET_SA/status/2107755744414060610",
+      "likes": 21,
+      "views": 2786
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T08:51:11.000Z",
+      "text": "🇺🇸 S&P 500\n\nThe S&P 500 is at record highs, but market breadth has plunged. With gains concentrated in a handful of leaders, the rally looks vulnerable unless participation broadens\n👉 [link",
+      "url": "https://x.com/ISABELNET_SA/status/2107755607055114485",
+      "likes": 21,
+      "views": 1968
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T08:50:39.000Z",
+      "text": "🇺🇸 S&P 500\n\nWhen markets hit record highs, many investors step back. That caution has often come at a cost: buying into strength has historically delivered better returns than buying on an avera",
+      "url": "https://x.com/ISABELNET_SA/status/2107755474418631122",
+      "likes": 32,
+      "views": 2465
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T08:50:13.000Z",
+      "text": "🇺🇸 Hyperscalers\n\nCloud revenue growth at the hyperscalers hit 48% in Q2. Goldman Sachs equity analysts forecast 55% in Q3. It's an encouraging sign, but not proof that the AI spending boom will pay ",
+      "url": "https://x.com/ISABELNET_SA/status/2107755363839643784",
+      "likes": 49,
+      "views": 4745
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T08:48:56.000Z",
+      "text": "🇺🇸 S&P 500\n\nIf history is any guide, the rally may have more room to run. Since 1950, the S&P 500 has finished higher in every Q4 when it declined in Q1 and rose more than 10% in Q2. The ave",
+      "url": "https://x.com/ISABELNET_SA/status/2107755041075367976",
+      "likes": 58,
+      "views": 6886
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T08:48:26.000Z",
+      "text": "🇺🇸 Valuations\n\nHigh starting CAPE valuations have often preceded disappointing returns for US stocks, creating a particularly risky backdrop for investors just entering retirement\n👉 [link]\n\nh/t @La",
+      "url": "https://x.com/ISABELNET_SA/status/2107754914600398922",
+      "likes": 14,
+      "views": 2114
+    },
+    {
+      "handle": "ISABELNET_SA",
+      "time": "2026-10-07T08:48:19.000Z",
+      "text": "📌 Subscriber Access\n\nThe #stockmarket bull and bear indicator, the short- & long-term forecasts, the #valuation & ERP charts have been updated on\n👉 [link]\n\n#valuations #markets #investing #e",
+      "url": "https://x.com/ISABELNET_SA/status/2107754885382844836",
+      "likes": 5,
+      "views": 1831
+    },
+    {
+      "handle": "afzal_57",
+      "time": "2026-10-07T05:09:45.000Z",
+      "text": "#BHEL broke out yesterday. Big prior move, orderly base, and a clean breakout on the chart.\n\nIt is not alone. Several stocks look just as strong right now, all in Stage 2.\n\nNow the truth. The index ch",
+      "url": "https://x.com/afzal_57/status/2107699881611760083",
+      "likes": 30,
+      "views": 17159
+    },
+    {
+      "handle": "KobeissiLetter",
+      "time": "2026-10-07T02:08:24.000Z",
+      "text": "BREAKING: Bitcoin falls nearly -$2,000 in 20 minutes as $400 million worth of levered longs are liquidated in under one hour. [link]",
+      "url": "https://x.com/KobeissiLetter/status/2107654242794410383",
+      "likes": 9108,
+      "views": 1183861
+    },
+    {
+      "handle": "PeterLBrandt",
+      "time": "2026-10-07T01:30:56.000Z",
+      "text": "Corn\nThere is a strong seasonal tendency for Corn to bottom in Oct/Nov, although the Jun-Sep rally was counter-seasonal\nRecent weakness appears as correction to bull trend from Jun lows\nUnderlying support via symmetrical triangle\nCommercials hold record short positions $ZC_F [link]",
+      "url": "https://x.com/PeterLBrandt/status/2107644816180056311",
+      "likes": 164,
+      "views": 39279
+    },
+    {
+      "handle": "RyanDetrick",
+      "time": "2026-10-07T01:25:50.000Z",
+      "text": "Good one from @FrankCappelleri. \n\nLast week sure felt like peak 'breadth is weak' hysteria.",
+      "url": "https://x.com/RyanDetrick/status/2107643528738152553",
+      "likes": 79,
+      "views": 18461
+    },
+    {
+      "handle": "yardeni",
+      "time": "2026-10-07T01:17:19.000Z",
+      "text": "Analysts now project S&P 500 earnings will hit $489 per share in 2028, a 17% jump. The forecast assumes profit margins will reach a record 18.1% that year.\n\n🔒 Members-Only\n[link]",
+      "url": "https://x.com/yardeni/status/2107641387881546100",
+      "likes": 31,
+      "views": 4821
+    },
+    {
+      "handle": "RyanDetrick",
+      "time": "2026-10-07T01:05:20.000Z",
+      "text": "Here's our latest Glass Half Full video, live and on location from @CarsonGroupLLC's Excell in Denver 🏔️ 🏔️ \n\n@sonusvarghese and I discussed the labor market, which continues to look solid to us. \n\n",
+      "url": "https://x.com/RyanDetrick/status/2107638370952262041",
+      "likes": 17,
+      "views": 14441
+    },
+    {
+      "handle": "DumbMoneyTV",
+      "time": "2026-10-07T01:00:00.000Z",
+      "text": "Who Has The Best Data? 🤔\n$RDDT [link]",
+      "url": "https://x.com/DumbMoneyTV/status/2107637030968570325",
+      "likes": 77,
+      "views": 12502
+    },
+    {
+      "handle": "KobeissiLetter",
+      "time": "2026-10-07T00:35:12.000Z",
+      "text": "BREAKING: SpaceX, $SPCX, is in talks with banks and investors to raise $40 billion of debt to buy chips from Nvidia amid \"insatiable demand\" among AI developers, per Bloomberg.\n\nThe company is seeking to raise about $10 billion in bank loans and $30 billion in investment-grade debt to pay for the chips.\n\nThe AI Revolution is even stronger than most people realize.",
+      "url": "https://x.com/KobeissiLetter/status/2107630789206724835",
+      "likes": 6476,
+      "views": 551994
+    },
+    {
+      "handle": "McClellanOsc",
+      "time": "2026-10-07T00:35:09.000Z",
+      "text": "Years ago we undertook a project to gather breadth data on market sectors. We abandoned it for a couple of reasons. First was that keeping up with sector component changes was a big task, and it was n",
+      "url": "https://x.com/McClellanOsc/status/2107630773973217331",
+      "likes": 46,
+      "views": 13233
+    },
+    {
+      "handle": "RyanDetrick",
+      "time": "2026-10-07T00:23:07.000Z",
+      "text": "👀👀",
+      "url": "https://x.com/RyanDetrick/status/2107627746360705386",
+      "likes": 194,
+      "views": 37699
+    },
+    {
+      "handle": "RyanDetrick",
+      "time": "2026-10-07T00:00:16.000Z",
+      "text": "S&P 500 up the first four days of October.\n\nIt was actually up the first four days of October last year. Hasn't been up the first five since 2003.\n\nLongest win streak ever to start the spooky mont",
+      "url": "https://x.com/RyanDetrick/status/2107621998318727234",
+      "likes": 205,
+      "views": 19662
+    },
+    {
+      "handle": "KobeissiLetter",
+      "time": "2026-10-06T23:44:08.000Z",
+      "text": "The employment downturn in the US Information sector is intensifying:\n\nInformation employment fell another -10,000 jobs in September, to 2.739 million, the lowest since December 2020.\n\nExcluding the 2020 pandemic drop, this is the lowest level since December 2014.\n\nIn total, the Information industry has shed -376,000 jobs, or -12.1%, since the November 2022 peak.\n\nTo put this into perspective, during the 2001 recession and its aftermath, Information employment fell -568,000 jobs, or -15.3%, from March 2001 to December 2003.\n\nThe Information sector is losing jobs at a crisis pace.",
+      "url": "https://x.com/KobeissiLetter/status/2107617937142014334",
+      "likes": 1298,
+      "views": 172275
+    }
+  ]
+}
