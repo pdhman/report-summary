@@ -11,6 +11,10 @@
   python send_x_summary.py --dry-run           발송 없이 출력
   python send_x_summary.py --if-missing --to channel
                                                오늘자가 아직 안 나갔으면 발송 (누락 감지용)
+  python send_x_summary.py --force             이미 보낸 날짜라도 다시 발송
+
+직접 발송도 sent.json 을 확인해 이미 보낸 곳은 건너뛴다. 같은 날 수동 수집을 두 번
+돌리거나 누락 감지기가 먼저 보낸 뒤라도 공개 채널에 중복 게시되지 않는다.
 """
 import argparse
 import html
@@ -204,6 +208,8 @@ def main():
                     help="오늘자 리포트가 아직 발송되지 않았을 때만 보낸다 (스케줄러용)")
     ap.add_argument("--min-age", type=int, default=30,
                     help="--if-missing 에서 리포트 수정 후 대기할 분 (기본 30)")
+    ap.add_argument("--force", action="store_true",
+                    help="이미 발송된 날짜라도 다시 보낸다 (공개 채널 중복 게시 주의)")
     add_target_arg(ap)
     args = ap.parse_args()
 
@@ -225,6 +231,16 @@ def main():
             print(f"건너뜀: {reason}")
             return
         print(f"미발송 감지 → {date} {', '.join(targets)}")
+    elif not args.dry_run and not args.force:
+        # 직접 발송도 이력을 본다. 한쪽 채널만 나간 상태면 남은 곳에만 보낸다.
+        done = set(load_sent().get(date, []))
+        dup = [t for t in targets if t in done]
+        if dup:
+            targets = [t for t in targets if t not in done]
+            if not targets:
+                print(f"건너뜀: {date} 이미 발송됨 → {', '.join(sorted(done))} (다시 보내려면 --force)")
+                return
+            print(f"{date} 이미 발송된 곳 제외: {', '.join(dup)}")
 
     msg = build_message(date)
 

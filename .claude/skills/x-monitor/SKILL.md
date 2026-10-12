@@ -240,6 +240,11 @@ window.__P.length
    같은 날짜 파일이 이미 있으면 posts를 합치고 url로 중복 제거.
 2. `x-monitor/reports/YYYY-MM-DD.md` 한국어 리포트 작성:
    - 상단: 수집 기간·건수·한 줄 총평
+   - **주말·휴일 포함 브리핑**: 수집은 평일 아침에만 하므로, `last_run` 이후 공백이 하루를
+     넘으면(월요일 = 금요일 오후~일요일, 연휴 다음 날도 마찬가지) 상단 수집 기간에
+     "주말 포함(금~일) 브리핑"처럼 커버 기간을 명시하고, 하루치가 아니라는 전제로
+     그 사이 흐름(며칠 이어진 이슈, 주말·휴일 중 발표·이벤트)을 묶어 요약한다.
+     화~금 정상 실행은 전일 대비 일일 리포트 그대로.
    - **핵심 (★★ 계정)**: 계정별 요약 + 원문 링크
    - **주제별 정리**: 비슷한 주제끼리 2~4개 클러스터로 묶어 요약
    - 시장 시사점이 있으면 마지막에 코멘트 한 줄
@@ -249,19 +254,27 @@ window.__P.length
      (2026-08-18 실제 사고. 파서에 인라인 폴백을 넣어두긴 했지만 헤딩이 표준이다).
    - 영어 원문은 한국어로 요약하고, 링크는 그대로 유지
 3. `python x-monitor/scripts/build_dashboard.py` 실행 → `dashboard/data.js` 갱신.
-4. `python make_summary.py` 실행 → '오늘의 요약'(reports/index.html)의 X 모니터링 카드와
-   게시 페이지(reports/x_YYYYMMDD.html, x.html)가 함께 재생성된다 (make_x_monitor.py 경유).
+4. `python make_summary.py` 실행 → 알파노트 홈(docs/index.html)의 X 모니터링 카드(주제별
+   정리 상위 3개)와 게시 페이지(docs/x_YYYYMMDD.html, docs/x.html)가 함께 재생성된다
+   (make_x_monitor.py 경유).
 5. `state.json`의 `last_run`을 수집 시점(ISO)으로, `browser_device_id`를 이번에 성공한
    브라우저 deviceId로 갱신 (state.json은 .gitignore 대상 — 로컬 전용).
-6. 사이트 게시: 변경분(x-monitor/reports·data, reports/x_*.html, x.html, index.html)을
-   커밋하고 main에 push → daily-insights 워크플로가 Pages 재배포. 커밋 메시지 예:
-   `x-monitor: 2026-07-29 수집 게시`
+6. 사이트 게시: 커밋 전에 `git branch --show-current`가 main인지 확인하고, 변경분
+   (x-monitor/data·reports, x-monitor/dashboard/data.js, docs/x_*.html, docs/x.html,
+   docs/index.html)을 커밋해 main에 push. **push 자체가 배포다** — Pages가 main `/docs`를
+   직접 서빙한다(2026-08-22 전환). 커밋 메시지 예: `x-monitor: 2026-07-29 수집 게시`
+   - 다른 자동화가 그사이 push 해서 `pull --rebase`가 docs/*.html 에서 충돌하면, 생성
+     산출물이므로 `git checkout --theirs <파일>` 로 받고 rebase 계속 → `python make_summary.py`
+     재실행 → 재커밋·push. (`checkout -f`, `checkout -- docs` 는 남의 편집을 날리므로 금지.)
 7. 텔레그램 발송: `python telegram/send_x_summary.py --to channel,rapha` — '주제별 정리'
    소제목과 '코멘트', 게시 페이지 링크를 공개 채널 **@daily_alphanote(데일리 알파노트)** 와
    **@Rapha_n_advisory(라파엔투자자문)** 두 곳에 올린다. 리포트(md)를 읽으므로 **2번 뒤에**
    실행해야 하고, 링크가 살아 있으려면 6번 push 뒤가 맞다.
    내용만 확인하려면 `--dry-run`, 개인 대화방으로만 보내려면 `--to dm`.
-   여기서 빠뜨려도 `X모니터링_누락감지_발송` 작업이 매시 확인해 대신 보낸다.
+   스크립트가 `telegram/sent.json`을 보고 **이미 보낸 채널은 알아서 건너뛴다**(같은 날 두 번
+   돌리거나 누락 감지기가 먼저 보냈어도 중복 게시 없음). 정말 다시 보내야 할 때만 `--force`.
+   여기서 빠뜨려도 `X모니터링_누락감지_발송` 작업이 매시(10~19시) 확인해 대신 보낸다
+   (리포트 수정 30분 경과 + 게시 페이지 배포 확인 후).
 8. 리포트 파일을 SendUserFile로 전달. 로컬 대시보드는 `x-monitor/dashboard/index.html`.
 
 ## 최초 설정 (list_url이 null일 때)
