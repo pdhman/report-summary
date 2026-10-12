@@ -1,96 +1,78 @@
 {
- "date": "2026-10-08",
+ "date": "2026-10-12",
  "high_52w_ratio": 0.65,
  "items": [
   {
    "name": "가온전선",
    "ticker": "000500",
-   "close": 295500.0,
-   "change_ratio": -3.75,
+   "close": 266500.0,
+   "change_ratio": -11.02,
    "rs_score": 98.5,
-   "vol_ratio": 58.3,
-   "from_high": -17.8
+   "vol_ratio": 64.8,
+   "from_high": -25.9
+  },
+  {
+   "name": "주성엔지니어링",
+   "ticker": "036930",
+   "close": 253000.0,
+   "change_ratio": -3.98,
+   "rs_score": 97.7,
+   "vol_ratio": 60.6,
+   "from_high": -10.9
+  },
+  {
+   "name": "RF머트리얼즈",
+   "ticker": "327260",
+   "close": 53700.0,
+   "change_ratio": 1.32,
+   "rs_score": 97.0,
+   "vol_ratio": 74.0,
+   "from_high": -15.3
   },
   {
    "name": "삼화콘덴서",
    "ticker": "001820",
-   "close": 158300.0,
-   "change_ratio": -0.31,
-   "rs_score": 93.3,
-   "vol_ratio": 48.0,
-   "from_high": -19.6
+   "close": 150100.0,
+   "change_ratio": -4.76,
+   "rs_score": 90.2,
+   "vol_ratio": 53.6,
+   "from_high": -23.7
   },
   {
    "name": "심텍",
    "ticker": "222800",
-   "close": 172800.0,
-   "change_ratio": 2.13,
-   "rs_score": 91.1,
-   "vol_ratio": 84.3,
-   "from_high": -5.4
-  },
-  {
-   "name": "피에스케이홀딩스",
-   "ticker": "031980",
-   "close": 209500.0,
-   "change_ratio": 3.97,
-   "rs_score": 87.4,
-   "vol_ratio": 98.6,
-   "from_high": -4.3
-  },
-  {
-   "name": "테스",
-   "ticker": "095610",
-   "close": 164200.0,
-   "change_ratio": 0.98,
-   "rs_score": 85.9,
-   "vol_ratio": 65.1,
-   "from_high": -30.6
-  },
-  {
-   "name": "케이씨텍",
-   "ticker": "281820",
-   "close": 124000.0,
-   "change_ratio": 3.25,
-   "rs_score": 83.7,
-   "vol_ratio": 70.8,
-   "from_high": -7.5
+   "close": 154900.0,
+   "change_ratio": -9.26,
+   "rs_score": 86.4,
+   "vol_ratio": 95.7,
+   "from_high": -15.2
   },
   {
    "name": "S-Oil",
    "ticker": "010950",
-   "close": 168700.0,
-   "change_ratio": -1.23,
-   "rs_score": 80.7,
-   "vol_ratio": 73.9,
-   "from_high": -4.7
-  },
-  {
-   "name": "삼성전자우",
-   "ticker": "005935",
-   "close": 194000.0,
-   "change_ratio": -1.67,
-   "rs_score": 79.3,
-   "vol_ratio": 82.1,
-   "from_high": -20.3
+   "close": 159100.0,
+   "change_ratio": -5.86,
+   "rs_score": 76.5,
+   "vol_ratio": 83.9,
+   "from_high": -10.2
   },
   {
    "name": "SFA반도체",
    "ticker": "036540",
-   "close": 11580.0,
-   "change_ratio": 1.85,
-   "rs_score": 77.0,
-   "vol_ratio": 60.7,
-   "from_high": -6.4
+   "close": 10840.0,
+   "change_ratio": -6.39,
+   "rs_score": 74.2,
+   "vol_ratio": 55.0,
+   "from_high": -12.4
   },
   {
-   "name": "한국콜마",
-   "ticker": "161890",
-   "close": 137100.0,
-   "change_ratio": -4.86,
-   "rs_score": 54.8,
-   "vol_ratio": 91.3,
-   "from_high": -17.4
+   "name": "HPSP",
+   "ticker": "403870",
+   "close": 61000.0,
+   "change_ratio": -4.69,
+   "rs_score": 56.8,
+   "vol_ratio": 61.2,
+   "from_high": -33.7
   }
  ]
 }
