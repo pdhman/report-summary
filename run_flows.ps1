@@ -17,8 +17,35 @@
 #    자동화의 pull --rebase 가 "unstaged changes" 로 실패한다.
 # =====================================================================
 
+param([switch]$Force)   # -Force : 시간·휴장 가드 무시(수동 실행용)
+
 $proj = $PSScriptRoot
 Set-Location $proj
+
+# --- 시간·휴장 가드: 장 마감 전·주말·평일 휴장이면 실행하지 않는다 ---
+# 2026-10-12 실사고: 10/9(한글날) PC 가 꺼져 놓친 실행이 월요일 부팅 직후 09:01 에
+# 따라잡기로 돌아, 장 시작 1분 값(수급 전부 0, 지수 시초가)으로 "10/12" 행을 만들어
+# 대시보드에 게시했다. 매 실행이 최근 14일을 재수집하므로 따라잡기를 건너뛰어도
+# 다음 정규 실행(15:46)에서 빈 날짜가 채워진다(선물 당일 누적치만은 소급 불가).
+$now = Get-Date
+if (-not $Force) {
+    $skip = $null
+    if ($now.DayOfWeek -eq 'Saturday' -or $now.DayOfWeek -eq 'Sunday') { $skip = '주말 휴장' }
+    elseif ($now.TimeOfDay -lt [TimeSpan]'15:30:00') { $skip = '장 마감 전' }
+    if (-not $skip) {
+        try {
+            $d = $now.ToString('yyyyMMdd')
+            $u = "https://api.stock.naver.com/chart/domestic/index/KOSPI/day?startDateTime=${d}00&endDateTime=${d}23"
+            $r = Invoke-RestMethod -Uri $u -Headers @{ 'User-Agent' = 'Mozilla/5.0' } -TimeoutSec 15
+            if (@($r).Count -eq 0) { $skip = '평일 휴장(오늘자 지수 없음)' }
+        } catch { }
+    }
+    if ($skip) {
+        "$($now.ToString('yyyy-MM-dd HH:mm:ss')) [guard] $skip - 실행 건너뜀 (놓친 실행 따라잡기 추정)" |
+            Add-Content -Path (Join-Path $proj 'logs\flows_skip.log') -Encoding UTF8 -ErrorAction SilentlyContinue
+        exit 0
+    }
+}
 
 # --- 브랜치 가드: 자동화는 항상 main 기준 ---
 # -f 금지: `checkout -f main` 은 이미 main 이어도 미커밋 수정을 전부 버린다
