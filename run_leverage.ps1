@@ -8,8 +8,34 @@
 #    자동화의 pull --rebase 가 "unstaged changes" 로 실패한다.
 # =====================================================================
 
+param([switch]$Force)   # -Force : 시간·휴장 가드 무시(수동 실행용)
+
 $proj = $PSScriptRoot
 Set-Location $proj
+
+# --- 휴장·장전 가드: 주말·평일 15:00 이전·평일 휴장이면 건너뛴다 (-Force 로 무시) ---
+# 금투협은 T일 15:00 직후 전 거래일 자료를 올린다. 그 전·휴일 실행은 새 자료 없이
+# 수집일 스탬프만 그날로 바꿔 카드 날짜가 어긋난다(2026-09-26 토요일 실행, 2026-10-12
+# 09:00 따라잡기 실행). 작업 트리거가 매일(주말 포함)이라 주말 가드도 필요하다.
+if (-not $Force) {
+    $now = Get-Date; $skip = $null
+    if ($now.DayOfWeek -eq 'Saturday' -or $now.DayOfWeek -eq 'Sunday') { $skip = '주말 휴장' }
+    elseif ($now.TimeOfDay -lt [TimeSpan]'15:00:00') { $skip = '금투협 게시(15:00) 전' }
+    else {
+        try {
+            $d = $now.ToString('yyyyMMdd')
+            $u = "https://api.stock.naver.com/chart/domestic/index/KOSPI/day?startDateTime=${d}00&endDateTime=${d}23"
+            $r = Invoke-RestMethod -Uri $u -Headers @{ 'User-Agent' = 'Mozilla/5.0' } -TimeoutSec 15
+            if (@($r).Count -eq 0) { $skip = '평일 휴장(오늘자 지수 없음)' }
+        } catch { }
+    }
+    if ($skip) {
+        "$($now.ToString('yyyy-MM-dd HH:mm:ss')) [leverage] $skip - 실행 건너뜀" |
+            Add-Content -Path (Join-Path $proj 'logs\catchup_skip.log') -Encoding UTF8 -ErrorAction SilentlyContinue
+        exit 0
+    }
+}
+
 
 # --- 브랜치 가드: 자동화는 항상 main 기준 ---
 # -f 금지: `checkout -f main` 은 이미 main 이어도 미커밋 수정을 전부 버린다

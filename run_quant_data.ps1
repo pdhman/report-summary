@@ -10,10 +10,26 @@
 #    logs the rs/git steps to logs\quantdata_*.log.
 # =====================================================================
 
+param([switch]$Force)   # -Force : 시간·휴장 가드 무시(수동 실행용)
+
 $proj = 'C:\Users\SAMSUNG\Desktop\클로드코드'
 $py   = 'C:\Users\SAMSUNG\AppData\Local\Programs\Python\Python311\python.exe'
 
 Set-Location $proj
+
+# --- 장중 따라잡기 가드: 평일 15:30 이전 실행은 건너뛴다 (-Force 로 무시) ---
+# 2026-10-12 실사고: PC 가 꺼져 놓친 실행이 월요일 09:00 부팅 직후 따라잡기로 돌아
+# 장중 시세가 섞인 데이터를 만들었다(차트: 09:02 장중 봉을 '10/12' 로 푸시하고
+# 푸시 기록까지 10/12 로 남겨 저녁 정규 실행이 확정 봉 푸시를 건너뜀).
+if (-not $Force) {
+    $now = Get-Date
+    if ($now.DayOfWeek -ne 'Saturday' -and $now.DayOfWeek -ne 'Sunday' -and $now.TimeOfDay -lt [TimeSpan]'15:30:00') {
+        "$($now.ToString('yyyy-MM-dd HH:mm:ss')) [quantdata] 평일 장 마감 전 - 실행 건너뜀 (놓친 실행 따라잡기 추정)" |
+            Add-Content -Path (Join-Path $proj 'logs\catchup_skip.log') -Encoding UTF8 -ErrorAction SilentlyContinue
+        exit 0
+    }
+}
+
 
 # --- git 용량 관리 ---
 # 종목별 데이터 파일이 매일 바뀌어 pack 이 빠르게 쌓인다. 자동 gc(gc.auto 400)는
