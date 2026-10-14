@@ -237,7 +237,11 @@
     <div class="grid2">
       <div>
         <h3>체크리스트 — 20항목 × 0~5점 = 100점 (자동 15 + 수동 4 + 기술적 분석)</h3>
-        <div class="meta">자동 15항목은 기본 점수(0~5)가 채워져 있고, 드롭다운으로 바꾸면 조정치로 저장됩니다(자동값으로 되돌리면 해제). 자료가 없는 항목은 "-"(0점 처리). 모든 항목 0~5점을 그대로 더해 100점. 수동 입력과 조정치는 이 브라우저에만 저장됩니다.</div>
+        <div class="row" style="margin:4px 0 6px;gap:8px;align-items:center">
+          <button class="btn" id="syncBtn" onclick="syncSetup()">☁ 저장소 동기화</button>
+          <span class="meta" id="syncMsg" style="margin:0"></span>
+        </div>
+        <div class="meta">자동 15항목은 기본 점수(0~5)가 채워져 있고, 드롭다운으로 바꾸면 조정치로 저장됩니다(자동값으로 되돌리면 해제). 자료가 없는 항목은 "-"(0점 처리). 모든 항목 0~5점을 그대로 더해 100점. 수동 입력과 조정치는 이 브라우저에 저장되고, 저장소 동기화를 켜면 비공개 저장소에도 저장돼 다른 기기와 공유됩니다(위 ☁ 버튼).</div>
         <table class="chk" id="cChk"></table>
       </div>
       <div>
@@ -256,7 +260,7 @@
       <div class="deep" id="cDeepBody"></div>
     </div>
     <details id="cTplWrap" open>
-      <summary><h3 style="display:inline">한 장짜리 투자 논리 템플릿 + 내 메모</h3> <span class="cnt" id="cTplHint">— 자동 채움(회색) + 내 메모(입력창, 브라우저에 자동 저장)</span></summary>
+      <summary><h3 style="display:inline">한 장짜리 투자 논리 템플릿 + 내 메모</h3> <span class="cnt" id="cTplHint">— 자동 채움(회색) + 내 메모(입력창, 브라우저에 자동 저장 + 저장소 동기화(켠 경우))</span></summary>
       <div class="row" style="margin:8px 0 6px">
         <button class="btn pri" onclick="copyMd()">📋 마크다운 복사</button>
         <button class="btn" onclick="resetManual()">↺ 이 종목 메모·조정·수동점수 초기화</button>
@@ -455,7 +459,89 @@ function dartHtml(h) {
 
 // ---------------- ③ company
 const LS = k => { try { return JSON.parse(localStorage.getItem('thesis:' + k) || '{}'); } catch(e) { return {}; } };
-const LSset = (k, v) => { try { localStorage.setItem('thesis:' + k, JSON.stringify(v)); } catch(e) {} };
+const LSset = (k, v) => { v._ts = Date.now(); delete v._del; try { localStorage.setItem('thesis:' + k, JSON.stringify(v)); } catch(e) {} syncQueue(k); };
+
+// ---------------- 수동 입력 저장소 동기화 — 비공개 GitHub 저장소 pdhman/thesis-notes 의 manual.json
+// 입력은 먼저 이 브라우저(localStorage)에 저장하고 2.5초 뒤 저장소로 올린다. 페이지를 열면 저장소에서 받아 합친다.
+// 종목 단위로 나중에 고친 쪽(_ts)이 이긴다. 초기화는 {_del, _ts} 로 남겨 다른 기기에도 전파한다.
+// 토큰(이 저장소 전용 fine-grained, Contents 읽기·쓰기)은 이 브라우저에만 저장 — 공개 저장소로는 아무것도 가지 않는다.
+const SYNC_REPO = 'pdhman/thesis-notes', SYNC_PATH = 'manual.json', SYNC_TOK = 'thesis-sync-token';
+const syncTok = () => { try { return localStorage.getItem(SYNC_TOK) || ''; } catch(e) { return ''; } };
+const syncDirty = new Set(); let syncTimer = null, syncBusy = false, syncLast = null, syncErr = '';
+const b64e = s => btoa(unescape(encodeURIComponent(s)));
+const b64d = s => decodeURIComponent(escape(atob(String(s).replace(/\s/g, ''))));
+const hasReal = v => Object.keys(v || {}).some(k => !k.startsWith('_'));
+function localCodes() { const out = []; try { for (let i = 0; i < localStorage.length; i++) { const m = /^thesis:([0-9A-Z]{6})$/.exec(localStorage.key(i) || ''); if (m) out.push(m[1]); } } catch(e) {} return out; }
+function syncQueue(code) { if (code) syncDirty.add(code); if (!syncTok()) return; clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 2500); syncShow(); }
+async function ghGet() {
+  const r = await fetch(`https://api.github.com/repos/${SYNC_REPO}/contents/${SYNC_PATH}?t=${Date.now()}`,
+    {cache: 'no-store', headers: {Authorization: 'Bearer ' + syncTok(), Accept: 'application/vnd.github+json'}});
+  if (!r.ok) throw new Error(r.status === 401 ? '토큰이 맞지 않음(401)' : r.status === 403 || r.status === 404 ? `저장소 접근 불가(${r.status}) — 토큰 권한 확인` : 'HTTP ' + r.status);
+  const j = await r.json(); let data = {}; try { data = JSON.parse(b64d(j.content || '')) || {}; } catch(e) {}
+  data.items = data.items || {}; return {sha: j.sha, data};
+}
+async function ghPut(data, sha) {
+  const r = await fetch(`https://api.github.com/repos/${SYNC_REPO}/contents/${SYNC_PATH}`, {method: 'PUT',
+    headers: {Authorization: 'Bearer ' + syncTok(), Accept: 'application/vnd.github+json', 'Content-Type': 'application/json'},
+    body: JSON.stringify({message: `수동 입력 갱신 ${new Date().toISOString().slice(0, 16)} (${Object.keys(data.items).length}종목)`,
+      content: b64e(JSON.stringify(data, null, 1) + '\n'), sha})});
+  if (r.status === 409 || r.status === 422) return false;      // 다른 기기가 먼저 씀 → 다시 받아 합친다
+  if (!r.ok) throw new Error('저장 실패 HTTP ' + r.status);
+  return true;
+}
+function mergeRemote(items) {          // 원격이 더 새것이면 로컬을 덮고, 로컬이 더 새것이면 올릴 목록에 넣는다
+  let changed = false;
+  for (const [code, rv] of Object.entries(items)) {
+    const lv = LS(code), lt = lv._ts || 0, rt = (rv && rv._ts) || 0;
+    if (rt > lt) { try { localStorage.setItem('thesis:' + code, JSON.stringify(rv)); } catch(e) {} changed = true; }
+    else if (lt > rt) syncDirty.add(code);
+  }
+  for (const code of localCodes()) { const lv = LS(code); if (!(code in items) && (lv._ts || hasReal(lv))) syncDirty.add(code); }
+  return changed;
+}
+function rerenderManual() { renderGroups(); if (curC) { showCompany(curC, false); refreshMemRow(curC); } }
+async function syncNow() {
+  if (!syncTok()) { syncShow(); return; }
+  if (syncBusy) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1500); return; }
+  syncBusy = true; syncErr = ''; syncShow('동기화 중…');
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const {sha, data} = await ghGet();
+      if (mergeRemote(data.items)) rerenderManual();
+      if (!syncDirty.size) break;
+      const items = {...data.items}, sent = {};
+      for (const code of syncDirty) { const v = LS(code); if (!v._ts) v._ts = Date.now(); items[code] = v; sent[code] = v._ts; }
+      if (await ghPut({_v: 1, updated: new Date().toISOString(), items}, sha)) {
+        for (const [code, ts] of Object.entries(sent)) if ((LS(code)._ts || ts) <= ts) syncDirty.delete(code);   // 올리는 사이 또 고친 종목은 남긴다
+        break;
+      }
+    }
+    syncLast = new Date();
+  } catch(e) { syncErr = e.message || String(e); }
+  syncBusy = false; syncShow();
+  if (syncDirty.size && !syncErr) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 2500); }
+}
+function syncShow(msg) {
+  const el = $('#syncMsg'), b = $('#syncBtn'); if (!el) return;
+  const on = !!syncTok(), hh = d => d.toTimeString().slice(0, 5);
+  if (b) b.textContent = on ? '☁ 저장소 동기화 설정' : '☁ 저장소 동기화 켜기';
+  el.style.color = syncErr ? 'var(--down, #d9534f)' : '';
+  el.textContent = !on ? '꺼짐 — 이 브라우저에만 저장됩니다'
+    : msg || (syncErr ? '⚠ ' + syncErr + ' (입력은 이 브라우저에 보관 중)'
+    : (syncLast ? `저장소와 동기화됨 ${hh(syncLast)}` : '저장소 연결됨') + (syncDirty.size ? ` · 올릴 종목 ${syncDirty.size}` : ''));
+}
+function syncSetup() {
+  const on = !!syncTok();
+  const t = prompt(on ? '저장소 동기화가 켜져 있습니다.\n새 토큰으로 바꾸려면 붙여넣고, 끄려면 off 를 입력하세요.'
+    : `수동 점수·메모를 비공개 저장소(${SYNC_REPO})에 저장합니다.\n이 저장소 전용 GitHub 토큰(fine-grained, Contents: Read and write)을 붙여넣으세요.\n토큰은 이 브라우저에만 저장됩니다.`, '');
+  if (t === null || !t.trim()) return;
+  try {
+    if (t.trim().toLowerCase() === 'off') { localStorage.removeItem(SYNC_TOK); syncErr = ''; syncShow(); return; }
+    localStorage.setItem(SYNC_TOK, t.trim());
+  } catch(e) {}
+  syncNow();
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && syncDirty.size) syncNow(); });
 const TPL = [
   ['what', '1. What is happening? — 현재 어떤 변화가 발생하고 있는가?'],
   ['why', '2. Why now? — 왜 지금 주가가 반응하기 시작했는가?'],
@@ -567,7 +653,7 @@ function spark(vals, fixMin, fixMax, w = 70, hgt = 20) {
   return `<svg class="spark" width="${w}" height="${hgt}" viewBox="0 0 ${w} ${hgt}"><polyline fill="none" stroke="var(--accent)" stroke-width="1.6" points="${pts}"/><circle cx="${lx}" cy="${ly}" r="2" fill="var(--accent)"/></svg>`;
 }
 function refreshMemRow(code) { renderGroups(); if (curG && $('#tblMem').querySelector(`tr[data-id="${code}"]`)) { const keep = curC; showGroup(curG.kind + '|' + curG.name); curC = keep; const tr = $('#tblMem').querySelector(`tr[data-id="${code}"]`); if (tr) tr.classList.add('sel'); } }
-function resetManual() { if (!curC) return; try { localStorage.removeItem('thesis:' + curC); } catch(e) {} showCompany(curC, false); }
+function resetManual() { if (!curC) return; try { localStorage.setItem('thesis:' + curC, JSON.stringify({_del: true, _ts: Date.now()})); } catch(e) {} syncQueue(curC); showCompany(curC, false); refreshMemRow(curC); }
 function copyMd() {
   const c = C[curC]; if (!c) return; const g = G.find(x => x.kind === '업종' && x.name === c.ind) || {}; const at = autoText(c, g); const man = LS(curC);
   let md = `# ${c.name} (${c.code}) 투자 논리 — 기준 ${D.asof}\n\n업종 ${c.ind||'-'} · ${c.cls||'-'} · 자동점수 **${c.score.total}/75** (${c.score.grade})${c.score_chg == null ? '' : ` · 전회 ${c.score_prev} (${chgTxt(c.score_chg)})`}\n점수 추이: ${(c.hist||[]).map(h=>`${fmtD(h[0])} ${h[1]}`).join(' → ')}\n\n`;
@@ -639,6 +725,7 @@ function mdToHtml(md) {
   return out.join('\n');
 }
 renderGroups();
+syncShow(); if (syncTok()) syncNow();
 // URL 해시로 바로 열기: #g=업종|반도체와반도체장비 또는 #c=000660
 (function(){ const h = decodeURIComponent(location.hash.slice(1)); if (h.startsWith('g=')) showGroup(h.slice(2)); else if (h.startsWith('c=')) showCompany(h.slice(2), true); })();
 </script>
