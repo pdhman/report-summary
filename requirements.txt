@@ -7,4 +7,4 @@ google-api-python-client
 google-auth
 finance-datareader
 yfinance
-markdown
+markdown==3.10.2  # 3.11 breaks **bold** next to Hangul (see make_x_monitor.render_md)

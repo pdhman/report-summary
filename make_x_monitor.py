@@ -39,6 +39,34 @@ def _wrap(title, body):
             f"{_MODAL_CSS}{_MODAL_JS}</body></html>")
 
 
+# ------------------------------------------------- 마크다운 렌더
+# 2026-10-14 실사고: Python-Markdown 3.11 이 강조를 CommonMark 규칙(flanking)으로 바꿔,
+# 닫는 ** 앞이 문장부호이고 뒤에 한글이 바로 붙으면(**"오역이다"**이라고) 굵게가 풀리고
+# <strong> 짝이 엇갈렸다(*"…"*하는 기울임도 같음). Actions(3.11)와 로컬(3.10) 빌드가 번갈아
+# docs/x_*.html 을 덮어써 페이지가 깨졌다 돌아왔다 했다. 버전은 requirements.txt 에서
+# 3.10.2 로 고정했고, 다른 버전이 깔려도 같은 결과가 나오도록 **…**·*…* 짝을 미리 태그로 바꾼다.
+# 같은 줄 안의 가장 가까운 짝만 잇고, 코드 스팬(`…`)·코드 펜스 안과 ***…*** 는 건드리지 않는다.
+_CODE_SPAN = r"(`+).+?\1|"
+_STRONG_RE = re.compile(_CODE_SPAN + r"(?<!\*)\*\*(?![\s*])(.+?)(?<![\s*])\*\*(?!\*)")
+_EM_RE = re.compile(_CODE_SPAN + r"(?<!\*)\*(?![\s*])([^*]+?)(?<![\s*])\*(?!\*)")
+
+
+def _tag(name):
+    return lambda m: m.group(0) if m.group(1) else f"<{name}>{m.group(2)}</{name}>"
+
+
+def render_md(text):
+    """리포트 마크다운 → HTML. 강조(**·*)는 markdown 버전과 무관하게 같은 결과를 낸다."""
+    lines, fenced = [], False
+    for line in text.split("\n"):
+        if line.lstrip().startswith(("```", "~~~")):
+            fenced = not fenced
+        elif not fenced:
+            line = _EM_RE.sub(_tag("em"), _STRONG_RE.sub(_tag("strong"), line))
+        lines.append(line)
+    return md.markdown("\n".join(lines), extensions=["extra", "sane_lists"])
+
+
 # ------------------------------------------------- 원문 모달 (트윗 임베드)
 # 리포트 본문·피드의 '원문' 링크를 가로채 페이지 안에서 트윗을 보여준다.
 # X 공식 위젯(platform.twitter.com)을 처음 열 때만 지연 로드하고,
@@ -558,7 +586,7 @@ def build():
             continue
         # 문서 첫 h1은 페이지 헤더와 중복되므로 제거
         text = re.sub(r"^#\s.*\n", "", text, count=1)
-        body_html = md.markdown(text, extensions=["extra", "sane_lists"])
+        body_html = render_md(text)
         pretty = f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:]}"
         page = f"""<div class="wrap">
   <header>
