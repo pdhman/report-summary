@@ -1,33 +1,37 @@
 {
- "date": "2026-10-15 22:33",
- "regime_icon": "🟢",
- "regime_name": "Goldilocks (근사)",
- "arrows": "Easing ↑ / Recession → / Inflation → / Risk →",
+ "date": "2026-10-16 04:57",
+ "regime_icon": "⚪",
+ "regime_name": "Neutral / Mixed (근사)",
+ "arrows": "Easing → / Recession → / Inflation → / Risk →",
  "fomc": {
   "title": "Fed Decision in October?",
   "top": {
    "label": "No change",
-   "prob": 0.735,
-   "d24": 0.22
+   "prob": 0.725,
+   "d24": 0.04
   },
-  "mean": 6.397,
-  "mean_d24": -5.751,
+  "mean": 6.647,
+  "mean_d24": -1.172,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
- "recession": null,
+ "recession": {
+  "prob": 0.085,
+  "d24": 0.01,
+  "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
+ },
  "top_signal": {
-  "q": "No change · Will there be no change in Fed interest rates after the October 2026 meeting?",
-  "pmss": 88.9,
-  "band": "Strong Signal",
-  "d24": 0.22,
-  "prob": 0.735
+  "q": "Hormuz Agreement; D Senate · Will there be a Hormuz agreement and the Democrats win the Senate?",
+  "pmss": 78.0,
+  "band": "Tactical Signal",
+  "d24": -0.054,
+  "prob": 0.03
  },
  "exposure": {
   "base": 0.5,
-  "suggested": 0.7,
-  "top_pmss": 88.9
+  "suggested": 0.5,
+  "top_pmss": 78.0
  },
- "alerts": 6,
- "n_markets": 451,
+ "alerts": 4,
+ "n_markets": 439,
  "source": "direct"
 }
