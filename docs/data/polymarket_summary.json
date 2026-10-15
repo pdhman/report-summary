@@ -1,17 +1,17 @@
 {
- "date": "2026-10-15 08:20",
+ "date": "2026-10-15 13:16",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing ↓ / Recession → / Inflation → / Risk →",
+ "arrows": "Easing → / Recession → / Inflation → / Risk →",
  "fomc": {
   "title": "Fed Decision in October?",
   "top": {
    "label": "No change",
-   "prob": 0.705,
-   "d24": -0.1
+   "prob": 0.755,
+   "d24": -0.05
   },
-  "mean": 7.234,
-  "mean_d24": 2.619,
+  "mean": 5.94,
+  "mean_d24": 1.124,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
@@ -20,18 +20,18 @@
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "Hormuz Agreement; D Senate · Will there be a Hormuz agreement and the Democrats win the Senate?",
-  "pmss": 73.0,
-  "band": "Tactical Signal",
-  "d24": -0.02,
-  "prob": 0.0385
+  "q": "Will the U.S. invade Cuba in 2026?",
+  "pmss": 63.4,
+  "band": "Interest",
+  "d24": 0.03,
+  "prob": 0.075
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 73.0
+  "top_pmss": 63.4
  },
- "alerts": 6,
- "n_markets": 421,
+ "alerts": 5,
+ "n_markets": 438,
  "source": "direct"
 }
