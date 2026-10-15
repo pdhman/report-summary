@@ -1,60 +1,15 @@
 {
- "date": "2026-10-14",
+ "date": "2026-10-15",
  "high_52w_ratio": 0.65,
  "items": [
   {
-   "name": "가온전선",
-   "ticker": "000500",
-   "close": 286500.0,
-   "change_ratio": 1.96,
-   "rs_score": 98.3,
-   "vol_ratio": 62.2,
-   "from_high": -20.3
-  },
-  {
    "name": "주성엔지니어링",
    "ticker": "036930",
-   "close": 240500.0,
-   "change_ratio": -8.9,
-   "rs_score": 97.4,
-   "vol_ratio": 74.0,
-   "from_high": -15.3
-  },
-  {
-   "name": "티에스이",
-   "ticker": "131290",
-   "close": 318500.0,
-   "change_ratio": -4.64,
-   "rs_score": 94.9,
-   "vol_ratio": 76.4,
-   "from_high": -7.7
-  },
-  {
-   "name": "삼화콘덴서",
-   "ticker": "001820",
-   "close": 142500.0,
-   "change_ratio": -1.25,
-   "rs_score": 91.5,
-   "vol_ratio": 66.8,
-   "from_high": -27.6
-  },
-  {
-   "name": "S-Oil",
-   "ticker": "010950",
-   "close": 162500.0,
-   "change_ratio": 2.98,
-   "rs_score": 76.1,
-   "vol_ratio": 98.9,
-   "from_high": -8.2
-  },
-  {
-   "name": "SFA반도체",
-   "ticker": "036540",
-   "close": 10360.0,
-   "change_ratio": -9.04,
-   "rs_score": 75.2,
-   "vol_ratio": 86.1,
-   "from_high": -16.2
+   "close": 202500.0,
+   "change_ratio": -16.32,
+   "rs_score": 97.6,
+   "vol_ratio": 91.0,
+   "from_high": -28.7
   }
  ]
 }
