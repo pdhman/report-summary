@@ -92,6 +92,7 @@ TH = {
     "bbb_oas_chg_90d": 50.0,       # BBB OAS 90일 상승폭(bp) 이 값 이상 → 경계
     "aa_oas_chg_90d": 30.0,        # AA OAS 90일 상승폭(bp) 이 값 이상 → 경계 (하이퍼스케일러급)
     "orcl_cds_level": 200.0,       # 오라클 5Y CDS(bp, 수동 스냅샷) 이 값 이상 → 경계
+    "crwv_cds_level": 1000.0,      # 코어위브 5Y CDS(bp, 수동) 이 값 이상 → 경계 (S&P Global MI: 1,000bp+ = 신용 디스트레스)
     "hy_oas_level": 450.0,         # 하이일드 OAS(bp) 이 값 이상 → 경계 (신용시장 전반 스트레스)
     "ccc_oas_chg_90d": 150.0,      # CCC OAS 90일 상승폭(bp) 이 값 이상 → 경계 (최약체 조달창구 경색)
     "orcl_rpo_qoq": 0.0,           # 오라클 RPO QoQ(%) 이 값 이하 → 경계 (계약 취소/전환 실패)
@@ -1241,6 +1242,9 @@ def judge(data):
     v = (cds.get("level") or {}).get("ORCL")
     add("레버리지", f"오라클 5Y CDS (수동 스냅샷 {cds.get('date', '')})", v, "bp",
         f"{TH['orcl_cds_level']:.0f}bp 이상", v is not None and v >= TH["orcl_cds_level"])
+    v = (cds.get("level") or {}).get("CRWV")
+    add("레버리지", f"코어위브 5Y CDS (수동 스냅샷 {cds.get('date', '')})", v, "bp",
+        f"{TH['crwv_cds_level']:.0f}bp 이상 (신용 디스트레스)", v is not None and v >= TH["crwv_cds_level"])
 
     pillar_status = {}
     for p in ["공급", "수요", "레버리지"]:
@@ -1464,7 +1468,7 @@ TEMPLATE = r"""<!DOCTYPE html>
       <div class="card"><h3>CoreWeave 분기 capex ($B)</h3>
         <p class="note">SEC 현금흐름표(YTD 차분) — GPU 담보부채로 조달하는 buildout, 급감 = 자금줄 경색 신호</p>
         <div id="ch-crwv"></div></div>
-      <div class="card"><h3>빅테크 5Y CDS 레벨 (bp)</h3>
+      <div class="card"><h3>빅테크·AI 인프라 5Y CDS 레벨 (bp)</h3>
         <p class="note" id="cdsNote">개별 CDS는 유료라 공개 자료 스냅샷을 수동 기록 — 괄호는 직전 스냅샷 대비 변화</p>
         <div id="ch-cds"></div></div>
       <div class="card"><h3>오라클 RPO 수주잔고 ($B)</h3>
@@ -1853,6 +1857,8 @@ function renderAll(){
   }
   const cds=DATA.leverage.cds||{}, cchg=cds.ytd_chg||{}, clvl=cds.level||{};
   const cprev=(cds.prev||{}).level||{}, hasPrev=Object.keys(cprev).length>0;
+  // stale = 이번 스냅샷에 새 수치가 없어 직전 값을 둔 이름 → 변화(+0)로 보이지 않게 '직전 날짜 값'으로 표시
+  const cstale=new Set(cds.stale||[]);
   if(Object.keys(clvl).length||Object.keys(cchg).length){
     document.getElementById('cdsNote').textContent=
       `${cds.date||''} 기준 · ${cds.source||''} — 유료 데이터라 공개 자료(언론·증권사 차트) 스냅샷 수동 기록, `
@@ -1861,7 +1867,9 @@ function renderAll(){
     // 레벨이 없으면 연초 대비 변화 막대로 폴백.
     const sgn=v=>(v>=0?'+':'')+v;
     const items=Object.keys(clvl).length
-      ?Object.keys(clvl).map(k=>({value:clvl[k], label:k+(hasPrev
+      ?Object.keys(clvl).map(k=>({value:clvl[k], label:k+(cstale.has(k)
+          ?` (${(cds.prev||{}).date||'직전'} 값)`
+          :hasPrev
           ?(cprev[k]!=null?` (${sgn(clvl[k]-cprev[k])})`:' (첫 기록)')
           :(cchg[k]!=null?` (+${cchg[k]})`:''))}))
       :Object.keys(cchg).map(k=>({label:k,value:cchg[k]}));
