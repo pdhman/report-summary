@@ -41,6 +41,9 @@ try {
     & $py -X utf8 -u (Join-Path $proj 'telegram\send_summary.py') --to both 2>&1 | Add-Content -Path $log -Encoding UTF8
     if ($LASTEXITCODE -ne 0) { Write-Log "ERROR: send_summary exit $LASTEXITCODE"; exit 1 }
 
+    # 반복실수 한 줄 — 개인 DM 전용 별도 메시지(공개 요약과 분리). 실패해도 요약 발송 결과에 영향 없음.
+    & $py -X utf8 -u (Join-Path $proj 'telegram\send_mistake_alert.py') 2>&1 | Add-Content -Path $log -Encoding UTF8
+
     Write-Log 'OK: sent'
     exit 0
 }
