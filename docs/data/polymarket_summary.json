@@ -1,5 +1,5 @@
 {
- "date": "2026-10-16 08:08",
+ "date": "2026-10-16 13:45",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -7,31 +7,31 @@
   "title": "Fed Decision in October?",
   "top": {
    "label": "No change",
-   "prob": 0.715,
-   "d24": 0.01
+   "prob": 0.845,
+   "d24": 0.09
   },
-  "mean": 6.898,
-  "mean_d24": -0.336,
+  "mean": 3.855,
+  "mean_d24": -2.086,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
-  "prob": 0.085,
-  "d24": 0.01,
+  "prob": 0.075,
+  "d24": 0.0,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
   "q": "October 31 · US announces end of Iranian blockade by October 31, 2026?",
-  "pmss": 78.0,
-  "band": "Tactical Signal",
-  "d24": -0.06,
-  "prob": 0.055
+  "pmss": 68.0,
+  "band": "Interest",
+  "d24": -0.07,
+  "prob": 0.045
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 78.0
+  "top_pmss": 68.0
  },
  "alerts": 2,
- "n_markets": 422,
+ "n_markets": 384,
  "source": "direct"
 }
