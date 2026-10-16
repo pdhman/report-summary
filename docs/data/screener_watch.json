@@ -1,15 +1,51 @@
 {
- "date": "2026-10-15",
+ "date": "2026-10-16",
  "high_52w_ratio": 0.65,
  "items": [
   {
    "name": "주성엔지니어링",
    "ticker": "036930",
-   "close": 202500.0,
-   "change_ratio": -16.32,
+   "close": 210500.0,
+   "change_ratio": 6.8,
    "rs_score": 97.6,
-   "vol_ratio": 91.0,
-   "from_high": -28.7
+   "vol_ratio": 82.5,
+   "from_high": -25.9
+  },
+  {
+   "name": "RF머트리얼즈",
+   "ticker": "327260",
+   "close": 44750.0,
+   "change_ratio": 15.19,
+   "rs_score": 95.2,
+   "vol_ratio": 91.4,
+   "from_high": -29.4
+  },
+  {
+   "name": "티에스이",
+   "ticker": "131290",
+   "close": 297500.0,
+   "change_ratio": 13.98,
+   "rs_score": 94.4,
+   "vol_ratio": 73.7,
+   "from_high": -13.8
+  },
+  {
+   "name": "삼성SDI",
+   "ticker": "006400",
+   "close": 530000.0,
+   "change_ratio": 0.95,
+   "rs_score": 78.4,
+   "vol_ratio": 72.1,
+   "from_high": -26.7
+  },
+  {
+   "name": "팬오션",
+   "ticker": "028670",
+   "close": 6720.0,
+   "change_ratio": -0.15,
+   "rs_score": 60.0,
+   "vol_ratio": 51.9,
+   "from_high": -14.2
   }
  ]
 }
