@@ -2,6 +2,8 @@
 # 별도 비공개 저장소(pdhman/prop-dashboard)에서 관리한다. 여기에는 절대 커밋 금지.
 # (자체 .git 을 가진 폴더라 실수로 add 하면 gitlink 로 들어간다 — 아예 무시한다)
 prop-dashboard/
+# 매매일지 폴더: 일지 백업·월간 리뷰(html/png)·에버노트 일기 적재분. 개인 기록이라 전부 제외
+매매일지/
 
 # 서비스 계정 키 등 비밀값 (절대 커밋 금지)
 gdrive_sa.json
