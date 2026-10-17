@@ -1,37 +1,37 @@
 {
- "date": "2026-10-17 07:55",
- "regime_icon": "🟢",
- "regime_name": "Goldilocks (근사)",
- "arrows": "Easing ↑ / Recession → / Inflation → / Risk →",
+ "date": "2026-10-17 13:43",
+ "regime_icon": "⚪",
+ "regime_name": "Neutral / Mixed (근사)",
+ "arrows": "Easing → / Recession → / Inflation → / Risk →",
  "fomc": {
   "title": "Fed Decision in October?",
   "top": {
    "label": "No change",
    "prob": 0.865,
-   "d24": 0.15
+   "d24": 0.04
   },
   "mean": 3.359,
-  "mean_d24": -3.539,
+  "mean_d24": -0.785,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
   "prob": 0.07,
-  "d24": -0.015,
+  "d24": -0.005,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "November 30 · Russia-Ukraine peace talks by November 30, 2026?",
-  "pmss": 63.9,
+  "q": "December 31 · Bab el-Mandeb Strait effectively closed by December 31?",
+  "pmss": 64.7,
   "band": "Interest",
-  "d24": -0.12,
-  "prob": 0.185
+  "d24": 0.03,
+  "prob": 0.175
  },
  "exposure": {
   "base": 0.5,
-  "suggested": 0.6,
-  "top_pmss": 63.9
+  "suggested": 0.5,
+  "top_pmss": 64.7
  },
  "alerts": 0,
- "n_markets": 394,
+ "n_markets": 405,
  "source": "direct"
 }
