@@ -1,5 +1,5 @@
 {
- "date": "2026-10-18 00:45",
+ "date": "2026-10-18 03:37",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -11,7 +11,7 @@
    "d24": 0.0
   },
   "mean": 3.359,
-  "mean_d24": 0.0,
+  "mean_d24": 0.217,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
@@ -20,18 +20,18 @@
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "December 31 · Bab el-Mandeb Strait effectively closed by December 31?",
-  "pmss": 68.2,
-  "band": "Interest",
-  "d24": 0.03,
-  "prob": 0.165
+  "q": "No Hormuz Agreement · Will there be no Hormuz agreement?",
+  "pmss": 70.1,
+  "band": "Tactical Signal",
+  "d24": -0.0505,
+  "prob": 0.898
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 68.2
+  "top_pmss": 70.1
  },
- "alerts": 1,
- "n_markets": 423,
+ "alerts": 4,
+ "n_markets": 417,
  "source": "direct"
 }
