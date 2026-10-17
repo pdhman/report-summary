@@ -1,5 +1,5 @@
 {
- "date": "2026-10-17 21:17",
+ "date": "2026-10-18 00:45",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -21,7 +21,7 @@
  },
  "top_signal": {
   "q": "December 31 · Bab el-Mandeb Strait effectively closed by December 31?",
-  "pmss": 66.8,
+  "pmss": 68.2,
   "band": "Interest",
   "d24": 0.03,
   "prob": 0.165
@@ -29,9 +29,9 @@
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 66.8
+  "top_pmss": 68.2
  },
- "alerts": 0,
- "n_markets": 412,
+ "alerts": 1,
+ "n_markets": 423,
  "source": "direct"
 }
