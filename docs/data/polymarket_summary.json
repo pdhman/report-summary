@@ -1,5 +1,5 @@
 {
- "date": "2026-10-18 13:49",
+ "date": "2026-10-18 21:41",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -16,18 +16,18 @@
  },
  "recession": null,
  "top_signal": {
-  "q": "No Hormuz Agreement · Will there be no Hormuz agreement?",
-  "pmss": 68.5,
+  "q": "January 31, 2027 · Russia x Ukraine ceasefire agreement by January 31, 2027?",
+  "pmss": 64.9,
   "band": "Interest",
-  "d24": -0.0415,
-  "prob": 0.911
+  "d24": -0.03,
+  "prob": 0.185
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 68.5
+  "top_pmss": 64.9
  },
- "alerts": 2,
- "n_markets": 396,
+ "alerts": 0,
+ "n_markets": 433,
  "source": "direct"
 }
