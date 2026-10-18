@@ -1,5 +1,5 @@
 {
- "date": "2026-10-18 07:28",
+ "date": "2026-10-18 13:49",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -19,8 +19,8 @@
   "q": "No Hormuz Agreement · Will there be no Hormuz agreement?",
   "pmss": 68.5,
   "band": "Interest",
-  "d24": -0.044,
-  "prob": 0.9065
+  "d24": -0.0415,
+  "prob": 0.911
  },
  "exposure": {
   "base": 0.5,
@@ -28,6 +28,6 @@
   "top_pmss": 68.5
  },
  "alerts": 2,
- "n_markets": 417,
+ "n_markets": 396,
  "source": "direct"
 }
