@@ -1,5 +1,5 @@
 {
- "date": "2026-10-19 07:30",
+ "date": "2026-10-19 13:57",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -10,8 +10,8 @@
    "prob": 0.875,
    "d24": 0.01
   },
-  "mean": 3.111,
-  "mean_d24": -0.248,
+  "mean": 3.164,
+  "mean_d24": -0.195,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
@@ -21,17 +21,17 @@
  },
  "top_signal": {
   "q": "Delcy Rodríguez · Will Delcy Rodríguez be the leader of Venezuela end of 2026?",
-  "pmss": 52.2,
-  "band": "Watch",
-  "d24": -0.045,
-  "prob": 0.2
+  "pmss": 63.0,
+  "band": "Interest",
+  "d24": -0.075,
+  "prob": 0.17
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 52.2
+  "top_pmss": 63.0
  },
- "alerts": 0,
- "n_markets": 408,
+ "alerts": 2,
+ "n_markets": 406,
  "source": "direct"
 }
