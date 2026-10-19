@@ -118,16 +118,37 @@ def red_tags(rows, today, days):
     return sorted(((t, n) for t, n in cnt.items() if n >= RED), key=lambda x: (-x[1], x[0]))[:3]
 
 
-def rule_for(rows, tag, used):
-    """태그의 '다음엔(규칙)'. 첫 태그가 이 태그인 행을 먼저, 다른 태그가 이미 쓴 문장은 건너뛴다."""
+# 규칙 문장이 그 태그 얘기인지 가리는 핵심어. 일기 한 항목에 태그 여러 개·규칙 여러 개가 섞여 있어
+# 핵심어 없이 고르면 X1(익절)에 "펀더멘탈보다 가격을 우선한다" 같은 문장이 붙었다(2026-10-19).
+TAG_KEYWORDS = {
+    'E1': ('돌파', '눌림', '패턴', '완성', '확인'), 'E2': ('충분히', '하락한 후', '떨어'),
+    'E3': ('검증', '공부', '맹신', '리포트'), 'E4': ('사이즈', '비중', '복구', '만회'),
+    'E5': ('업종', '따라'),
+    'X1': ('청산', '익절', '매도', '차익', '수익 실현', '털어', '판다'), 'X2': ('트레일링', '본절'),
+    'X3': ('손절',), 'X4': ('재진입', '다시 사', '추세'),
+    'R1': ('신용', '레버리지', '담보'), 'R2': ('계약', '사이즈', '랏수', '손절 금액'),
+    'R3': ('물타', '추가 매수'), 'R4': ('헤지', '헷지', '헷징'),
+    'P1': ('낙관', '장밋빛', '환희', '틀릴', '과신', '반대', '보수적', '하락 계획'),
+    'P2': ('FOMO', '조급', '욕구'), 'P3': ('재진입', '당일', '오기'), 'P4': ('방심', '리스크'),
+    'P5': ('휴가', '피로', '음주'), 'O1': ('주문', '수량', '방향'), 'O2': ('알림', '알람'),
+}
+
+
+def rule_for(rows, tag, used, width=34):
+    """태그의 '다음엔(규칙)'. 그 태그 핵심어가 든 문장을 먼저, 첫 태그가 이 태그인 행을 먼저 본다.
+    다른 태그가 이미 쓴 문장은 건너뛴다."""
     cand = [r for r in rows if tag in r['tags'] and r['rules']]
     cand.sort(key=lambda r: (r['tags'][0] != tag, len(r['tags']) > 2))   # 안정 정렬 → 첫 태그가 이 태그인 행 우선, 같으면 최근순
-    for r in cand:
-        for rule in r['rules']:
-            rule = ml.clip(str(rule), 34)
-            if rule not in used:
-                used.add(rule)
-                return rule
+    kws = TAG_KEYWORDS.get(tag, ())
+    for need_kw in (True, False):
+        for r in cand:
+            for rule in r['rules']:
+                if need_kw and not any(k in str(rule) for k in kws):
+                    continue
+                rule = ml.clip(str(rule), width)
+                if rule not in used:
+                    used.add(rule)
+                    return rule
     return next((t[3] for t in ml.TAGS if t[0] == tag), '')
 
 
@@ -178,19 +199,29 @@ def gate_check(wb, keys, side):
 
 
 def recent_recurrences(rows, today, days=30):
-    """최근 days일 안에 난 실수 중, 같은 태그가 직전 days일 안에도 있었던 건 → [(날짜, 태그)]."""
+    """최근 days일 안에 난 실수 중, 같은 태그가 직전 days일 안에도 있었던 건 (최근순)."""
     last, out = {}, []
     for r in sorted(rows, key=lambda r: r['date']):
         for t in r['tags']:
             prev = last.get(t)
             if (today - r['date']).days <= days and prev and (r['date'] - prev).days <= days:
-                out.append((r['date'], t))
+                out.append({'date': r['date'], 'tag': t, 'prev': prev,
+                            'gap': (r['date'] - prev).days, 'what': r['what']})
             last[t] = r['date']
-    return out
+    return out[::-1]
 
 
-def repeat_line(xlsx=None, days=90, recur_days=30, today=None):
-    """텔레그램 일일 요약용 한 줄(HTML 없음). 읽을 데이터가 없으면 None — 호출한 쪽 발송을 막지 않는다."""
+# 체크리스트_2611 에 새로 넣은 항목이 막는 태그(mistake_log.TAGS 의 '없음 — 추가 후보'를 대신한다)
+GUARD_2611 = {
+    'X1': '수익 시 트레일링 조건(예: +10% 후 -5%)을 미리 걸었다',
+    'X2': '수익 시 트레일링 조건(예: +10% 후 -5%)을 미리 걸었다',
+    'X3': '진입과 동시에 손절 주문(TP/SL·자동감시)을 넣었다',
+    'R1': '신용 사용액이 계좌의 1/3 이내다',
+}
+
+
+def repeat_report(xlsx=None, days=90, recur_days=30, today=None):
+    """텔레그램 반복실수 알림용 자료. 읽을 데이터가 없으면 None — 호출한 쪽 발송을 막지 않는다."""
     today = today or dt.date.today()
     try:
         wb = open_wb(xlsx or u.DEFAULT_XLSX, data_only=True)
@@ -199,19 +230,16 @@ def repeat_line(xlsx=None, days=90, recur_days=30, today=None):
     rows = load_rows(wb)
     if not rows:
         return None
-    red = red_tags(rows, today, days)
-    rec = recent_recurrences(rows, today, recur_days)
-    head = ' · '.join(f"{t} {ml.TAG_NAME.get(t, '').split(' / ')[0].replace(' ', '')} {n}" for t, n in red)
-    parts = [f'{days}일 3회↑ ' + (head or '없음')]
-    if rec:
-        tags = {}
-        for _, t in rec:
-            tags[t] = tags.get(t, 0) + 1
-        parts.append(f'{recur_days}일 내 재발 {len(rec)}건(' + ' '.join(
-            f'{t}×{n}' for t, n in sorted(tags.items(), key=lambda x: -x[1])[:3]) + ')')
-    else:
-        parts.append(f'{recur_days}일 내 재발 없음')
-    return ' / '.join(parts)
+    used, red = set(), []
+    for t, n in red_tags(rows, today, days):
+        tag = next((x for x in ml.TAGS if x[0] == t), (t, t, '', '없음'))
+        guard = GUARD_2611.get(t) or ('' if tag[3].startswith('없음') else tag[3])
+        red.append({'tag': t, 'name': tag[1], 'desc': tag[2], 'count': n,
+                    'last': max(r['date'] for r in rows if t in r['tags']),
+                    'rule': rule_for(rows, t, used, width=80), 'guard': guard})
+    return {'today': today, 'days': days, 'recur_days': recur_days,
+            'n_recent': sum(1 for r in rows if (today - r['date']).days <= days),
+            'red': red, 'recur': recent_recurrences(rows, today, recur_days)}
 
 
 def main():

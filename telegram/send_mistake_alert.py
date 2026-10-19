@@ -26,12 +26,49 @@ from send_summary import CONFIG_PATH, api_call  # noqa: E402
 SENT_LOG = HERE / "sent_mistake.json"
 
 
+WEEKDAY = "월화수목금토일"
+CIRCLED = "①②③④⑤"
+
+
 def build_message():
+    """반복실수 알림 본문(HTML). 코드(X1 등)보다 이름·뜻·다음 행동을 먼저 풀어쓴다(2026-10-19 요청)."""
     import pre_trade
-    line = pre_trade.repeat_line()
-    if not line:
+    rep = pre_trade.repeat_report()
+    if not rep:
         return None
-    return f"🔁 <b>반복실수</b> · {datetime.now():%m/%d}\n{html.escape(line)}"
+    esc = html.escape
+    d = rep["today"]
+    out = [f"🔁 <b>반복실수 점검</b> · {d:%m/%d}({WEEKDAY[d.weekday()]})",
+           f"최근 {rep['days']}일 동안 기록된 실수 {rep['n_recent']}건을 기준으로 정리했습니다.", ""]
+
+    out.append(f"<b>■ 자주 반복한 실수</b> (최근 {rep['days']}일 동안 3번 이상)")
+    if not rep["red"]:
+        out.append("   3번 이상 반복한 실수는 없습니다.")
+    for i, r in enumerate(rep["red"]):
+        out.append("")
+        out.append(f"<b>{CIRCLED[i]} {esc(r['name'])}</b> ({r['tag']})")
+        out.append(f"   {r['count']}번 반복 · 마지막 {r['last']:%m/%d}")
+        if r["desc"]:
+            out.append(f"   • 어떤 실수: {esc(r['desc'])}")
+        if r["rule"]:
+            out.append(f"   • 다음엔: {esc(r['rule'])}")
+        out.append("   • 막는 장치: " + (f"체크리스트 「{esc(r['guard'])}」" if r["guard"] else "아직 없음"))
+
+    out.append("")
+    out.append(f"<b>■ 최근 {rep['recur_days']}일 안에 다시 나온 실수</b>")
+    if not rep["recur"]:
+        out.append(f"   같은 실수가 {rep['recur_days']}일 안에 다시 나온 경우는 없습니다.")
+    for r in rep["recur"][:5]:
+        name = pre_trade.ml.TAG_NAME.get(r["tag"], r["tag"])
+        out.append(f"   • {r['date']:%m/%d} {esc(name)}({r['tag']}) — "
+                   f"직전 {r['prev']:%m/%d} 이후 {r['gap']}일 만에 다시 발생")
+        if r["what"]:
+            out.append(f"     “{esc(pre_trade.ml.clip(r['what'], 60))}”")
+
+    out.append("")
+    out.append("💡 진입 전에 <code>python pre_trade.py 종목명 --side long</code> 으로 "
+               "그 종목의 과거 실수와 손절가·손실금액·청산조건을 확인하세요.")
+    return "\n".join(out)
 
 
 def main():
