@@ -1,51 +1,78 @@
 {
- "date": "2026-10-16",
+ "date": "2026-10-19",
  "high_52w_ratio": 0.65,
  "items": [
   {
-   "name": "주성엔지니어링",
-   "ticker": "036930",
-   "close": 210500.0,
-   "change_ratio": 6.8,
-   "rs_score": 97.6,
-   "vol_ratio": 82.5,
-   "from_high": -25.9
+   "name": "가온전선",
+   "ticker": "000500",
+   "close": 254500.0,
+   "change_ratio": 0.59,
+   "rs_score": 98.1,
+   "vol_ratio": 82.7,
+   "from_high": -29.2
   },
   {
-   "name": "RF머트리얼즈",
-   "ticker": "327260",
-   "close": 44750.0,
-   "change_ratio": 15.19,
-   "rs_score": 95.2,
-   "vol_ratio": 91.4,
-   "from_high": -29.4
+   "name": "주성엔지니어링",
+   "ticker": "036930",
+   "close": 209500.0,
+   "change_ratio": -0.95,
+   "rs_score": 97.1,
+   "vol_ratio": 65.6,
+   "from_high": -26.2
   },
   {
    "name": "티에스이",
    "ticker": "131290",
-   "close": 297500.0,
-   "change_ratio": 13.98,
-   "rs_score": 94.4,
-   "vol_ratio": 73.7,
-   "from_high": -13.8
+   "close": 280000.0,
+   "change_ratio": -4.76,
+   "rs_score": 94.2,
+   "vol_ratio": 83.3,
+   "from_high": -18.8
   },
   {
-   "name": "삼성SDI",
-   "ticker": "006400",
-   "close": 530000.0,
-   "change_ratio": 0.95,
-   "rs_score": 78.4,
-   "vol_ratio": 72.1,
-   "from_high": -26.7
+   "name": "피에스케이홀딩스",
+   "ticker": "031980",
+   "close": 193200.0,
+   "change_ratio": -3.11,
+   "rs_score": 92.2,
+   "vol_ratio": 62.9,
+   "from_high": -12.8
   },
   {
-   "name": "팬오션",
-   "ticker": "028670",
-   "close": 6720.0,
-   "change_ratio": -0.15,
-   "rs_score": 60.0,
-   "vol_ratio": 51.9,
-   "from_high": -14.2
+   "name": "엑시콘",
+   "ticker": "092870",
+   "close": 54200.0,
+   "change_ratio": 0.18,
+   "rs_score": 85.4,
+   "vol_ratio": 79.2,
+   "from_high": -8.3
+  },
+  {
+   "name": "S-Oil",
+   "ticker": "010950",
+   "close": 156200.0,
+   "change_ratio": 1.36,
+   "rs_score": 72.8,
+   "vol_ratio": 75.1,
+   "from_high": -11.8
+  },
+  {
+   "name": "이오테크닉스",
+   "ticker": "039030",
+   "close": 437500.0,
+   "change_ratio": -1.8,
+   "rs_score": 61.2,
+   "vol_ratio": 91.2,
+   "from_high": -29.8
+  },
+  {
+   "name": "SK이노베이션",
+   "ticker": "096770",
+   "close": 163000.0,
+   "change_ratio": 7.38,
+   "rs_score": 53.4,
+   "vol_ratio": 93.2,
+   "from_high": -1.5
   }
  ]
 }
