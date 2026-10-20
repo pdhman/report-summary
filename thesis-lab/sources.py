@@ -143,7 +143,9 @@ def list_snapshots() -> list[tuple[str, str]]:
 def load_snapshot(path: str) -> pd.DataFrame:
     df = pd.read_csv(path, dtype={"코드": str}, encoding="utf-8-sig")
     df["코드"] = df["코드"].str.zfill(6)
-    return df
+    # 2026-10-20: 9/18 스냅샷에 036170 이 두 번 들어 있어(네이버 목록 페이지 경계 중복, 9/21 수집기는 수정됨)
+    # 비교본으로 골린 10/16 빌드가 revision_table 의 map() 에서 멈췄다. 옛 스냅샷도 읽을 때 코드 기준으로 유일화.
+    return df.drop_duplicates(subset="코드", keep="first").reset_index(drop=True)
 
 
 def load_current_and_prior(min_gap_days: int = 26):
