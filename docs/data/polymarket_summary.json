@@ -1,5 +1,5 @@
 {
- "date": "2026-10-21 05:03",
+ "date": "2026-10-21 08:15",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -7,11 +7,11 @@
   "title": "Fed Decision in October?",
   "top": {
    "label": "No change",
-   "prob": 0.865,
-   "d24": 0.02
+   "prob": 0.855,
+   "d24": 0.01
   },
-  "mean": 3.412,
-  "mean_d24": -0.285,
+  "mean": 3.446,
+  "mean_d24": -0.251,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
@@ -21,7 +21,7 @@
  },
  "top_signal": {
   "q": "May 31, 2027 · Russia x Ukraine ceasefire agreement by May 31, 2027?",
-  "pmss": 59.4,
+  "pmss": 64.4,
   "band": "Interest",
   "d24": 0.04,
   "prob": 0.495
@@ -29,9 +29,9 @@
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 59.4
+  "top_pmss": 64.4
  },
  "alerts": 0,
- "n_markets": 402,
+ "n_markets": 408,
  "source": "direct"
 }
