@@ -1,10 +1,10 @@
 {
  "date": "2026-10-20",
- "overall": 28.2,
+ "overall": 28.1,
  "trend": 29.6,
  "spec": 42.8,
  "conc": 78.9,
- "vol": 69.3,
+ "vol": 69.6,
  "lev": 66.3,
  "fg": 47.2,
  "mom": 1.0,
@@ -95,6 +95,9 @@
  "nl": 154,
  "adv": 498,
  "dec": 2044,
- "vkospi": null,
- "putcall": null
+ "vkospi": 49.42,
+ "putcall": 0.38,
+ "trdval": 17.05,
+ "trdval_date": "2026-10-20",
+ "trdval_vs20": -21.3
 }

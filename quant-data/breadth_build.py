@@ -242,6 +242,31 @@ def fetch_krx_series(hist: pd.DataFrame, col: str, fn, recent_n: int = 5) -> pd.
     return pd.Series(vals, name=col).sort_index()
 
 
+def krx_kospi_trdval(day) -> float | None:
+    """KRX 공식 코스피 거래대금(조원). 당일분은 장 마감 뒤 저녁에 게시돼 보통 다음 실행 때 채워진다."""
+    import krx_api
+    for row in krx_api.fetch("kospi", day):
+        if krx_api._norm(row.get("IDX_NM")) == "코스피":
+            v = krx_api.num(row.get("ACC_TRDVAL"))
+            return None if v is None else v / 1e12
+    return None
+
+
+def naver_kospi_trdval_today():
+    """네이버 지수 '대금'(백만원) → (날짜, 조원). 장 마감(CLOSE) 뒤에만 쓴다 — 장중 값은 부분 합계라 버린다.
+    다음 실행에서 KRX 공식값이 나오면 fetch_krx_series(최근 5일 재조회)가 덮어쓴다."""
+    b = requests.get("https://m.stock.naver.com/api/index/KOSPI/basic", headers=UA, timeout=15).json()
+    if b.get("marketStatus") != "CLOSE":
+        return None
+    day = pd.Timestamp(str(b.get("localTradedAt"))[:10])
+    j = requests.get("https://m.stock.naver.com/api/index/KOSPI/integration", headers=UA, timeout=15).json()
+    for it in j.get("totalInfos", []):
+        if it.get("code") == "accumulatedTradingValue":
+            v = float(str(it.get("value")).replace(",", "").replace("백만", ""))
+            return day, v / 1e6
+    return None
+
+
 def fetch_vkospi_investing() -> pd.Series:
     """인베스팅닷컴 히스토리 테이블(최근 1개월) — KRX 실패 시 폴백."""
     from playwright.sync_api import sync_playwright
@@ -946,6 +971,10 @@ def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
         },
         "vkospi": _round(recent.get("vkospi", pd.Series(index=recent.index)), 2),
         "putcall": _round(recent.get("putcall", pd.Series(index=recent.index)), 3),
+        # 코스피 거래대금(조원, KRX 공식) + 20일 평균 — 투기 열기 섹션 차트
+        "trdval": {"v": _round(recent.get("kospi_trdval", pd.Series(index=recent.index)), 2),
+                   "ma20": _round(d["kospi_trdval"].rolling(20, min_periods=10).mean().reindex(recent.index)
+                                  if "kospi_trdval" in d.columns else pd.Series(index=recent.index), 2)},
         "ew": {"close": _round(recent.get("ew_close", pd.Series(index=recent.index)), 0),
                "mom": _round(recent.get("ew_mom", pd.Series(index=recent.index)), 2),
                # 125일선: 종가 ÷ (1 + 모멘텀%) — ew_mom 은 더 긴 이력으로 계산돼 있어 역산이
@@ -1003,6 +1032,14 @@ def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
         "putcall": (None if "putcall" not in recent.columns or pd.isna(last.get("putcall"))
                     else round(float(last["putcall"]), 2)),
     }
+    # 코스피 거래대금(조원) + 20일 평균 대비 % — 홈 카드 한 줄
+    if "kospi_trdval" in d.columns and d["kospi_trdval"].notna().any():
+        tvs = d["kospi_trdval"].dropna()
+        ma = tvs.rolling(20, min_periods=10).mean()
+        summary["trdval"] = round(float(tvs.iloc[-1]), 2)
+        summary["trdval_date"] = f"{tvs.index[-1]:%Y-%m-%d}"
+        summary["trdval_vs20"] = (None if pd.isna(ma.iloc[-1])
+                                  else round((float(tvs.iloc[-1]) / float(ma.iloc[-1]) - 1) * 100, 1))
     with open(SUMMARY_PATH, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=1)
     log.info("market_summary.json 저장: %s", summary)
@@ -1069,6 +1106,22 @@ def main():
                      len(pc), pc.index[-1].date(), pc.iloc[-1])
         except Exception as e:
             log.warning("풋콜비율 수집 실패(기존 값 유지): %s", e)
+
+    # 코스피 거래대금(조원, 2026-10-21 추가) — KRX 공식값. 폭 지표의 거래대금(종가×거래량 근사)은
+    # 공식값과 1~2% 차이, 날에 따라 7%까지 벌어져 화면용 절대 금액은 공식값을 쓴다.
+    try:
+        tv = fetch_krx_series(hist, "kospi_trdval", krx_kospi_trdval)
+        hist = apply_series(hist, tv, "kospi_trdval")
+        log.info("코스피 거래대금(KRX) %d일 갱신 (최근 %s = %.2f조)", len(tv), tv.index[-1].date(), tv.iloc[-1])
+    except Exception as e:
+        log.warning("코스피 거래대금 KRX 실패(기존 값 유지): %s", e)
+    try:
+        nv = naver_kospi_trdval_today()
+        if nv and nv[0] in hist.index and pd.isna(hist.at[nv[0], "kospi_trdval"]):
+            hist.at[nv[0], "kospi_trdval"] = nv[1]
+            log.info("코스피 거래대금 당일 %s = %.2f조 (네이버, KRX 게시 전 잠정)", nv[0].date(), nv[1])
+    except Exception as e:
+        log.warning("코스피 거래대금 당일값(네이버) 실패: %s", e)
 
     # 마스터 저장 — 파생(누적선) 열은 저장하지 않는다
     os.makedirs(os.path.dirname(HIST_PATH), exist_ok=True)

@@ -87,6 +87,7 @@
       <div class="chart-block"><div class="ct">저가주 거래대금 비중 <span class="cd">종가 2천원 미만 · %</span></div><div id="ch-penny"></div></div>
       <div class="chart-block"><div class="ct">상한가 / 하한가 종목수</div><div id="ch-cap"></div></div>
       <div class="chart-block"><div class="ct">시장 회전율 <span class="cd">거래대금 ÷ 시가총액 · %</span></div><div id="ch-turn"></div></div>
+      <div class="chart-block wide"><div class="ct">코스피 거래대금 <span class="cd">조원 · 막대 = 일별, 선 = 20일 평균 · KRX 공식(당일은 장 마감 직후 잠정치)</span></div><div id="ch-trdval"></div></div>
       <div class="chart-block wide"><div class="ct">코스닥 − 코스피 20일 상대수익률 <span class="cd">%p · 양수 = 위험선호</span></div><div id="ch-kqrel"></div></div>
     </div>
   </section>
@@ -624,6 +625,16 @@ function renderSpec(){
   drawChart(el('ch-turn'), { dates:dates, h:170, series:[
     { data:sl(D.markets.all.turnover), label:'전체', color:'var(--accent)', nd:2, fmt:function(v){ return fmt(v,2) + '%'; } },
     { data:sl(D.markets.kosdaq.turnover), label:'코스닥', color:'var(--amber)', nd:2, fmt:function(v){ return fmt(v,2) + '%'; } }] });
+  if (D.trdval && D.trdval.v) {
+    // 0부터 시작하는 고정 눈금(막대 차트의 자동 축은 아래에 음수 눈금이 붙는다)
+    var tvMax = Math.max.apply(null, sl(D.trdval.v).filter(function(v){ return v != null; }).concat([1]));
+    var tvStep = tvMax > 60 ? 20 : tvMax > 30 ? 10 : 5, tvTop = Math.ceil(tvMax / tvStep) * tvStep, tvTicks = [];
+    for (var tv = 0; tv <= tvTop; tv += tvStep) tvTicks.push(tv);
+  drawChart(el('ch-trdval'), { dates:dates, h:180, yRange:[0, tvTop], yTicks:tvTicks, series:[
+    { data:sl(D.trdval.v), label:'거래대금', color:'var(--accent)', type:'bar', nd:1, fmt:function(v){ return fmt(v,1) + '조'; } },
+    { data:sl(D.trdval.ma20), label:'20일 평균', color:'var(--ink)', width:1.6, nd:1, fmt:function(v){ return fmt(v,1) + '조'; } }],
+    yfmt:function(v){ return fmt(v,0) + '조'; } });
+  }
   drawChart(el('ch-kqrel'), { dates:dates, h:150, zero:true, series:[
     { data:sl(D.index.kq_rel20), label:'KQ−KS 20일', color:'var(--teal)', type:'area', nd:1,
       fmt:function(v){ return (v > 0 ? '+' : '') + fmt(v,1) + '%p'; } }] });

@@ -572,6 +572,13 @@ def build():
         if c.get("vkospi") is not None:
             body += (f'<div class="krow"><span class="k-name">VKOSPI</span>'
                      f'<span class="k-val">{c["vkospi"]:.2f}</span></div>')
+        if c.get("trdval") is not None:
+            # 코스피 거래대금(조원) · 20일 평균 대비 (2026-10-21 추가)
+            vs = c.get("trdval_vs20")
+            vs_html = ("" if vs is None else
+                       f' <span class="k-diff {"up" if vs >= 0 else "down"}">{vs:+.0f}%</span>')
+            body += (f'<div class="krow"><span class="k-name">코스피 거래대금</span>'
+                     f'<span class="k-val">{c["trdval"]:,.1f}조{vs_html}</span></div>')
         if body:
             cards.append(_card("market.html", "🌡️", "시장 온도계", c["date"], body))
 
