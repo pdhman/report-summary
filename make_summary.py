@@ -555,20 +555,10 @@ def build():
             lab = labels[min(4, int(c["overall"] // 20))]
             body += (f'<div class="krow"><span class="k-name">종합 체온</span>'
                      f'<span class="k-val">{c["overall"]:.0f} · {lab}</span></div>')
-        if c.get("fg") is not None:
-            # CNN 원판 구간: 0~25 극단공포 / 25~45 공포 / 45~55 중립 / 55~75 탐욕 / 75~ 극단탐욕
-            fg = c["fg"]
-            fg_lab = ("극단 공포" if fg < 25 else "공포" if fg < 45 else
-                      "중립" if fg < 55 else "탐욕" if fg < 75 else "극단 탐욕")
-            body += (f'<div class="krow"><span class="k-name">공포탐욕</span>'
-                     f'<span class="k-val">{fg:.0f} · {fg_lab}</span></div>')
+        # 공포탐욕·52주 신고/신저 줄은 2026-10-21 사용자 요청으로 제외(카드 높이 줄이기) — 상세는 market.html
         if c.get("ma200") is not None:
             body += (f'<div class="krow"><span class="k-name">200일선 위</span>'
                      f'<span class="k-val">{c["ma200"]:.1f}%</span></div>')
-        if c.get("nh") is not None and c.get("nl") is not None:
-            body += (f'<div class="krow"><span class="k-name">52주 신고/신저</span>'
-                     f'<span class="k-val"><span class="k-diff up">{c["nh"]}</span> / '
-                     f'<span class="k-diff down">{c["nl"]}</span></span></div>')
         if c.get("vkospi") is not None:
             body += (f'<div class="krow"><span class="k-name">VKOSPI</span>'
                      f'<span class="k-val">{c["vkospi"]:.2f}</span></div>')
