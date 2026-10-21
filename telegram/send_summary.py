@@ -91,6 +91,14 @@ def section_index(m, lines):
     vk = last(m.get("vkospi"))
     if vk is not None:
         rows.append(f"   VKOSPI {num(vk, 1)}")
+    # 코스피 거래대금(조원, KRX 공식·당일은 장 마감 직후 잠정) + 20일 평균 대비 (2026-10-21 추가)
+    # last() 로 거슬러 올라가면 오늘 값이 비었을 때 어제 값을 오늘 것처럼 보내므로 마지막 칸만 쓴다.
+    tv = m.get("trdval") or {}
+    v = (tv.get("v") or [None])[-1]
+    ma = (tv.get("ma20") or [None])[-1]
+    if v is not None:
+        vs = f" (20일 평균 대비 {(v / ma - 1) * 100:+.0f}%)" if ma else ""
+        rows.append(f"   코스피 거래대금 {num(v, 1)}조{vs}")
     if rows:
         lines.append("")
         lines.append("📈 <b>지수</b>")
