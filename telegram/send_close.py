@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """증권사 텔레그램 마감시황 요약 발송.
 
-market-close/out/YYYY-MM-DD.md (평일 16:45 Claude 예약 작업 market-close-brief 가 작성)를
-읽어 텔레그램 HTML 로 바꿔 보낸다. 봇·설정은 send_summary.py 와 공유(@alphanote_daily_bot).
+docs/data/close/YYYY-MM-DD.md (평일 16:45 Claude 예약 작업 market-close-brief 가 작성, 알파노트
+뉴스 탭 '📝 마감시황'과 같은 파일)를 읽어 텔레그램 HTML 로 바꿔 보낸다. 봇·설정은 send_summary.py 와
+공유(@alphanote_daily_bot). 맨 아래에 그 날짜의 알파노트 페이지 링크를 단다.
 
 기본 발송처는 개인 대화방(dm)뿐이다. 요약 재료가 증권사 채널 글이라 공개 채널로는 보내지 않는다.
 
@@ -23,7 +24,8 @@ from pathlib import Path
 from send_summary import CONFIG_PATH, add_target_arg, resolve_targets, send
 
 BASE = Path(__file__).resolve().parent.parent
-OUT_DIR = BASE / "market-close" / "out"
+OUT_DIR = BASE / "docs" / "data" / "close"
+PAGE_URL = "https://pdhman.github.io/report-summary/briefs.html"
 SENT_LOG = Path(__file__).resolve().parent / "sent_close.json"
 LIMIT = 4000
 
@@ -100,7 +102,8 @@ def main():
     date, md = load(args.date)
     if "**" in md and md.count("**") % 2:
         raise SystemExit("요약 파일의 ** 가 짝이 맞지 않습니다 — 굵게 표시를 확인하세요.")
-    msg = md_to_html(md)
+    link = f'<a href="{PAGE_URL}?tab=close#{date.replace("-", "")}">알파노트에서 지난 날짜와 함께 보기</a>'
+    msg = md_to_html(md) + "\n\n" + link
     chunks = split_chunks(msg)
     if args.dry_run:
         for i, c in enumerate(chunks, 1):
