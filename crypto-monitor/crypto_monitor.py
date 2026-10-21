@@ -374,6 +374,11 @@ def main():
         log(f"BTC ${m['btc_price']:,.0f} ({m['btc_chg_24h']:+.2f}%) · RSI {m['rsi14']}")
     except Exception as e:
         log(f"실패: {e}")
+        # 2026-10-21: 새벽 절전 해제 직후 따라잡기 실행이 네트워크(DNS) 연결 전에 돌아 전 소스가 실패했는데도
+        # 빈 페이지를 만들어 배포했다. 가격은 대시보드의 뼈대라 실패하면 아무것도 쓰지 않고 끝낸다
+        # (이전 페이지·홈 카드 유지, run_crypto.ps1 이 exit 2 를 보고 커밋하지 않음).
+        log("가격 수집 실패 → 페이지를 갱신하지 않고 종료(이전 페이지 유지)")
+        sys.exit(2)
 
     print("[2/6] CoinMetrics MVRV")
     try:
