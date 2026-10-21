@@ -7,9 +7,12 @@
 사용:
   python send_mistake_alert.py            발송(하루 한 번)
   python send_mistake_alert.py --dry-run  발송 없이 메시지만 출력
-  python send_mistake_alert.py --force    오늘 이미 보냈어도 재발송
+  python send_mistake_alert.py --force    오늘 이미 보냈거나 직전 발송과 내용이 같아도 재발송
+
+직전에 보낸 것과 본문(날짜 줄 제외)이 같으면 보내지 않는다(2026-10-21 요청).
 """
 import argparse
+import hashlib
 import html
 import json
 import sys
@@ -71,6 +74,20 @@ def build_message():
     return "\n".join(out)
 
 
+def body_hash(msg):
+    """첫 줄(날짜)을 뺀 본문의 지문. 날짜만 바뀐 같은 내용은 같은 지문이 된다."""
+    body = msg.split("\n", 1)[1] if "\n" in msg else ""
+    return hashlib.sha1(body.encode("utf-8")).hexdigest()
+
+
+def last_sent_hash(log, today):
+    """오늘 이전 가장 최근 발송의 본문 지문(옛 기록은 chat_id 문자열뿐이라 None)."""
+    for day in sorted(log, reverse=True):
+        if day < today and isinstance(log[day], dict):
+            return log[day].get("hash")
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
@@ -101,11 +118,15 @@ def main():
     if log.get(today) and not args.force:
         print(f"건너뜀: {today} 이미 발송됨")
         return
+    h = body_hash(msg)
+    if h == last_sent_hash(log, today) and not args.force:
+        print("건너뜀: 직전 발송과 내용이 같습니다")
+        return
     res = api_call(cfg["bot_token"], "sendMessage", {
         "chat_id": chat_id, "text": msg, "parse_mode": "HTML", "disable_web_page_preview": "true"})
     if not res.get("ok"):
         raise SystemExit(f"발송 실패: {res}")
-    log[today] = chat_id
+    log[today] = {"chat_id": chat_id, "hash": h}
     for old in sorted(log)[:-30]:
         del log[old]
     SENT_LOG.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
