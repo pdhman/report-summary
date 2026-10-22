@@ -232,10 +232,19 @@ def build():
         ymd = pretty.replace("-", "")
         if ymd in briefs:
             continue
-        page = _page(pretty, gaze_pane(pretty),
-                     '<article class="prose"><p class="muted">'
-                     '이 날짜의 뉴스 브리핑은 아직 게시되지 않았습니다.</p></article>',
-                     close_pane(pretty))
+        brief_html = ('<article class="prose"><p class="muted">'
+                      '이 날짜의 뉴스 브리핑은 아직 게시되지 않았습니다.</p></article>')
+        # 2026-10-22: 원본 md 가 아직 원격에 없는 상태(로컬에서 게시 중)에서 GitHub Actions 가 이 루프를 돌아,
+        # 다른 자동 작업이 먼저 올려둔 '본문 있는 페이지'를 빈 안내문으로 덮어썼다. 기존 페이지에 본문이
+        # 있으면 그 브리핑 본문은 그대로 살리고 시선·마감시황 패널만 새로 만든다.
+        path = os.path.join(OUT_DIR, f"brief_{ymd}.html")
+        if os.path.exists(path):
+            old = open(path, encoding="utf-8").read()
+            m = re.search(r'</header>\s*(<article class="prose">.*?</article>)\s*<footer>', old, re.S)
+            if m and "아직 게시되지 않았습니다" not in m.group(1):
+                brief_html = m.group(1)
+                print(f"[시황] {pretty} 원본 md 없음 — 기존 페이지의 브리핑 본문 유지")
+        page = _page(pretty, gaze_pane(pretty), brief_html, close_pane(pretty))
         os.makedirs(OUT_DIR, exist_ok=True)
         with open(os.path.join(OUT_DIR, f"brief_{ymd}.html"), "w", encoding="utf-8") as fh:
             fh.write(_wrap(f"뉴스 브리핑 {pretty}", page))
