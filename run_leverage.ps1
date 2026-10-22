@@ -24,7 +24,7 @@ if (-not $Force) {
     else {
         try {
             $d = $now.ToString('yyyyMMdd')
-            $u = "https://api.stock.naver.com/chart/domestic/index/KOSPI/day?startDateTime=${d}00&endDateTime=${d}23"
+            $u = "https://api.stock.naver.com/chart/domestic/index/KOSPI/day?startDateTime=${d}0000&endDateTime=${d}2359"
             $r = Invoke-RestMethod -Uri $u -Headers @{ 'User-Agent' = 'Mozilla/5.0' } -TimeoutSec 15
             if (@($r).Count -eq 0) { $skip = '평일 휴장(오늘자 지수 없음)' }
         } catch { }

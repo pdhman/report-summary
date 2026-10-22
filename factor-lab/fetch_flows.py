@@ -52,7 +52,7 @@ def _fetch_one(code: str) -> pd.DataFrame | None:
     # 2026-08-28: finance.naver 9/10 종료 대비 — 신형 차트 API 로 전환
     # (foreignRetentionRate = 기존 외국인소진율과 동일 값 확인)
     url = (f"https://api.stock.naver.com/chart/domestic/item/{code}/day"
-           f"?startDateTime={START}00&endDateTime={end}23")
+           f"?startDateTime={START}0000&endDateTime={end}2359")
     for attempt in range(3):
         try:
             time.sleep(SLEEP)

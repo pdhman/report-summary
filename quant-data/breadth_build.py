@@ -188,7 +188,7 @@ def fetch_index(symbol: str, start: dt.date) -> pd.Series:
     """
     try:
         url = (f"https://api.stock.naver.com/chart/domestic/index/{symbol}/day"
-               f"?startDateTime={start:%Y%m%d}00&endDateTime={dt.date.today():%Y%m%d}23")
+               f"?startDateTime={start:%Y%m%d}0000&endDateTime={dt.date.today():%Y%m%d}2359")
         r = requests.get(url, headers=UA, timeout=15)
         r.raise_for_status()
         rows = r.json()

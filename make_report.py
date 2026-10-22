@@ -117,7 +117,7 @@ def _trading_days(start, end):
     try:
         import requests
         url = (f"https://api.stock.naver.com/chart/domestic/index/KOSPI/day"
-               f"?startDateTime={s:%Y%m%d}00&endDateTime={e:%Y%m%d}23")
+               f"?startDateTime={s:%Y%m%d}0000&endDateTime={e:%Y%m%d}2359")
         rows = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15).json()
         days = sorted({pd.Timestamp(str(r["localDate"])).normalize() for r in rows
                        if r.get("closePrice")})
