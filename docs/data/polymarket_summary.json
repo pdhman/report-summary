@@ -1,37 +1,37 @@
 {
- "date": "2026-10-22 22:57",
- "regime_icon": "⚪",
- "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing → / Recession → / Inflation → / Risk →",
+ "date": "2026-10-23 05:14",
+ "regime_icon": "🟢",
+ "regime_name": "Goldilocks (근사)",
+ "arrows": "Easing ↑ / Recession → / Inflation → / Risk ↓",
  "fomc": {
   "title": "Fed Decision in October?",
   "top": {
    "label": "No change",
-   "prob": 0.915,
-   "d24": 0.04
+   "prob": 0.945,
+   "d24": 0.07
   },
-  "mean": 1.969,
-  "mean_d24": -0.975,
+  "mean": 1.453,
+  "mean_d24": -1.739,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
-  "prob": 0.075,
-  "d24": null,
+  "prob": 0.07,
+  "d24": -0.005,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "October 31 · Israel x Iran ceasefire continues through October 31?",
-  "pmss": 67.1,
-  "band": "Interest",
-  "d24": -0.07,
-  "prob": 0.805
+  "q": "No change · Will there be no change in Fed interest rates after the October 2026 meeting?",
+  "pmss": 79.4,
+  "band": "Tactical Signal",
+  "d24": 0.07,
+  "prob": 0.945
  },
  "exposure": {
   "base": 0.5,
-  "suggested": 0.5,
-  "top_pmss": 67.1
+  "suggested": 0.6,
+  "top_pmss": 79.4
  },
- "alerts": 2,
- "n_markets": 456,
+ "alerts": 9,
+ "n_markets": 424,
  "source": "direct"
 }
