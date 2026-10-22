@@ -118,4 +118,9 @@ if ($LASTEXITCODE -eq 0) {
         Write-Host "잠시 후 이 스크립트를 다시 실행하거나 클로드에게 알려주세요." -ForegroundColor Red
     }
 }
+# 5) 게시 확인 (2026-10-22): 실제 사이트에 오늘 시황 본문·홈 카드 날짜가 반영됐는지 최대 10분 확인해
+#    텔레그램 개인 DM 으로 알린다. 이 창을 붙잡지 않도록 숨김 백그라운드로 띄운다(창을 닫아도 계속 돈다).
+#    (2026-10-22 실사고: 게시 직후 다른 자동 작업이 페이지를 빈 안내문으로 덮어써도 조용히 지나갔다)
+Start-Process -FilePath $py -ArgumentList @('-u', (Join-Path $proj 'verify_brief.py'), $date) -WindowStyle Hidden -WorkingDirectory $proj
+Write-Host "게시 확인을 시작했습니다 - 결과(완료/문제)는 몇 분 안에 텔레그램 DM 으로 옵니다." -ForegroundColor Cyan
 Read-Host "엔터를 누르면 종료"
