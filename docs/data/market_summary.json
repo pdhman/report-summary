@@ -99,6 +99,6 @@
  "putcall": null,
  "trdval": 13.7,
  "trdval_date": "2026-10-22",
- "trdval_prov": false,
+ "trdval_prov": true,
  "trdval_vs20": -34.8
 }
