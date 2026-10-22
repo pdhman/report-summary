@@ -1,5 +1,5 @@
 {
- "date": "2026-10-22 08:29",
+ "date": "2026-10-22 14:05",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -8,10 +8,10 @@
   "top": {
    "label": "No change",
    "prob": 0.875,
-   "d24": 0.02
+   "d24": 0.0
   },
   "mean": 3.192,
-  "mean_d24": -0.254,
+  "mean_d24": 0.028,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
