@@ -87,7 +87,7 @@
       <div class="chart-block"><div class="ct">저가주 거래대금 비중 <span class="cd">종가 2천원 미만 · %</span></div><div id="ch-penny"></div></div>
       <div class="chart-block"><div class="ct">상한가 / 하한가 종목수</div><div id="ch-cap"></div></div>
       <div class="chart-block"><div class="ct">시장 회전율 <span class="cd">거래대금 ÷ 시가총액 · %</span></div><div id="ch-turn"></div></div>
-      <div class="chart-block wide"><div class="ct">코스피 거래대금 <span class="cd">조원 · 막대 = 일별, 선 = 20일 평균 · 빨강 = 20일 평균의 1.5배 넘는 날 · KRX 공식(당일은 장 마감 직후 잠정치)</span></div><div id="ch-trdval"></div></div>
+      <div class="chart-block wide"><div class="ct">코스피 거래대금 <span class="cd">조원 · 막대 = 일별, 선 = 20일 평균 · 빨강 = 20일 평균의 1.5배 넘는 날 · 회색 = 당일 잠정치(장 마감 직후 기준, 다음 날 KRX 공식값으로 교체)</span></div><div id="ch-trdval"></div></div>
       <div class="chart-block wide"><div class="ct">코스닥 − 코스피 20일 상대수익률 <span class="cd">%p · 양수 = 위험선호</span></div><div id="ch-kqrel"></div></div>
     </div>
   </section>
@@ -632,9 +632,12 @@ function renderSpec(){
     for (var tv = 0; tv <= tvTop; tv += tvStep) tvTicks.push(tv);
     // 20일 평균의 1.5배를 넘는 날(투매·급등 등 거래 폭증)은 막대 색을 바꿔 따로 그린다
     var tvV = sl(D.trdval.v), tvM = sl(D.trdval.ma20);
-    var tvHot = function(i){ return tvV[i] != null && tvM[i] != null && tvV[i] > tvM[i] * 1.5; };
+    var tvP = sl(D.trdval.prov || []);
+    var tvProv = function(i){ return tvP[i] === 1; };   // 장 마감 직후 네이버 잠정치(다음 날 KRX 공식값으로 교체)
+    var tvHot = function(i){ return !tvProv(i) && tvV[i] != null && tvM[i] != null && tvV[i] > tvM[i] * 1.5; };
   drawChart(el('ch-trdval'), { dates:dates, h:180, yRange:[0, tvTop], yTicks:tvTicks, series:[
-    { data:tvV.map(function(v, i){ return tvHot(i) ? null : v; }), label:'거래대금', color:'var(--accent)', type:'bar', nd:1, fmt:function(v){ return fmt(v,1) + '조'; } },
+    { data:tvV.map(function(v, i){ return (tvHot(i) || tvProv(i)) ? null : v; }), label:'거래대금', color:'var(--accent)', type:'bar', nd:1, fmt:function(v){ return fmt(v,1) + '조'; } },
+    { data:tvV.map(function(v, i){ return tvProv(i) ? v : null; }), label:'잠정(장 마감 직후, 다음 날 공식값으로 교체)', color:'var(--muted)', type:'bar', nd:1, fmt:function(v){ return fmt(v,1) + '조 (잠정)'; } },
     { data:tvV.map(function(v, i){ return tvHot(i) ? v : null; }), label:'급증(20일 평균 1.5배↑)', color:'var(--up)', type:'bar', nd:1, fmt:function(v){ return fmt(v,1) + '조'; } },
     { data:sl(D.trdval.ma20), label:'20일 평균', color:'var(--ink)', width:1.6, nd:1, fmt:function(v){ return fmt(v,1) + '조'; } }],
     yfmt:function(v){ return fmt(v,0) + '조'; } });
