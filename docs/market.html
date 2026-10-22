@@ -141,7 +141,7 @@
     fetch(location.pathname, { method:'HEAD', cache:'no-store' }).then(function(res){
       if(!res.ok) return; var s = stamp(res); if(!s) return;
       if(tag === null){ tag = s; return; }
-      if(s !== tag){ location.reload(); }
+      if(s !== tag){ try{sessionStorage.setItem("gc-skip","1")}catch(x){} location.reload(); }
     }).catch(function(){});
   }
   check(); setInterval(check, POLL);
@@ -1057,4 +1057,4 @@ if (D) {
   window.addEventListener('resize', function(){ clearTimeout(rsz); rsz = setTimeout(renderAll, 200); });
 }
 </script>
-<script id="embed-hide">(function(){var e=window.self!==window.top,q=null;try{q=new URLSearchParams(location.search).get("theme")}catch(x){}if(q==="dark"||q==="light"){document.documentElement.dataset.theme=q;if(e){try{localStorage.setItem("theme",q)}catch(x){}}}if(e){var s=document.createElement("style");s.textContent=".bottomnav,#theme-toggle{display:none!important}body{padding-bottom:0!important}";document.head.appendChild(s);}})();</script></body></html>
+<script id="embed-hide">(function(){var e=window.self!==window.top,q=null;try{q=new URLSearchParams(location.search).get("theme")}catch(x){}if(q==="dark"||q==="light"){document.documentElement.dataset.theme=q;if(e){try{localStorage.setItem("theme",q)}catch(x){}}}if(e){var s=document.createElement("style");s.textContent=".bottomnav,#theme-toggle{display:none!important}body{padding-bottom:0!important}";document.head.appendChild(s);}})();</script><script id="gc-cfg">(function(){var s=false;try{s=sessionStorage.getItem("gc-skip")==="1";sessionStorage.removeItem("gc-skip")}catch(x){}window.goatcounter={no_onload:s,path:function(){return location.host+(window.self!==window.top?"/embed":"")+location.pathname}}})();</script><script data-goatcounter="https://park.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script></body></html>

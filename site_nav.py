@@ -70,6 +70,9 @@ function _tgTheme(){
 # 홈페이지(rapha-n-site) 의 iframe 안에서 열리면 하단 탭바·테마 버튼을 숨긴다(상위 사이트가 내비게이션 담당).
 _EMBED_HIDE_SCRIPT = '''<script id="embed-hide">(function(){var e=window.self!==window.top,q=null;try{q=new URLSearchParams(location.search).get("theme")}catch(x){}if(q==="dark"||q==="light"){document.documentElement.dataset.theme=q;if(e){try{localStorage.setItem("theme",q)}catch(x){}}}if(e){var s=document.createElement("style");s.textContent=".bottomnav,#theme-toggle{display:none!important}body{padding-bottom:0!important}";document.head.appendChild(s);}})();</script>'''
 
+# 방문자 통계(GoatCounter park, 2026-10-22): 사이트 주소·임베드 여부를 경로 앞에 붙여 구분, 자동 새로고침은 미집계
+_GC_SCRIPT = '''<script id="gc-cfg">(function(){var s=false;try{s=sessionStorage.getItem("gc-skip")==="1";sessionStorage.removeItem("gc-skip")}catch(x){}window.goatcounter={no_onload:s,path:function(){return location.host+(window.self!==window.top?"/embed":"")+location.pathname}}})();</script><script data-goatcounter="https://park.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>'''
+
 _AUTOREFRESH_SCRIPT = """<script>
 (function(){
   if(!/^https?:$/.test(location.protocol)) return;   // file:// 등에서는 동작 안 함
@@ -85,7 +88,7 @@ _AUTOREFRESH_SCRIPT = """<script>
       var s = stamp(res);
       if(!s) return;                  // 판별 정보가 없으면 새로고침하지 않는다
       if(tag === null){ tag = s; return; }   // 첫 확인은 기준값만 기록
-      if(s !== tag){ location.reload(); }
+      if(s !== tag){ try{sessionStorage.setItem("gc-skip","1")}catch(x){} location.reload(); }
     }).catch(function(){});
   }
   window.__checkUpdate = check;       // 콘솔에서 즉시 확인용
@@ -105,7 +108,7 @@ def nav_html(active):
         for key, icon, label, href in _ITEMS
     )
     btn = _THEME_BTN if active == "home" else ""
-    return f'<nav class="bottomnav">{cells}</nav>{btn}{_THEME_SCRIPT}{_EMBED_HIDE_SCRIPT}{_AUTOREFRESH_SCRIPT}'
+    return f'<nav class="bottomnav">{cells}</nav>{btn}{_THEME_SCRIPT}{_EMBED_HIDE_SCRIPT}{_GC_SCRIPT}{_AUTOREFRESH_SCRIPT}'
 
 
 NAV_CSS = """<style>
