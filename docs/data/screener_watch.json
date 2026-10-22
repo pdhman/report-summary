@@ -1,42 +1,15 @@
 {
- "date": "2026-10-21",
+ "date": "2026-10-22",
  "high_52w_ratio": 0.65,
  "items": [
   {
-   "name": "가온전선",
-   "ticker": "000500",
-   "close": 243500.0,
-   "change_ratio": 7.03,
-   "rs_score": 97.8,
-   "vol_ratio": 70.4,
-   "from_high": -32.3
-  },
-  {
-   "name": "주성엔지니어링",
-   "ticker": "036930",
-   "close": 205000.0,
-   "change_ratio": 6.66,
-   "rs_score": 95.6,
-   "vol_ratio": 59.2,
-   "from_high": -27.8
-  },
-  {
-   "name": "삼성SDI",
-   "ticker": "006400",
-   "close": 554000.0,
-   "change_ratio": -0.18,
-   "rs_score": 84.6,
-   "vol_ratio": 71.3,
-   "from_high": -23.4
-  },
-  {
-   "name": "KT&G",
-   "ticker": "033780",
-   "close": 194000.0,
-   "change_ratio": -0.41,
-   "rs_score": 53.8,
-   "vol_ratio": 64.7,
-   "from_high": -1.2
+   "name": "피에스케이홀딩스",
+   "ticker": "031980",
+   "close": 168500.0,
+   "change_ratio": -8.47,
+   "rs_score": 85.9,
+   "vol_ratio": 91.9,
+   "from_high": -23.9
   }
  ]
 }
