@@ -973,6 +973,7 @@ def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
         "putcall": _round(recent.get("putcall", pd.Series(index=recent.index)), 3),
         # 코스피 거래대금(조원, KRX 공식) + 20일 평균 — 투기 열기 섹션 차트
         "trdval": {"v": _round(recent.get("kospi_trdval", pd.Series(index=recent.index)), 2),
+                   "prov": _round(recent.get("kospi_trdval_prov", pd.Series(index=recent.index)), 0),
                    "ma20": _round(d["kospi_trdval"].rolling(20, min_periods=10).mean().reindex(recent.index)
                                   if "kospi_trdval" in d.columns else pd.Series(index=recent.index), 2)},
         "ew": {"close": _round(recent.get("ew_close", pd.Series(index=recent.index)), 0),
@@ -1038,6 +1039,8 @@ def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
         ma = tvs.rolling(20, min_periods=10).mean()
         summary["trdval"] = round(float(tvs.iloc[-1]), 2)
         summary["trdval_date"] = f"{tvs.index[-1]:%Y-%m-%d}"
+        pv = d.get("kospi_trdval_prov", pd.Series(dtype=float)).get(tvs.index[-1])
+        summary["trdval_prov"] = bool(pv == 1)
         summary["trdval_vs20"] = (None if pd.isna(ma.iloc[-1])
                                   else round((float(tvs.iloc[-1]) / float(ma.iloc[-1]) - 1) * 100, 1))
     with open(SUMMARY_PATH, "w", encoding="utf-8") as f:
@@ -1112,13 +1115,17 @@ def main():
     try:
         tv = fetch_krx_series(hist, "kospi_trdval", krx_kospi_trdval)
         hist = apply_series(hist, tv, "kospi_trdval")
+        # 출처 표시: KRX 공식으로 채운 날은 0 (전날 네이버 잠정치가 있었다면 여기서 공식값으로 교체됨)
+        hist = apply_series(hist, pd.Series(0.0, index=tv.index), "kospi_trdval_prov")
         log.info("코스피 거래대금(KRX) %d일 갱신 (최근 %s = %.2f조)", len(tv), tv.index[-1].date(), tv.iloc[-1])
     except Exception as e:
         log.warning("코스피 거래대금 KRX 실패(기존 값 유지): %s", e)
     try:
         nv = naver_kospi_trdval_today()
-        if nv and nv[0] in hist.index and pd.isna(hist.at[nv[0], "kospi_trdval"]):
+        # KRX 공식값(prov=0)이 아직 없으면 채운다 — 같은 날 다시 돌 때도 잠정 표시가 붙도록
+        if nv and nv[0] in hist.index and hist.get("kospi_trdval_prov", pd.Series(dtype=float)).get(nv[0]) != 0:
             hist.at[nv[0], "kospi_trdval"] = nv[1]
+            hist.at[nv[0], "kospi_trdval_prov"] = 1.0   # 잠정 — 화면에 옅은 막대·'잠정' 표시
             log.info("코스피 거래대금 당일 %s = %.2f조 (네이버, KRX 게시 전 잠정)", nv[0].date(), nv[1])
     except Exception as e:
         log.warning("코스피 거래대금 당일값(네이버) 실패: %s", e)

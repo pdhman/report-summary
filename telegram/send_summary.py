@@ -98,7 +98,8 @@ def section_index(m, lines):
     ma = (tv.get("ma20") or [None])[-1]
     if v is not None:
         vs = f" (20일 평균 대비 {(v / ma - 1) * 100:+.0f}%)" if ma else ""
-        rows.append(f"   코스피 거래대금 {num(v, 1)}조{vs}")
+        pv = (tv.get("prov") or [None])[-1]
+        rows.append(f"   코스피 거래대금 {num(v, 1)}조{vs}{' · 잠정' if pv == 1 else ''}")
     if rows:
         lines.append("")
         lines.append("📈 <b>지수</b>")

@@ -567,8 +567,9 @@ def build():
             vs = c.get("trdval_vs20")
             vs_html = ("" if vs is None else
                        f' <span class="k-diff {"up" if vs >= 0 else "down"}">{vs:+.0f}%</span>')
+            prov = ' <span class="k-diff" style="color:var(--muted)">잠정</span>' if c.get("trdval_prov") else ""
             body += (f'<div class="krow"><span class="k-name">코스피 거래대금</span>'
-                     f'<span class="k-val">{c["trdval"]:,.1f}조{vs_html}</span></div>')
+                     f'<span class="k-val">{c["trdval"]:,.1f}조{vs_html}{prov}</span></div>')
         if body:
             cards.append(_card("market.html", "🌡️", "시장 온도계", c["date"], body))
 
