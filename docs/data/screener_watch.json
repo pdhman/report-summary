@@ -1,15 +1,5 @@
 {
- "date": "2026-10-22",
+ "date": "2026-10-23",
  "high_52w_ratio": 0.65,
- "items": [
-  {
-   "name": "피에스케이홀딩스",
-   "ticker": "031980",
-   "close": 168500.0,
-   "change_ratio": -8.47,
-   "rs_score": 85.9,
-   "vol_ratio": 91.9,
-   "from_high": -23.9
-  }
- ]
+ "items": []
 }
