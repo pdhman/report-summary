@@ -1,5 +1,5 @@
 {
- "date": "2026-10-24 21:48",
+ "date": "2026-10-25 03:52",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk ↓",
@@ -8,10 +8,10 @@
   "top": {
    "label": "No change",
    "prob": 0.945,
-   "d24": 0.01
+   "d24": 0.03
   },
   "mean": 1.431,
-  "mean_d24": -0.27,
+  "mean_d24": -0.794,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
@@ -20,18 +20,18 @@
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "December 31 · NATO x Russia military clash by December 31, 2026?",
-  "pmss": 57.8,
+  "q": "October 31 · NATO x Russia military clash by October 31, 2026?",
+  "pmss": 68.0,
   "band": "Interest",
-  "d24": -0.165,
-  "prob": 0.185
+  "d24": -0.3735,
+  "prob": 0.0215
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 57.8
+  "top_pmss": 68.0
  },
- "alerts": 1,
- "n_markets": 414,
+ "alerts": 2,
+ "n_markets": 433,
  "source": "direct"
 }
