@@ -1,35 +1,35 @@
 {
- "date": "2026-10-26 04:09",
+ "date": "2026-10-26 07:41",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing → / Recession → / Inflation → / Risk →",
+ "arrows": "Easing → / Recession → / Inflation ↓ / Risk →",
  "fomc": {
   "title": "Fed Decision in October?",
   "top": {
    "label": "No change",
-   "prob": 0.945,
-   "d24": 0.0
+   "prob": 0.935,
+   "d24": -0.01
   },
-  "mean": 1.431,
-  "mean_d24": 0.0,
+  "mean": 1.728,
+  "mean_d24": 0.297,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
-  "prob": 0.075,
-  "d24": -0.01,
+  "prob": 0.095,
+  "d24": 0.01,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "November 30 · Bab el-Mandeb Strait effectively closed by November 30?",
-  "pmss": 52.5,
-  "band": "Watch",
-  "d24": -0.03,
-  "prob": 0.075
+  "q": "December 31 · US announces end of Iranian blockade by December 31, 2026?",
+  "pmss": 59.2,
+  "band": "Interest",
+  "d24": 0.021,
+  "prob": 0.3665
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 52.5
+  "top_pmss": 59.2
  },
  "alerts": 0,
  "n_markets": 466,
