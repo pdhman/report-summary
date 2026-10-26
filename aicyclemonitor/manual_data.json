@@ -24,9 +24,9 @@
   },
   "bigtech_cds_5y_bp": {
     "date": "2026-10-15",
-    "source": "ORCL·소프트뱅크 Reuters 10/15(사상 최고), CRWV CNBC 10/15 종가 근사(장중 1,140bp 이상) · 나머지는 새 수치가 없어 9월 말 값 유지",
-    "level": {"CRWV": 1038, "소프트뱅크": 424, "ORCL": 288, "SPCX·xAI": 180, "AVGO": 126, "META": 97, "NVDA": 87, "AMZN": 73, "GOOGL": 72, "MSFT": 52, "AAPL": 43},
-    "stale": ["SPCX·xAI", "AVGO", "META", "NVDA", "AMZN", "GOOGL", "MSFT", "AAPL"],
+    "source": "ORCL·소프트뱅크 Reuters 10/15(사상 최고), CRWV CNBC 10/15 종가 근사(장중 1,140bp 이상), META 10/22 실적 직후 사상 최고 114.8bp(증권 매체 보도) · 나머지는 새 수치가 없어 9월 말 값 유지",
+    "level": {"CRWV": 1038, "소프트뱅크": 424, "ORCL": 288, "SPCX·xAI": 180, "AVGO": 126, "META": 115, "NVDA": 87, "AMZN": 73, "GOOGL": 72, "MSFT": 52, "AAPL": 43},
+    "stale": ["SPCX·xAI", "AVGO", "NVDA", "AMZN", "GOOGL", "MSFT", "AAPL"],
     "prev": {
       "date": "2026-09 말",
       "source": "Bloomberg(하나증권 Total ETF '주요 기업들의 CDS 추이' 차트 끝값 판독, ±3bp)",
