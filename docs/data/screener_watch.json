@@ -1,24 +1,15 @@
 {
- "date": "2026-10-26",
+ "date": "2026-10-27",
  "high_52w_ratio": 0.65,
  "items": [
   {
    "name": "삼성E&A",
    "ticker": "028050",
-   "close": 59800.0,
-   "change_ratio": 1.18,
-   "rs_score": 83.8,
-   "vol_ratio": 79.6,
-   "from_high": -11.1
-  },
-  {
-   "name": "KT&G",
-   "ticker": "033780",
-   "close": 188900.0,
-   "change_ratio": -0.26,
-   "rs_score": 64.9,
-   "vol_ratio": 90.5,
-   "from_high": -3.8
+   "close": 62200.0,
+   "change_ratio": 3.49,
+   "rs_score": 80.0,
+   "vol_ratio": 60.2,
+   "from_high": -7.6
   }
  ]
 }
