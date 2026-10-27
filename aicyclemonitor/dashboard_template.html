@@ -135,7 +135,7 @@
     <p class="desc">인프라가 실수요보다 많이 깔리고 있는가: GPU 임대가격, 데이터센터 REIT, 공실률</p>
     <div class="cards">
       <div class="card"><h3>GPU 시간당 임대가 ($/hr, 임대중 중앙값)</h3>
-        <p class="note">실선 = vast.ai(개인·소형 업체의 단기 임대 장터, 500.farm 미러) 임대중 중앙값. 장터라 가격 수준은 업계 지수와 다르다(신형은 더 비싸고 구형은 더 쌈) — 신호는 수준이 아니라 90일 변화(방향)로 본다. 점선 = Silicon Data 업계 지수(전문 클라우드 기준, 공개 블로그 수치 수동 인용). B200 하락 = 순수 공급과잉 신호, H100은 세대교체 감가 포함</p>
+        <p class="note">vast.ai 임대 장터 임대중 중앙값 — 가격 수준보다 90일 변화로 판단, B200 하락 = 공급과잉 신호</p>
         <div id="ch-gpu"></div></div>
       <div class="card"><h3>데이터센터 REIT 주가 (시작=100)</h3>
         <p class="note">DLR·EQIX — 임대수요·공실 기대를 선반영하는 프록시</p>
@@ -459,9 +459,7 @@ function renderAll(){
 
   // ① 공급 — 모델별 임대중 중앙값 (공통 날짜축 정렬, H100 가용 호가는 참고선)
   const g=DATA.supply.gpu_rental||{};
-  // 업계 지수 참고값(Silicon Data 공개 글 수동 인용) — {모델: {날짜: 값}}, 문자열 키(source 등)는 제외
-  const gr=DATA.supply.gpu_ref||{}, grModels=Object.keys(gr).filter(k=>gr[k]&&typeof gr[k]==='object');
-  const gDates=[...new Set([].concat(...Object.keys(g).map(mo=>g[mo].dates),...grModels.map(k=>Object.keys(gr[k]))))].sort();
+  const gDates=[...new Set([].concat(...Object.keys(g).map(mo=>g[mo].dates)))].sort();
   // 그 시리즈에 없는 날짜는 undefined(선을 잇고 건너뜀), 있는데 값이 비면 null(선을 끊음)
   const gAlign=(mo,key)=>{const idx={};g[mo].dates.forEach((d,i)=>idx[d]=g[mo][key][i]??null);
     return gDates.map(d=>idx[d]);};
@@ -472,12 +470,6 @@ function renderAll(){
   });
   if(g['H100 SXM']&&(g['H100 SXM'].avail||[]).some(v=>v!=null))
     gSeries.push({name:'H100 가용 호가',dates:gDates,values:gAlign('H100 SXM','avail')});
-  const gModels=Object.keys(g);   // 같은 GPU 는 같은 색: 임대중 실선 ↔ 업계 지수 점선
-  grModels.forEach(k=>{
-    const mo=gModels.find(m=>m.startsWith(k));
-    gSeries.push({name:k+' 업계 지수',dates:gDates,values:gDates.map(d=>gr[k][d]),
-      color:SLOT[Math.max(0,gModels.indexOf(mo))],dash:true,dots:true});
-  });
   lineChart('ch-gpu',gSeries,{labels:gDates,unit:'$',time:true});
   const reit=DATA.supply.dc_reit_indexed||{};
   lineChart('ch-reit', Object.keys(reit).map(k=>({name:k,dates:reit[k].dates,values:reit[k].values})));
