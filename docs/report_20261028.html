@@ -29,7 +29,7 @@
         <td class="num">80.0</td>
         <td class="num">153.5%</td>
         <td class="num">190,100</td>
-        <td class="ind">Unknown</td>
+        <td class="ind" title="Unknown">Unknown</td>
         <td class="st"><span class="badge new">NEW</span></td>
       </tr>
       <tr>
@@ -40,7 +40,7 @@
         <td class="num">65.8</td>
         <td class="num">90.5%</td>
         <td class="num">110,900</td>
-        <td class="ind">소프트웨어 개발 및 공급업</td>
+        <td class="ind" title="소프트웨어 개발 및 공급업">소프트웨어 개발 및 공급업</td>
         <td class="st"><span class="badge new">NEW</span></td>
       </tr>
       <tr>
@@ -51,7 +51,7 @@
         <td class="num">89.2</td>
         <td class="num">267.6%</td>
         <td class="num">193,000</td>
-        <td class="ind">특수 목적용 기계 제조업</td>
+        <td class="ind" title="특수 목적용 기계 제조업">특수 목적용 기계 제조업</td>
         <td class="st"><span class="badge new">NEW</span></td>
       </tr>
       <tr>
@@ -62,7 +62,7 @@
         <td class="num">95.0</td>
         <td class="num">372.5%</td>
         <td class="num">67,000</td>
-        <td class="ind">특수 목적용 기계 제조업</td>
+        <td class="ind" title="특수 목적용 기계 제조업">특수 목적용 기계 제조업</td>
         <td class="st"><span class="badge streak">2일 연속</span></td>
       </tr>
       <tr>
@@ -73,7 +73,7 @@
         <td class="num">73.3</td>
         <td class="num">111.0%</td>
         <td class="num">84,700</td>
-        <td class="ind">전자부품 제조업</td>
+        <td class="ind" title="전자부품 제조업">전자부품 제조업</td>
         <td class="st"><span class="badge streak">2일 연속</span></td>
       </tr>
       <tr>
@@ -84,7 +84,7 @@
         <td class="num">84.2</td>
         <td class="num">200.9%</td>
         <td class="num">29,700</td>
-        <td class="ind">전자부품 제조업</td>
+        <td class="ind" title="전자부품 제조업">전자부품 제조업</td>
         <td class="st"><span class="badge new">NEW</span></td>
       </tr>
       <tr>
@@ -95,7 +95,7 @@
         <td class="num">77.5</td>
         <td class="num">143.3%</td>
         <td class="num">15,400</td>
-        <td class="ind">특수 목적용 기계 제조업</td>
+        <td class="ind" title="특수 목적용 기계 제조업">특수 목적용 기계 제조업</td>
         <td class="st"><span class="badge streak">2일 연속</span></td>
       </tr>
       <tr>
@@ -106,7 +106,7 @@
         <td class="num">70.8</td>
         <td class="num">107.6%</td>
         <td class="num">8,980</td>
-        <td class="ind">반도체 제조업</td>
+        <td class="ind" title="반도체 제조업">반도체 제조업</td>
         <td class="st"><span class="badge new">NEW</span></td>
       </tr>
       <tr>
@@ -117,7 +117,7 @@
         <td class="num">95.8</td>
         <td class="num">435.0%</td>
         <td class="num">275,000</td>
-        <td class="ind">측정, 시험, 항해, 제어 및 기타 정밀기기 제조업; 광학기기 제외</td>
+        <td class="ind" title="측정, 시험, 항해, 제어 및 기타 정밀기기 제조업; 광학기기 제외">측정, 시험, 항해, 제어 및 기타 정밀기기 제조업; 광학기기 제외</td>
         <td class="st"><span class="badge new">NEW</span></td>
       </tr>
       <tr>
@@ -128,7 +128,7 @@
         <td class="num">69.2</td>
         <td class="num">104.5%</td>
         <td class="num">41,000</td>
-        <td class="ind">반도체 제조업</td>
+        <td class="ind" title="반도체 제조업">반도체 제조업</td>
         <td class="st"><span class="badge new">NEW</span></td>
       </tr>
       <tr>
@@ -139,7 +139,7 @@
         <td class="num">91.7</td>
         <td class="num">290.3%</td>
         <td class="num">63,700</td>
-        <td class="ind">특수 목적용 기계 제조업</td>
+        <td class="ind" title="특수 목적용 기계 제조업">특수 목적용 기계 제조업</td>
         <td class="st"><span class="badge new">NEW</span></td>
       </tr></tbody>
       </table>
@@ -291,7 +291,7 @@ function _tgTheme(){
   .strong { font-weight:700; }
   .up { color:var(--up); font-weight:600; }
   .down { color:var(--down); font-weight:600; }
-  .ind { color:var(--muted); font-size:13px; }
+  .ind { color:var(--muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }  /* 긴 산업명은 한 줄로 자르고 … (전체는 마우스 올리면) */
   .badge { display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap; }
   .badge.new { background:color-mix(in srgb,var(--accent) 18%,transparent); color:var(--accent); }
   .badge.streak { background:color-mix(in srgb,var(--up) 16%,transparent); color:var(--up); }

@@ -302,7 +302,7 @@ def _write_report(today, date_str):
         <td class="num">{('%.1f'%rs) if pd.notna(rs) else '-'}</td>
         <td class="num">{('%.1f%%'%ret) if pd.notna(ret) else '-'}</td>
         <td class="num">{fmt_int(r.get('close'))}</td>
-        <td class="ind">{esc(r.get('Industry','-'))}</td>
+        <td class="ind" title="{esc(r.get('Industry','-')).replace('"', '&quot;')}">{esc(r.get('Industry','-'))}</td>
         <td class="st">{streak_badge}</td>
       </tr>""")
     if not rows_html:
@@ -398,7 +398,7 @@ def _write_report(today, date_str):
   .strong {{ font-weight:700; }}
   .up {{ color:var(--up); font-weight:600; }}
   .down {{ color:var(--down); font-weight:600; }}
-  .ind {{ color:var(--muted); font-size:13px; }}
+  .ind {{ color:var(--muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }}  /* 긴 산업명은 한 줄로 자르고 … (전체는 마우스 올리면) */
   .badge {{ display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap; }}
   .badge.new {{ background:color-mix(in srgb,var(--accent) 18%,transparent); color:var(--accent); }}
   .badge.streak {{ background:color-mix(in srgb,var(--up) 16%,transparent); color:var(--up); }}
