@@ -386,15 +386,15 @@ def _write_report(today, date_str):
   .tablewrap {{ overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--panel); }}
   table {{ width:100%; border-collapse:collapse; font-size:14px; min-width:720px; }}
   thead th {{ text-align:left; color:var(--muted); font-weight:600; font-size:12px;
-    padding:12px 12px; border-bottom:1px solid var(--line); white-space:nowrap; }}
-  tbody td {{ padding:12px 12px; border-bottom:1px solid var(--line); vertical-align:middle; }}
+    padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }}
+  tbody td {{ padding:5px 10px; border-bottom:1px solid var(--line); vertical-align:middle; }}
   tbody tr:last-child td {{ border-bottom:none; }}
   .num {{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }}
   .rank {{ color:var(--muted); width:28px; }}
   .empty {{ text-align:center; color:var(--muted); padding:28px 12px; font-size:14px; }}
   .name {{ white-space:nowrap; }}  /* 종목명이 산업 컬럼에 눌려 두 줄로 잘리지 않게 */
   .name .nm {{ font-weight:600; }}
-  .name .code {{ display:block; color:var(--muted); font-size:12px; }}
+  .name .code {{ color:var(--muted); font-size:12px; margin-left:6px; }}  /* 코드를 이름 옆에 둬 한 줄로 */
   .strong {{ font-weight:700; }}
   .up {{ color:var(--up); font-weight:600; }}
   .down {{ color:var(--down); font-weight:600; }}
