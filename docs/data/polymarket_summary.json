@@ -1,5 +1,5 @@
 {
- "date": "2026-10-28 05:49",
+ "date": "2026-10-28 14:58",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -7,11 +7,11 @@
   "title": "Fed Decision in October?",
   "top": {
    "label": "No change",
-   "prob": 0.951,
-   "d24": 0.0255
+   "prob": 0.9535,
+   "d24": 0.017
   },
-  "mean": 1.262,
-  "mean_d24": -0.741,
+  "mean": 1.211,
+  "mean_d24": -0.541,
   "url": "https://polymarket.com/event/fed-decision-in-october-20260617190323537"
  },
  "recession": {
@@ -20,18 +20,18 @@
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "October 31 · US x Iran ceasefire continues through October 31?",
-  "pmss": 58.6,
-  "band": "Interest",
-  "d24": 0.07,
-  "prob": 0.935
+  "q": "Benjamin Netanyahu · Will Benjamin Netanyahu receive the first mandate to form a government after the 2026 Israeli election?",
+  "pmss": 53.0,
+  "band": "Watch",
+  "d24": 0.255,
+  "prob": 0.58
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 58.6
+  "top_pmss": 53.0
  },
  "alerts": 0,
- "n_markets": 456,
+ "n_markets": 490,
  "source": "direct"
 }
