@@ -1,5 +1,5 @@
 {
- "date": "2026-10-29 15:04",
+ "date": "2026-10-30 00:19",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk ↓",
@@ -7,31 +7,31 @@
   "title": "Fed Decision in December?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.775,
-   "d24": 0.01
+   "prob": 0.765,
+   "d24": -0.01
   },
-  "mean": 20.332,
-  "mean_d24": 0.194,
+  "mean": 19.734,
+  "mean_d24": -0.353,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
   "prob": 0.055,
-  "d24": -0.02,
+  "d24": -0.015,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "2.6% · Will Core CPI YoY be 2.6% in October?",
-  "pmss": 57.5,
-  "band": "Interest",
-  "d24": -0.225,
-  "prob": 0.71
+  "q": "November 3 · Israel x Iran ceasefire continues through November 3?",
+  "pmss": 73.0,
+  "band": "Tactical Signal",
+  "d24": 0.4375,
+  "prob": 0.9375
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 57.5
+  "top_pmss": 73.0
  },
- "alerts": 0,
- "n_markets": 471,
+ "alerts": 4,
+ "n_markets": 458,
  "source": "direct"
 }
