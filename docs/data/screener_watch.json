@@ -1,15 +1,33 @@
 {
- "date": "2026-10-28",
+ "date": "2026-10-29",
  "high_52w_ratio": 0.65,
  "items": [
   {
+   "name": "피에스케이홀딩스",
+   "ticker": "031980",
+   "close": 194200.0,
+   "change_ratio": -0.26,
+   "rs_score": 89.4,
+   "vol_ratio": 95.2,
+   "from_high": -12.3
+  },
+  {
    "name": "삼성E&A",
    "ticker": "028050",
-   "close": 64200.0,
-   "change_ratio": 2.23,
-   "rs_score": 75.8,
-   "vol_ratio": 49.7,
-   "from_high": -4.6
+   "close": 62800.0,
+   "change_ratio": -0.95,
+   "rs_score": 77.9,
+   "vol_ratio": 51.1,
+   "from_high": -6.7
+  },
+  {
+   "name": "안랩",
+   "ticker": "053800",
+   "close": 100100.0,
+   "change_ratio": -10.3,
+   "rs_score": 64.4,
+   "vol_ratio": 63.1,
+   "from_high": -16.2
   }
  ]
 }
