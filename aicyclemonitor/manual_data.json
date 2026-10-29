@@ -19,7 +19,7 @@
     "2025Q4": {"Azure": 39.0, "AWS": 24.0, "Google Cloud": 48.0, "OCI": 68.0},
     "2026Q1": {"Azure": 40.0, "AWS": 28.0, "Google Cloud": 63.0, "OCI": 84.0},
     "2026Q2": {"Azure": 43.0, "AWS": 37.0, "Google Cloud": 82.0, "OCI": 93.0},
-    "2026Q3": {"OCI": 121.0}
+    "2026Q3": {"Azure": 48.0, "Google Cloud": 103.0, "OCI": 121.0}
   },
   "bigtech_cds_5y_bp": {
     "date": "2026-10-15",
