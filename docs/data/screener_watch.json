@@ -1,33 +1,42 @@
 {
- "date": "2026-10-29",
+ "date": "2026-10-30",
  "high_52w_ratio": 0.65,
  "items": [
   {
-   "name": "피에스케이홀딩스",
-   "ticker": "031980",
-   "close": 194200.0,
-   "change_ratio": -0.26,
-   "rs_score": 89.4,
-   "vol_ratio": 95.2,
-   "from_high": -12.3
+   "name": "엑시콘",
+   "ticker": "092870",
+   "close": 60700.0,
+   "change_ratio": -6.18,
+   "rs_score": 92.6,
+   "vol_ratio": 92.3,
+   "from_high": -10.7
   },
   {
    "name": "삼성E&A",
    "ticker": "028050",
-   "close": 62800.0,
-   "change_ratio": -0.95,
-   "rs_score": 77.9,
-   "vol_ratio": 51.1,
-   "from_high": -6.7
+   "close": 61700.0,
+   "change_ratio": -1.44,
+   "rs_score": 77.7,
+   "vol_ratio": 54.0,
+   "from_high": -8.3
   },
   {
-   "name": "안랩",
-   "ticker": "053800",
-   "close": 100100.0,
-   "change_ratio": -10.3,
-   "rs_score": 64.4,
-   "vol_ratio": 63.1,
-   "from_high": -16.2
+   "name": "삼성화재",
+   "ticker": "000810",
+   "close": 659000.0,
+   "change_ratio": 0.92,
+   "rs_score": 63.8,
+   "vol_ratio": 94.3,
+   "from_high": -12.9
+  },
+  {
+   "name": "KT&G",
+   "ticker": "033780",
+   "close": 196200.0,
+   "change_ratio": 1.55,
+   "rs_score": 61.7,
+   "vol_ratio": 98.2,
+   "from_high": -0.3
   }
  ]
 }
