@@ -85,7 +85,7 @@ try {
     # wait while other scheduled git automations are running (max 6 min)
     for ($i = 0; $i -lt 36; $i++) {
         $busy = $false
-        foreach ($tn in @('주도섹터_필터링_매일1530', '투자전략_1730_수집', '시장레버리지_1730_수집', '수급동향_1540_수집')) {
+        foreach ($tn in @('주도섹터_필터링_매일1530', '투자전략_1730_수집', '시장레버리지_1730_수집', '수급동향_1540_수집', '시장건전성_1635_수집', '차트데이터_1620_수집')) {
             $t = Get-ScheduledTask -TaskName $tn -ErrorAction SilentlyContinue
             if ($t -and $t.State -eq 'Running') { $busy = $true }
         }
