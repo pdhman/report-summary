@@ -1,5 +1,5 @@
 {
- "date": "2026-11-02 00:20",
+ "date": "2026-11-02 05:38",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -11,27 +11,27 @@
    "d24": 0.0
   },
   "mean": 18.038,
-  "mean_d24": 0.061,
+  "mean_d24": 0.075,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
   "prob": 0.055,
-  "d24": -0.01,
+  "d24": -0.005,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "0.6%+ · Will Core PCE MoM be 0.6% or more in October?",
-  "pmss": 58.6,
+  "q": "November 2 · US announces end of Iranian blockade by November 2, 2026?",
+  "pmss": 58.2,
   "band": "Interest",
-  "d24": -0.2345,
-  "prob": 0.0505
+  "d24": -0.062,
+  "prob": 0.033
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 58.6
+  "top_pmss": 58.2
  },
  "alerts": 0,
- "n_markets": 404,
+ "n_markets": 422,
  "source": "direct"
 }
