@@ -53,7 +53,9 @@ COMPUTE_TASK_CSV = os.path.join(BASE_DIR, "compute_task_history.csv")
 # date,requests,tok_per_req,frontier_price,tier_gap,cn_share,gpu_util_h100,gpu_util_b200
 CN_MODEL_RE = r"^(qwen|deepseek|moonshotai|z-ai|zhipu|baidu|minimax|bytedance|tencent|stepfun|01-ai|alibaba)/"
 CAPEX_CIK = {"GOOGL": "0001652044", "MSFT": "0000789019", "AMZN": "0001018724",
-             "META": "0001326801", "ORCL": "0001341439"}
+             "META": "0001326801", "ORCL": "0001341439",
+             "SPCX": "0001181412"}   # 스페이스X(2026-06 상장, xAI 포함) — Bloomberg 집계 2026-10월부터 6사
+CAPEX_CORE = ["GOOGL", "MSFT", "AMZN", "META", "ORCL"]   # 연간 실적 인정에 반드시 필요한 5사
 CAPEX_CONCEPTS = ["PaymentsToAcquirePropertyPlantAndEquipment",
                   "PaymentsToAcquireProductiveAssets",
                   "PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets"]
@@ -86,8 +88,9 @@ TH = {
     "cloud_yoy_floor": 20.0,       # 클라우드 부문 YoY(%) 이 값 미만 → 경계
     "nvda_dc_yoy_floor": 20.0,     # NVIDIA DC 매출 YoY(%) 이 값 미만 → 경계 (국면 악화 확정)
     "nvda_dc_qoq": 0.0,            # NVIDIA DC 매출 QoQ(%) 이 값 이하 → 경계 (성장 정지 조기 경보)
-    "capex_runrate_vs_ttm": 0.0,   # 5사 capex 런레이트(최근2Q×2)가 직전 4분기 합 이하(가속 멈춤) → 경계
-    "capex_consensus_rev": -5.0,   # 5사 capex 내년 컨센서스가 직전 집계 대비 이 % 이하(하향 수정) → 경계
+    "capex_runrate_vs_ttm": 0.0,   # 6사 capex 런레이트(최근2Q×2)가 직전 4분기 합 이하(가속 멈춤) → 경계
+    "capex_consensus_rev": -5.0,   # 6사 capex 내년 컨센서스가 직전 집계 대비 이 % 이하(하향 수정) → 경계
+    "ocf_consensus_rev": -5.0,     # 6사 영업현금흐름 내년 컨센서스가 직전 집계 대비 이 % 이하 → 경계(돈을 덜 버는 신호)
     "bbb_oas_level": 200.0,        # BBB OAS(bp) 이 값 이상 → 경계
     "bbb_oas_chg_90d": 50.0,       # BBB OAS 90일 상승폭(bp) 이 값 이상 → 경계
     "aa_oas_chg_90d": 30.0,        # AA OAS 90일 상승폭(bp) 이 값 이상 → 경계 (하이퍼스케일러급)
@@ -733,14 +736,19 @@ def collect_live():
             capex_total["labels"].append(k)
             capex_total["values"].append(cap[k])
     hs_cx = fetch_hyperscaler_capex()
-    # 역년(분기말 기준) 합산: 5사 모두 4개 분기가 있는 해만 '실적'으로 인정
+    # SEC 10-Q 로 분기 분리가 안 되는 분기(상장 전 반기 누적 등)는 수동 보충 — SEC 값이 있으면 SEC 우선
+    for t, qs in (manual.get("capex_quarter_manual_mil", {}) or {}).items():
+        if isinstance(qs, dict):
+            for en, v in qs.items():
+                hs_cx.setdefault((t, en), float(v) * 1e6)
+    # 역년(분기말 기준) 합산: 핵심 5사가 모두 4개 분기를 갖춘 해만 '실적'(스페이스X는 있으면 4개 분기 모두 있어야)
     peryear = {}
     for (t, en), v in hs_cx.items():
         peryear.setdefault(en[:4], {}).setdefault(t, []).append(v)
     annual = {y: round(sum(sum(vs) for vs in d.values()) / 1e9, 1)
               for y, d in peryear.items()
-              if len(d) == 5 and all(len(vs) == 4 for vs in d.values())}
-    # 런레이트: 5사 각자 최근 2개 분기 합 ×2 (당해 실행 속도의 연율화)
+              if all(len(d.get(t, [])) == 4 for t in CAPEX_CORE) and all(len(vs) == 4 for vs in d.values())}
+    # 런레이트: 6사 각자 최근 2개 분기 합 ×2 (당해 실행 속도의 연율화)
     runrate = None
     latest2 = [sorted(en for (tk, en) in hs_cx if tk == t)[-2:] for t in CAPEX_CIK]
     if all(len(qs) == 2 for qs in latest2):
@@ -751,13 +759,16 @@ def collect_live():
                              else (runrate if runrate else annual.get(lb[:4]))
                              for lb in capex_total["labels"]]
     if annual or runrate:
-        log(f"5사 capex(SEC): 연간 실적 {annual}, 런레이트 ${runrate}B/yr")
+        log(f"6사 capex(SEC): 연간 실적 {annual}, 런레이트 ${runrate}B/yr")
     # 컨센서스 집계 이력: 최신 vs 직전 집계 — 내년(E) 전망치가 하향 수정되면 수요 조기 경보
     vint = manual.get("hyperscaler_capex_consensus_vintages", {}) or {}
     vdates = sorted(vint)
     capex_total["vintage"] = vdates[-1] if vdates else None
     capex_total["prev_vintage"] = vdates[-2] if len(vdates) >= 2 else None
     prev_v = vint.get(capex_total["prev_vintage"], {}) if capex_total["prev_vintage"] else {}
+    cur_basis = (vint.get(vdates[-1], {}) or {}).get("_basis", "5사") if vdates else "5사"
+    if prev_v and prev_v.get("_basis", "5사") != cur_basis:   # 집계 대상이 바뀐 달은 직전 집계와 비교하지 않음
+        prev_v = {}
     capex_total["prev_consensus"] = [prev_v.get(lb) for lb in capex_total["labels"]]
     consensus_rev = None
     if len(vdates) >= 2:
@@ -765,6 +776,23 @@ def collect_live():
         cur_v = vint[vdates[-1]]
         if cur_v.get(key) and prev_v.get(key):
             consensus_rev = pct(cur_v[key], prev_v[key])
+
+    # ── 수요: 6사 영업현금흐름 vs capex 컨센서스 (Bloomberg 차트 판독, 수동) ──
+    cfm = manual.get("hyperscaler_cashflow_consensus_bil", {}) or {}
+    capex_cf = {}
+    if cfm.get("OCF") and cfm.get("CAPEX"):
+        lbs = sorted(set(cfm["OCF"]) & set(cfm["CAPEX"]))
+        capex_cf = {"labels": lbs, "ocf": [cfm["OCF"][k] for k in lbs],
+                    "capex": [cfm["CAPEX"][k] for k in lbs],
+                    "fcf": [round(cfm["OCF"][k] - cfm["CAPEX"][k], 1) for k in lbs],
+                    "vintage": cfm.get("vintage")}
+    ocf_rev = None
+    ov = manual.get("hyperscaler_ocf_consensus_vintages", {}) or {}
+    ovd = sorted(ov)
+    if len(ovd) >= 2:
+        key = f"{int(this_year) + 1}E"
+        if ov[ovd[-1]].get(key) and ov[ovd[-2]].get(key):
+            ocf_rev = pct(ov[ovd[-1]][key], ov[ovd[-2]][key])
 
     # ── 수요: AI 토큰 P×Q — 제번스 모니터 (OpenRouter 주간, 자동) ──
     tok = sorted(fetch_token_pxq().items())
@@ -830,6 +858,7 @@ def collect_live():
     metrics["nvda_dc_last_bil"] = nvda_dc["values"][-1] if nvda_dc["values"] else None
     metrics["capex_runrate_bil"] = runrate
     metrics["capex_consensus_rev"] = consensus_rev
+    metrics["ocf_consensus_rev"] = ocf_rev
     if tok:
         def _tok_chg(idx, weeks):  # 최근 주 vs weeks주 전(이하 가장 가까운 주)
             last_d = date.fromisoformat(tok[-1][0])
@@ -906,6 +935,7 @@ def collect_live():
             "cloud_yoy": manual.get("cloud_segment_yoy", {}),
             "nvda_dc": nvda_dc,
             "capex_total": capex_total,
+            "capex_cf": capex_cf,
             "mu_yoy": mu_yoy,
             "token_pxq": token_pxq,
             "compute_task": compute_task,
@@ -1190,11 +1220,14 @@ def judge(data):
     add("수요", "NVIDIA DC 매출 QoQ (성장 정지 조기 경보)", v, "%",
         f"{TH['nvda_dc_qoq']:.0f}% 이하", v is not None and v <= TH["nvda_dc_qoq"])
     v = m.get("capex_runrate_vs_ttm")
-    add("수요", "5사 capex 런레이트 vs 직전 4분기 (SEC 자동)", v, "%",
+    add("수요", "6사 capex 런레이트 vs 직전 4분기 (SEC 자동)", v, "%",
         f"{TH['capex_runrate_vs_ttm']:.0f}% 이하 (가속 멈춤)", v is not None and v <= TH["capex_runrate_vs_ttm"])
     v = m.get("capex_consensus_rev")
-    add("수요", "5사 capex 내년 컨센서스 수정폭 (직전 집계 대비, 수동)", v, "%",
+    add("수요", "6사 capex 내년 컨센서스 수정폭 (직전 집계 대비, 수동)", v, "%",
         f"{TH['capex_consensus_rev']:.0f}% 이하 (하향 수정)", v is not None and v <= TH["capex_consensus_rev"])
+    v = m.get("ocf_consensus_rev")
+    add("수요", "6사 영업현금흐름 내년 컨센서스 수정폭 (직전 집계 대비, 수동)", v, "%",
+        f"{TH['ocf_consensus_rev']:.0f}% 이하 (하향 수정)", v is not None and v <= TH["ocf_consensus_rev"])
     v = m.get("mu_slowdown_q")
     add("수요", "메모리(MU) 매출 YoY 연속 둔화 — HBM 주문 프록시", v, "개",
         f"{TH['mu_slowdown_q']}분기 이상", v is not None and v >= TH["mu_slowdown_q"])
@@ -1419,11 +1452,14 @@ TEMPLATE = r"""<!DOCTYPE html>
         <p class="note">공급자 측 총 AI 인프라 투자 프록시 — YoY=국면(후행), QoQ=모멘텀(조기 경보,
           0% 이하=성장 정지). 실적 발표 후 manual_data.json 수동 입력, 라벨=회계분기 말월</p>
         <div id="ch-nvda"></div></div>
-      <div class="card"><h3>5대 Hyperscaler 연간 capex ($B)</h3>
-        <p class="note">GOOGL+MSFT+AMZN+META+ORCL — 컨센서스(Bloomberg, 수동·E) vs 직전 집계 vs
+      <div class="card"><h3>6대 Hyperscaler 연간 capex ($B)</h3>
+        <p class="note">GOOGL+MSFT+AMZN+META+ORCL+스페이스X(2026-10월 집계부터 포함) — 컨센서스(Bloomberg, 수동·E) vs 직전 집계 vs
           SEC 실적·최근2Q×2 런레이트(자동). 경계: 런레이트가 직전 4분기 합 아래로(가속 멈춤), 내년 컨센서스가
-          직전 집계보다 5% 이상 하향 수정. SEC 현금 capex 기준이라 Bloomberg 합계와 정의가 소폭 다름</p>
-        <div id="ch-capex"></div></div>
+          직전 집계보다 5% 이상 하향 수정(집계 기준이 바뀐 달은 비교 안 함). SEC 현금 capex 기준이라 Bloomberg 합계와 정의가 소폭 다름</p>
+        <div id="ch-capex"></div>
+        <p class="note" id="capexcf-note">아래: 영업현금흐름 vs capex 컨센서스 — FCF 적자가 'capex가 더 빨리 늘어서'인지
+          '돈을 덜 벌어서'인지 구분. 경계 = 내년 영업현금흐름 컨센서스 5% 이상 하향(Bloomberg 차트 판독 ±20B)</p>
+        <div id="ch-capexcf"></div></div>
       <div class="card"><h3>메모리(MU) 매출 YoY (%)</h3>
         <p class="note">HBM 주문의 카나리아 — 마이크론은 회계분기(2·5·8·11월 마감)가 빨라
           빅테크·엔비디아보다 분기 신호가 먼저 찍힘. 물량 둔화는 매출 둔화로 나타남</p>
@@ -1820,6 +1856,16 @@ function renderAll(){
   } else {
     document.getElementById('ch-capex').innerHTML=
       '<div class="empty">manual_data.json 의 hyperscaler_capex_total_bil 에 연간 capex($B)를 입력하세요</div>';
+  }
+  const ccf=DATA.demand.capex_cf||{};
+  if(ccf.labels&&ccf.labels.length){
+    lineChart('ch-capexcf',[
+      {name:'영업현금흐름',dates:ccf.labels,values:ccf.ocf},
+      {name:'capex',dates:ccf.labels,values:ccf.capex},
+      {name:'FCF',dates:ccf.labels,values:ccf.fcf,dash:true}],{labels:ccf.labels,unit:'B',h:170});
+  } else {
+    document.getElementById('ch-capexcf').style.display='none';
+    document.getElementById('capexcf-note').style.display='none';
   }
 
   // ③ 레버리지

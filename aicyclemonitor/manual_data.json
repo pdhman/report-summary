@@ -3,63 +3,195 @@
     "datacenter_vacancy": "CBRE 'North America Data Center Trends' 반기 보고서(무료 공개)에서 공실률을 옮겨 적으세요. https://www.cbre.com/insights",
     "cloud_segment_yoy": "분기 실적발표에서 Azure/AWS/Google Cloud/OCI 매출 YoY(%)를 옮겨 적으세요. OCI는 오라클 회계분기(8·11·2·5월 마감)를 한 분기 시차로 매핑: 8월분기→Q3, 11월→Q4, 2월→Q1, 5월→Q2.",
     "nvda_dc_revenue_bil": "NVIDIA 실적 발표의 Data Center 부문 분기 매출($B). 키는 회계분기 말월(YYYY-MM, 1·4·7·10월). 공급자 측 총 AI 인프라 투자 프록시.",
-    "hyperscaler_capex_total_bil": "5대 하이퍼스케일러(GOOGL+MSFT+AMZN+META+ORCL) 연간 capex 합산($B). 'E' 접미사=Bloomberg 컨센서스 추정치 — 컨센서스가 바뀌면 갱신. 차트는 2025년부터 표시.",
-    "hyperscaler_capex_consensus_vintages": "컨센서스 집계 이력(기준일별 E값). 새 컨센서스가 나오면 항목 추가 — 최신 집계의 내년 전망치가 직전 집계보다 5% 이상 하향 수정되면 경계(수요 조기 경보).",
+    "hyperscaler_capex_total_bil": "6대 하이퍼스케일러(GOOGL+MSFT+AMZN+META+ORCL+스페이스X) 연간 capex 합산($B). 'E' 접미사=Bloomberg 컨센서스 추정치. 2026-10-31 집계부터 Bloomberg 차트가 스페이스X를 포함한 Top6 로 바뀜(2023·2024 는 스페이스X 미포함 값 그대로). 차트는 2025년부터 표시.",
+    "hyperscaler_capex_consensus_vintages": "컨센서스 집계 이력(기준일별 E값). _basis = 집계 대상('5사'/'6사', 없으면 5사). 최신 집계의 내년 전망치가 같은 기준의 직전 집계보다 5% 이상 하향 수정되면 경계 — 기준이 바뀐 달은 비교하지 않음.",
     "bigtech_cds_5y_bp": "빅테크 5년 CDS 스냅샷(bp). 유료 데이터(Bloomberg 등)라 언론·증권사 차트 인용 시 수동 갱신 — level(현재 레벨), prev(직전 스냅샷: 갱신 때 지금 level 을 여기로 옮김 → 화면 괄호 = 직전 대비 변화), ytd_chg(연초 대비, 있을 때만). ORCL 레벨 200bp 이상 → 경계. CRWV(코어위브) 1,000bp 이상 → 경계(S&P Global MI: 1,000bp 이상은 신용 디스트레스). stale = 이번 스냅샷에 새 수치가 없어 직전 값을 그대로 둔 이름(화면에 '직전 날짜 값'으로 표시, 변화로 계산하지 않음).",
-    "notes": "값을 채우면 대시보드의 해당 차트가 자동으로 갱신됩니다. 비워두면 '수동 입력 대기'로 표시됩니다."
+    "notes": "값을 채우면 대시보드의 해당 차트가 자동으로 갱신됩니다. 비워두면 '수동 입력 대기'로 표시됩니다.",
+    "capex_quarter_manual_mil": "SEC 10-Q 차분으로 분기 분리가 안 되는 분기 보충($백만, 분기말 키). 스페이스X: 상장 전 1분기는 S-1/A(2026-06-03) 현금흐름표, 2분기 = 반기 누적(10-Q) − 1분기, 2025년 4분기 = 연간(S-1/A) − 3분기 누적(10-Q). SEC 값이 있는 분기는 SEC 우선.",
+    "hyperscaler_cashflow_consensus_bil": "6사 영업현금흐름(OCF)·capex 컨센서스($B, 4개 분기 합의 12월 시점 = 연간). Bloomberg 차트(라벨 없음) 판독이라 ±20B. FCF = OCF − capex 로 계산해 표시.",
+    "hyperscaler_ocf_consensus_vintages": "영업현금흐름 내년 컨센서스 집계 이력 — 직전 집계 대비 5% 이상 하향이면 경계(돈을 덜 버는 신호)."
   },
   "datacenter_vacancy": [
-    {"date": "2024-H2", "region": "북미 1차 시장", "vacancy_pct": 1.9, "source": "CBRE"},
-    {"date": "2025-H1", "region": "북미 1차 시장", "vacancy_pct": 1.6, "source": "CBRE"},
-    {"date": "2025-H2", "region": "북미 1차 시장", "vacancy_pct": 1.4, "source": "CBRE"},
-    {"date": "2026-H1", "region": "북미 1차 시장", "vacancy_pct": 1.4, "source": "CBRE"}
+    {
+      "date": "2024-H2",
+      "region": "북미 1차 시장",
+      "vacancy_pct": 1.9,
+      "source": "CBRE"
+    },
+    {
+      "date": "2025-H1",
+      "region": "북미 1차 시장",
+      "vacancy_pct": 1.6,
+      "source": "CBRE"
+    },
+    {
+      "date": "2025-H2",
+      "region": "북미 1차 시장",
+      "vacancy_pct": 1.4,
+      "source": "CBRE"
+    },
+    {
+      "date": "2026-H1",
+      "region": "북미 1차 시장",
+      "vacancy_pct": 1.4,
+      "source": "CBRE"
+    }
   ],
   "cloud_segment_yoy": {
-    "2025Q3": {"Azure": 40.0, "AWS": 20.2, "Google Cloud": 33.5, "OCI": 54.0},
-    "2025Q4": {"Azure": 39.0, "AWS": 24.0, "Google Cloud": 48.0, "OCI": 68.0},
-    "2026Q1": {"Azure": 40.0, "AWS": 28.0, "Google Cloud": 63.0, "OCI": 84.0},
-    "2026Q2": {"Azure": 43.0, "AWS": 37.0, "Google Cloud": 82.0, "OCI": 93.0},
-    "2026Q3": {"Azure": 48.0, "Google Cloud": 103.0, "OCI": 121.0}
+    "2025Q3": {
+      "Azure": 40.0,
+      "AWS": 20.2,
+      "Google Cloud": 33.5,
+      "OCI": 54.0
+    },
+    "2025Q4": {
+      "Azure": 39.0,
+      "AWS": 24.0,
+      "Google Cloud": 48.0,
+      "OCI": 68.0
+    },
+    "2026Q1": {
+      "Azure": 40.0,
+      "AWS": 28.0,
+      "Google Cloud": 63.0,
+      "OCI": 84.0
+    },
+    "2026Q2": {
+      "Azure": 43.0,
+      "AWS": 37.0,
+      "Google Cloud": 82.0,
+      "OCI": 93.0
+    },
+    "2026Q3": {
+      "Azure": 48.0,
+      "AWS": 39.0,
+      "Google Cloud": 103.0,
+      "OCI": 121.0
+    }
   },
   "bigtech_cds_5y_bp": {
     "date": "2026-10-15",
     "source": "ORCL·소프트뱅크 Reuters 10/15(사상 최고), CRWV CNBC 10/15 종가 근사(장중 1,140bp 이상), META 10/22 실적 직후 사상 최고 114.8bp(증권 매체 보도) · 나머지는 새 수치가 없어 9월 말 값 유지",
-    "level": {"CRWV": 1038, "소프트뱅크": 424, "ORCL": 288, "SPCX·xAI": 180, "AVGO": 126, "META": 115, "NVDA": 87, "AMZN": 73, "GOOGL": 72, "MSFT": 52, "AAPL": 43},
-    "stale": ["SPCX·xAI", "AVGO", "NVDA", "AMZN", "GOOGL", "MSFT", "AAPL"],
+    "level": {
+      "CRWV": 1038,
+      "소프트뱅크": 424,
+      "ORCL": 288,
+      "SPCX·xAI": 180,
+      "AVGO": 126,
+      "META": 115,
+      "NVDA": 87,
+      "AMZN": 73,
+      "GOOGL": 72,
+      "MSFT": 52,
+      "AAPL": 43
+    },
+    "stale": [
+      "SPCX·xAI",
+      "AVGO",
+      "NVDA",
+      "AMZN",
+      "GOOGL",
+      "MSFT",
+      "AAPL"
+    ],
     "prev": {
       "date": "2026-09 말",
       "source": "Bloomberg(하나증권 Total ETF '주요 기업들의 CDS 추이' 차트 끝값 판독, ±3bp)",
-      "level": {"ORCL": 237, "SPCX·xAI": 180, "AVGO": 126, "META": 97, "NVDA": 87, "AMZN": 73, "GOOGL": 72, "MSFT": 52, "AAPL": 43}
+      "level": {
+        "ORCL": 237,
+        "SPCX·xAI": 180,
+        "AVGO": 126,
+        "META": 97,
+        "NVDA": 87,
+        "AMZN": 73,
+        "GOOGL": 72,
+        "MSFT": 52,
+        "AAPL": 43
+      }
     }
   },
   "hyperscaler_capex_total_bil": {
     "2023": 160.4,
     "2024": 259.1,
-    "2025": 446.4,
-    "2026E": 815.2,
-    "2027E": 1140.3,
-    "2028E": 1257.5
+    "2025": 467.2,
+    "2026E": 918.1,
+    "2027E": 1462.2,
+    "2028E": 1584.3
   },
   "hyperscaler_capex_consensus_vintages": {
-    "2026-06-30": {"2026E": 792.6, "2027E": 1003.6, "2028E": 1082.2},
-    "2026-07-31": {"2026E": 813.1, "2027E": 1119.6, "2028E": 1267.1},
-    "2026-08-31": {"2026E": 815.5, "2027E": 1138.4, "2028E": 1266.4},
-    "2026-09-30": {"2026E": 815.2, "2027E": 1140.3, "2028E": 1257.5}
+    "2026-06-30": {
+      "2026E": 792.6,
+      "2027E": 1003.6,
+      "2028E": 1082.2
+    },
+    "2026-07-31": {
+      "2026E": 813.1,
+      "2027E": 1119.6,
+      "2028E": 1267.1
+    },
+    "2026-08-31": {
+      "2026E": 815.5,
+      "2027E": 1138.4,
+      "2028E": 1266.4
+    },
+    "2026-09-30": {
+      "2026E": 815.2,
+      "2027E": 1140.3,
+      "2028E": 1257.5
+    },
+    "2026-10-31": {
+      "_basis": "6사",
+      "2026E": 918.1,
+      "2027E": 1462.2,
+      "2028E": 1584.3
+    }
   },
   "nvda_dc_revenue_bil": {
     "2023-04": 4.28,
     "2023-07": 10.32,
     "2023-10": 14.51,
-    "2024-01": 18.40,
-    "2024-04": 22.60,
+    "2024-01": 18.4,
+    "2024-04": 22.6,
     "2024-07": 26.27,
     "2024-10": 30.77,
     "2025-01": 35.58,
     "2025-04": 39.11,
-    "2025-07": 41.10,
+    "2025-07": 41.1,
     "2025-10": 51.22,
     "2026-01": 62.3,
     "2026-04": 75.2,
     "2026-07": 89.0
+  },
+  "capex_quarter_manual_mil": {
+    "SPCX": {
+      "2025-03-31": 4140,
+      "2025-06-30": 2825,
+      "2025-12-31": 6891,
+      "2026-03-31": 10107,
+      "2026-06-30": 18369
+    }
+  },
+  "hyperscaler_cashflow_consensus_bil": {
+    "vintage": "2026-10-31",
+    "basis": "6사, Bloomberg 차트 판독 ±20B",
+    "OCF": {
+      "2025": 610,
+      "2026E": 800,
+      "2027E": 1135,
+      "2028E": 1575
+    },
+    "CAPEX": {
+      "2025": 467.2,
+      "2026E": 918.1,
+      "2027E": 1462.2,
+      "2028E": 1584.3
+    }
+  },
+  "hyperscaler_ocf_consensus_vintages": {
+    "2026-10-31": {
+      "2026E": 800,
+      "2027E": 1135,
+      "2028E": 1575
+    }
   }
 }
