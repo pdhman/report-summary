@@ -1,17 +1,17 @@
 {
- "date": "2026-11-03 03:35",
+ "date": "2026-11-03 11:30",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing → / Recession → / Inflation ↓ / Risk ↓",
+ "arrows": "Easing → / Recession → / Inflation → / Risk ↑",
  "fomc": {
   "title": "Fed Decision in December?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.705,
-   "d24": 0.0
+   "prob": 0.725,
+   "d24": 0.03
   },
-  "mean": 18.784,
-  "mean_d24": 0.746,
+  "mean": 18.614,
+  "mean_d24": 0.71,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
@@ -20,18 +20,18 @@
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "↑ $105 · Will WTI Crude Oil (WTI) hit (HIGH) $105 in November?",
-  "pmss": 50.0,
-  "band": "Watch",
-  "d24": -0.335,
-  "prob": 0.525
+  "q": "November 2 · US x Iran ceasefire continues through November 2?",
+  "pmss": 69.4,
+  "band": "Interest",
+  "d24": -0.4955,
+  "prob": 0.474
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 50.0
+  "top_pmss": 69.4
  },
- "alerts": 0,
- "n_markets": 422,
+ "alerts": 7,
+ "n_markets": 442,
  "source": "direct"
 }
