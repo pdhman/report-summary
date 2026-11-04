@@ -70,6 +70,14 @@
   .card h3{font-size:13.5px;margin:0 0 2px;font-weight:600;}
   .card .note{display:none;} /* 2026-11 사용자 요청: 카드 설명 숨김 — 다시 보이려면 이 줄을 원래 스타일로 */
   .card .subhead{font-size:12.5px;font-weight:600;margin:14px 0 2px;}
+  .info-btn{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
+    margin-left:6px;padding:0;border-radius:50%;border:1px solid var(--baseline);background:transparent;
+    color:var(--text-muted);font:600 10.5px/1 Georgia,serif;font-style:italic;cursor:pointer;vertical-align:1px;}
+  .info-btn:hover,.info-btn[aria-expanded="true"]{color:var(--text-primary);border-color:var(--text-muted);}
+  .info-pop{position:absolute;z-index:30;max-width:min(420px,calc(100vw - 32px));background:var(--surface-1);
+    border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;line-height:1.55;
+    color:var(--text-secondary);box-shadow:0 6px 20px rgba(0,0,0,.18);}
+  .info-pop p{margin:0;} .info-pop p+p{margin-top:6px;}
   .legend{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0 4px;font-size:12px;color:var(--text-secondary);}
   .legend .key{display:inline-flex;align-items:center;gap:5px;}
   .legend .sw{width:10px;height:10px;border-radius:3px;display:inline-block;}
@@ -644,5 +652,49 @@ let rsz;window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(r
 if(window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',renderAll);
 </script>
 <script id="embed-hide">(function(){var e=window.self!==window.top,q=null;try{q=new URLSearchParams(location.search).get("theme")}catch(x){}if(q==="dark"||q==="light"){document.documentElement.dataset.theme=q;if(e){try{localStorage.setItem("theme",q)}catch(x){}}}if(e){var s=document.createElement("style");s.textContent=".bottomnav,#theme-toggle{display:none!important}body{padding-bottom:0!important}";document.head.appendChild(s);}})();</script><script id="gc-cfg">(function(){var s=false;try{s=sessionStorage.getItem("gc-skip")==="1";sessionStorage.removeItem("gc-skip")}catch(x){}window.goatcounter={no_onload:s,path:function(){return location.host+(window.self!==window.top?"/embed":"")+location.pathname}}})();</script><script data-goatcounter="https://park.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script id="info-tips">
+/* 제목 옆 ⓘ: 숨겨 둔 설명(.card .note · section>.desc)을 마우스를 올리면 잠깐, 누르면 고정해서 보여 준다.
+   설명 문구는 다른 스크립트가 채우기도 하므로 열 때마다 새로 읽는다. */
+(function(){
+  var pop=null, owner=null, pinned=false;
+  function close(){ if(pop){pop.remove();pop=null;} if(owner){owner.setAttribute('aria-expanded','false');} owner=null; pinned=false; }
+  function open(btn){
+    close();
+    var html=btn._notes().map(function(n){return '<p>'+n.innerHTML+'</p>';}).join('');
+    if(!html) return;
+    pop=document.createElement('div'); pop.className='info-pop'; pop.setAttribute('role','tooltip');
+    pop.innerHTML=html;
+    var root=btn.closest('.viz-root')||document.body; root.appendChild(pop);
+    var r=btn.getBoundingClientRect(), w=pop.offsetWidth;
+    var left=Math.max(16, Math.min(r.left+window.scrollX-8, window.scrollX+document.documentElement.clientWidth-w-16));
+    pop.style.left=left+'px'; pop.style.top=(r.bottom+window.scrollY+6)+'px';
+    owner=btn; btn.setAttribute('aria-expanded','true');
+  }
+  function addBtn(head, getNotes){
+    if(!getNotes().some(function(n){return n.textContent.trim();})) return;
+    var b=document.createElement('button');
+    b.type='button'; b.className='info-btn'; b.textContent='i';
+    b.setAttribute('aria-label','설명 보기'); b.setAttribute('aria-expanded','false');
+    b._notes=getNotes;
+    b.addEventListener('mouseenter',function(){ if(!pinned) open(b); });
+    b.addEventListener('mouseleave',function(){ if(!pinned && owner===b) close(); });
+    b.addEventListener('click',function(e){
+      e.stopPropagation();
+      if(pinned && owner===b){ close(); return; }
+      open(b); pinned=true;
+    });
+    head.appendChild(b);
+  }
+  document.querySelectorAll('.card').forEach(function(c){
+    var h=c.querySelector('h3'); if(h) addBtn(h,function(){return [].slice.call(c.querySelectorAll('.note'));});
+  });
+  document.querySelectorAll('section>h2').forEach(function(h){
+    var d=h.parentNode.querySelector(':scope>.desc'); if(d) addBtn(h,function(){return [d];});
+  });
+  document.addEventListener('click',function(e){ if(pop && !pop.contains(e.target)) close(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') close(); });
+  window.addEventListener('resize',close);
+})();
+</script>
 </body>
 </html>
