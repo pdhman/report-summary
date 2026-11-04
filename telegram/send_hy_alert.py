@@ -28,6 +28,7 @@ import argparse
 import io
 import json
 import sys
+import time
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -65,22 +66,53 @@ def load_cached(csv_path=HIST_CSV):
     return s.set_index("date")["bp"].dropna().sort_index()
 
 
+def _fetch_jina(series_id):
+    """r.jina.ai 경유 FRED /data/<id>.txt — 표("| 2026-11-02 | 1.17 |")로 돌려준다.
+    fredgraph.csv 는 jina 가 content-type(application/csv)을 거부해 못 쓴다.
+    allorigins 가 520/522 를 연달아 낼 때(2026-11-04) 이 경로는 됐다."""
+    import re
+    import pandas as pd
+    import requests
+    r = requests.get(f"https://r.jina.ai/https://fred.stlouisfed.org/data/{series_id}.txt",
+                     timeout=90, headers={"User-Agent": "Mozilla/5.0"})
+    r.raise_for_status()
+    # 휴장일 값은 "." 이라 숫자로 시작하는 칸만 잡는다
+    rows = re.findall(r"\|\s*(\d{4}-\d{2}-\d{2})\s*\|\s*(\d+(?:\.\d+)?)\s*\|", r.text)
+    if len(rows) < 10:
+        raise ValueError(f"jina 응답에 관측값이 없음: {r.text[:80]!r}")
+    s = pd.Series([float(v) for _, v in rows], index=pd.to_datetime([d for d, _ in rows]))
+    return s[~s.index.duplicated(keep="last")].sort_index()
+
+
+def _fetch_allorigins(series_id):
+    import pandas as pd
+    from ai_cycle_monitor import _fred_csv_text
+    cosd = (date.today() - timedelta(days=60)).isoformat()
+    df = pd.read_csv(io.StringIO(_fred_csv_text(series_id, cosd)))
+    df.columns = ["date", "value"]
+    return pd.Series(pd.to_numeric(df["value"], errors="coerce").values, index=pd.to_datetime(df["date"]))
+
+
 def load_series(series_id=SERIES, csv_path=HIST_CSV):
-    """최근 구간을 FRED(프록시 폴백)에서 받아 캐시 뒤에 붙인다. 실패하면 캐시만."""
+    """최근 구간을 FRED(jina → allorigins 프록시)에서 받아 캐시 뒤에 붙인다. 실패하면 캐시만."""
     import pandas as pd
     global _FRED_DOWN
     cached = load_cached(csv_path)
     try:
         if _FRED_DOWN:   # 앞 시리즈가 실패했으면 프록시를 또 붙들지 않는다(시리즈당 최대 2.5분)
             raise RuntimeError("앞 시리즈 수집 실패 — 재시도 생략")
-        from ai_cycle_monitor import _fred_csv_text
-        cosd = (date.today() - timedelta(days=60)).isoformat()
-        df = pd.read_csv(io.StringIO(_fred_csv_text(series_id, cosd)))
-        df.columns = ["date", "value"]
-        df["date"] = pd.to_datetime(df["date"])
-        fresh = (pd.to_numeric(df["value"], errors="coerce") * 100).round(0)
-        fresh.index = df["date"]
-        fresh = fresh.dropna()
+        raw = None
+        for attempt in range(3):   # jina 도 간헐적으로 빈 응답을 준다
+            try:
+                raw = _fetch_jina(series_id)
+                break
+            except Exception as e:
+                print(f"jina {series_id} 실패 {attempt + 1}/3 ({type(e).__name__}: {str(e)[:120]})")
+                time.sleep(5 * (attempt + 1))
+        if raw is None:
+            raw = _fetch_allorigins(series_id)
+        fresh = (raw.dropna() * 100).round(0)
+        fresh = fresh[fresh.index >= pd.Timestamp(date.today() - timedelta(days=60))]
         if cached is None:
             return fresh, "FRED"
         return pd.concat([cached[cached.index < fresh.index[0]], fresh]).sort_index(), "FRED"
