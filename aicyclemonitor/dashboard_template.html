@@ -141,98 +141,87 @@
 
   <section id="sec-supply">
     <h2>① 공급과잉 — 1999년형</h2>
-    <p class="desc">인프라가 실수요보다 많이 깔리고 있는가: GPU 임대가격, 데이터센터 REIT, 공실률</p>
+    <p class="desc">AI 시설이 실제로 쓰이는 것보다 너무 많이 지어지고 있는지 봅니다. 1999년 인터넷 거품 때 광케이블이 남아돈 것과 같은 위험입니다. GPU를 빌려 쓰는 값, 데이터센터 회사 주가, 비어 있는 데이터센터 비율로 확인합니다.</p>
     <div class="cards">
       <div class="card"><h3>GPU 시간당 임대가 ($/hr, 임대중 중앙값)</h3>
-        <p class="note">vast.ai 임대 장터 임대중 중앙값 — 가격 수준보다 90일 변화로 판단, B200 하락 = 공급과잉 신호</p>
+        <p class="note">GPU를 시간 단위로 빌려 쓰는 장터(vast.ai)에서 실제로 빌려 간 가격의 중간값입니다. 가격 수준보다 최근 90일 동안 얼마나 변했는지를 봅니다. 최신 칩(B200) 값이 떨어지면 GPU가 남아돈다는 신호입니다.</p>
         <div id="ch-gpu"></div></div>
       <div class="card"><h3>데이터센터 REIT 주가 (시작=100)</h3>
-        <p class="note">DLR·EQIX — 임대수요·공실 기대를 선반영하는 프록시</p>
+        <p class="note">데이터센터를 지어 빌려주는 회사(디지털리얼티·에퀴닉스)의 주가입니다. 주가는 앞으로 임대가 잘될지를 먼저 반영하므로, 빈 데이터센터가 늘어날 조짐을 미리 보여 줍니다.</p>
         <div id="ch-reit"></div></div>
       <div class="card"><h3>데이터센터 공실률 (%)</h3>
-        <p class="note" id="vacNote">CBRE 반기 보고서 → manual_data.json 수동 입력</p>
+        <p class="note" id="vacNote">북미 데이터센터 중 비어 있는 비율입니다(CBRE, 반기마다 발표). 낮을수록 공간이 모자란다는 뜻이고, 오르기 시작하면 너무 많이 지었다는 신호입니다.</p>
         <div id="ch-vac"></div></div>
     </div>
   </section>
 
   <section id="sec-demand">
     <h2>② 수요둔화 — 2022년형</h2>
-    <p class="desc">돈을 내는 쪽의 성장이 꺾이는가: Hyperscaler 매출과 클라우드 부문 성장률</p>
+    <p class="desc">AI에 돈을 쓰는 큰 회사들의 성장이 꺾이는지 봅니다. 2022년처럼 수요가 갑자기 식는 위험입니다. 빅테크 매출, 클라우드 성장률, 시설 투자액, AI 사용량으로 확인합니다.</p>
     <div class="cards">
       <div class="card"><h3>Hyperscaler 전사 매출 YoY (%)</h3>
-        <p class="note">yfinance + SEC EDGAR 백필(2023Q1~) — 실행할수록 히스토리 누적</p>
+        <p class="note">마이크로소프트·구글·아마존·메타의 회사 전체 매출이 1년 전보다 몇 % 늘었는지입니다. 광고·쇼핑 등 AI 밖의 사업도 모두 들어 있습니다. 함께 꺾이면 AI에 쓸 돈도 줄어들 수 있습니다.</p>
         <div id="ch-rev"></div></div>
       <div class="card"><h3>클라우드 부문 매출 YoY (%)</h3>
-        <p class="note">manual_data.json 수동 입력 — AWS=순수 부문 · Google Cloud=GCP+Workspace ·
-          Azure='Azure 및 기타 클라우드' 성장률(달러 미공시) · OCI=오라클 IaaS 부문(회계분기 1개월 시차) · Meta=클라우드 사업 없음</p>
+        <p class="note">클라우드 사업만 떼어 본 매출 성장률(1년 전 대비)입니다. AI 수요가 가장 먼저 숫자로 나타나는 곳입니다. 회사마다 범위가 조금 다릅니다 — 구글 클라우드는 업무용 소프트웨어(Workspace) 포함, Azure는 금액 없이 성장률만 공개, 오라클(OCI)은 결산 시기가 한 달 빠릅니다. 메타는 클라우드 사업이 없습니다.</p>
         <div id="ch-cloud"></div></div>
       <div class="card"><h3>NVIDIA 데이터센터 매출 성장률 (%)</h3>
-        <p class="note">공급자 측 총 AI 인프라 투자 프록시 — YoY=국면(후행), QoQ=모멘텀(조기 경보,
-          0% 이하=성장 정지). 실적 발표 후 manual_data.json 수동 입력, 라벨=회계분기 말월</p>
+        <p class="note">엔비디아 데이터센터(AI 칩) 매출 성장률로, AI 시설에 들어가는 돈 전체를 가늠하는 지표입니다. 1년 전 대비(YoY)는 큰 흐름을, 직전 분기 대비(QoQ)는 최근 속도를 보여 줍니다. 직전 분기 대비가 0% 아래로 내려가면 성장이 멈췄다는 경고입니다. 날짜는 엔비디아 결산 분기의 마지막 달입니다.</p>
         <div id="ch-nvda"></div></div>
       <div class="card"><h3>6대 Hyperscaler 연간 capex ($B)</h3>
-        <p class="note">GOOGL+MSFT+AMZN+META+ORCL+스페이스X(2026-10월 집계부터 포함) — 컨센서스(Bloomberg, 수동·E) vs 직전 집계 vs
-          SEC 실적·최근2Q×2 런레이트(자동). 경계: 런레이트가 직전 4분기 합 아래로(가속 멈춤), 내년 컨센서스가
-          직전 집계보다 5% 이상 하향 수정(집계 기준이 바뀐 달은 비교 안 함). SEC 현금 capex 기준이라 Bloomberg 합계와 정의가 소폭 다름</p>
+        <p class="note">구글·마이크로소프트·아마존·메타·오라클·스페이스X가 1년에 시설(데이터센터·서버 등)에 쓰는 돈입니다(스페이스X는 2026년 10월 집계부터 포함). 파란 선은 증권가 예상(Bloomberg 집계), 주황 점은 공시된 실제 지출로 최근 두 분기 속도를 1년으로 환산한 값입니다. 실제 속도가 직전 1년 합계보다 낮아지거나, 내년 예상이 지난달보다 5% 넘게 깎이면 경계입니다. 아래 차트는 영업으로 버는 현금(영업현금흐름)과 투자액을 비교합니다 — 남는 현금(FCF)이 마이너스인 이유가 투자가 더 빨라서인지, 돈을 덜 벌어서인지 구분할 수 있습니다.</p>
         <div id="ch-capex"></div>
         <p class="subhead" id="capexcf-note">영업현금흐름 vs capex 컨센서스 ($B)</p>
         <div id="ch-capexcf"></div></div>
       <div class="card"><h3>메모리(MU) 매출 YoY (%)</h3>
-        <p class="note">HBM 주문의 카나리아 — 마이크론은 회계분기(2·5·8·11월 마감)가 빨라
-          빅테크·엔비디아보다 분기 신호가 먼저 찍힘. 물량 둔화는 매출 둔화로 나타남</p>
+        <p class="note">마이크론 매출 성장률(1년 전 대비)입니다. 마이크론은 결산이 빅테크·엔비디아보다 한두 달 빨라, AI 메모리(HBM) 주문 변화가 가장 먼저 보이는 곳입니다. 주문이 줄면 매출 성장 둔화로 나타납니다.</p>
         <div id="ch-mu"></div></div>
       <div class="card"><h3>AI 토큰 P×Q — 제번스 모니터 (OpenRouter, 시작=100)</h3>
-        <p class="note" id="pxqNote">주간 처리량 Q × 사용량 가중 단가 P(모델별 토큰×정가) = 지출 P×Q.
-          단가↓인데 지출↑ = 제번스 국면, 지출↓ = 효율이 수요를 이기는 전환 (OpenRouter 표본·정가 기준, 자동)</p>
+        <p class="note" id="pxqNote">AI 서비스 중개 사이트(OpenRouter)에서 1주일 동안 쓰인 AI 사용량(토큰 수, Q)과 평균 가격(P), 둘을 곱한 지출(P×Q)입니다. 처음 주를 100으로 맞췄습니다. 가격이 내려가는데 지출이 늘면 '싸지니까 더 많이 쓰는' 국면(제번스 효과)이고, 지출이 줄면 효율 개선이 수요를 앞지르기 시작했다는 뜻입니다.</p>
         <div id="ch-pxq"></div></div>
       <div class="card"><h3>Compute/Task 프록시 (OpenRouter·500.farm, 시작=100)</h3>
-        <p class="note" id="ctNote">작업당 계산량의 대리 지표 — 요청당 토큰(작업 무게)·요청 수(작업 수)·프론티어 단가(랩이 매긴
-          compute 원가)·중국계 점유율. 토큰에 안 잡히는 계산은 GPU 가동률(하드웨어 측)로만 확인 — 짝으로 읽을 것</p>
+        <p class="note" id="ctNote">AI 작업 하나에 계산이 얼마나 드는지를 간접적으로 봅니다. 요청 한 번에 쓰는 토큰(작업 크기), 요청 횟수(작업 수), 최고 성능 모델의 가격, 중국 모델 점유율을 함께 그렸습니다. 토큰으로 잡히지 않는 계산은 GPU가 얼마나 바쁘게 도는지(가동률)로만 알 수 있어 같이 봐야 합니다.</p>
         <div id="ch-ct"></div></div>
     </div>
   </section>
 
   <section id="sec-leverage">
     <h2>③ 레버리지 — 2008년형</h2>
-    <p class="desc">자금조달이 막히는가: 신용 스프레드, 네오클라우드 주가, 사모신용 프록시</p>
+    <p class="desc">AI 시설을 빚으로 짓는 회사들이 돈 빌리기 어려워지는지 봅니다. 2008년 금융위기처럼 빚이 문제를 키우는 위험입니다. 회사채 금리 차이(스프레드), 빚이 많은 AI 클라우드 회사 주가, 부도 보험료(CDS)로 확인합니다.</p>
     <div class="cards">
       <div class="card"><h3>투자등급 신용 스프레드 (bp)</h3>
-        <p class="note">FRED — AA(하이퍼스케일러·NVIDIA급)·BBB(오라클·브로드컴급) OAS.
-          개별 CDS는 유료 데이터라 등급 버킷 OAS로 프록시</p>
+        <p class="note">회사채 금리가 같은 만기 국채보다 얼마나 높은지(스프레드, 1bp = 0.01%p)입니다. 높을수록 돈 빌리기가 비쌉니다. AA는 빅테크·엔비디아 같은 우량 회사, BBB는 오라클·브로드컴 같은 투자등급 맨 아래 회사의 대표값입니다(회사별 값은 유료라 등급 평균으로 봅니다).</p>
         <div id="ch-spread"></div></div>
       <div class="card"><h3>하이일드(HY) OAS (bp)</h3>
-        <p class="note">투기등급(BB 이하) 회사채 스프레드 — 신용시장 전반의 위험선호 온도계.
-          레벨이 투자등급의 3~5배라 축 왜곡을 피해 별도 표시. 급등 = 2008년형 스트레스</p>
+        <p class="note">신용등급이 낮은(투기등급) 회사채의 스프레드입니다. 신용시장 전체가 위험을 얼마나 꺼리는지 보여 주는 온도계입니다. 숫자가 투자등급보다 3~5배 커서 따로 그렸습니다. 급하게 오르면 2008년형 신용 경색의 신호입니다.</p>
         <div id="ch-hy"></div></div>
       <div class="card"><h3>CCC 등급 OAS (bp)</h3>
-        <p class="note">최약체 투기등급의 조달비용(FRED) — '저신용 AI 사업자도 쉽게 빌리는가'의 프록시.
-          이례적 축소=과열, 90일 +150bp 급등=조달창구 폐쇄 신호</p>
+        <p class="note">가장 위험한 등급(CCC 이하) 회사채의 스프레드입니다. 신용이 약한 AI 회사도 쉽게 돈을 빌릴 수 있는지 보여 줍니다. 이상할 만큼 낮으면 과열, 90일 동안 150bp 넘게 뛰면 돈줄이 막히기 시작했다는 신호입니다.</p>
         <div id="ch-ccc"></div></div>
       <div class="card"><h3>네오클라우드 주가 (시작=100)</h3>
-        <p class="note">CRWV·NBIS·IREN·APLD — GPU 담보 레버리지의 체온계</p>
+        <p class="note">GPU를 담보로 빚을 내 AI 클라우드를 짓는 신생 회사들(코어위브·네비우스·IREN·어플라이드디지털)의 주가입니다. 빚에 기댄 AI 투자의 건강 상태를 보여 줍니다.</p>
         <div id="ch-neo"></div></div>
       <div class="card"><h3>52주 고점 대비 낙폭 (%)</h3>
-        <p class="note">네오클라우드 + 오라클</p>
+        <p class="note">신생 AI 클라우드 회사들과 오라클의 주가가 최근 1년 최고가보다 몇 % 내려와 있는지입니다. 낙폭이 깊을수록 시장이 이들의 빚 부담을 걱정한다는 뜻입니다.</p>
         <div id="ch-dd"></div></div>
       <div class="card"><h3>사모신용/BDC 프록시 (시작=100)</h3>
-        <p class="note">BIZD·PBDC — 사모대출 시장의 상장 그림자</p>
+        <p class="note">사모대출(은행 밖에서 기업에 돈을 빌려주는 펀드) 시장을 대신 보여 주는 상장 상품(BIZD·PBDC)입니다. AI 시설 자금의 상당 부분이 이런 곳에서 나오므로, 하락하면 자금줄이 조여진다는 신호입니다.</p>
         <div id="ch-bdc"></div></div>
       <div class="card"><h3>CoreWeave 분기 capex ($B)</h3>
-        <p class="note">SEC 현금흐름표(YTD 차분) — GPU 담보부채로 조달하는 buildout, 급감 = 자금줄 경색 신호</p>
+        <p class="note">코어위브가 분기마다 시설에 쓰는 돈입니다(공시 기준). 코어위브는 GPU를 담보로 빌린 돈으로 데이터센터를 짓기 때문에, 이 금액이 갑자기 줄면 돈줄이 막혔다는 신호입니다.</p>
         <div id="ch-crwv"></div></div>
       <div class="card"><h3>빅테크·AI 인프라 5Y CDS 레벨 (bp)</h3>
-        <p class="note" id="cdsNote">개별 CDS는 유료라 공개 자료 스냅샷을 수동 기록 — 괄호는 직전 스냅샷 대비 변화</p>
+        <p class="note" id="cdsNote">회사가 부도날 경우에 대비한 보험료(5년 CDS, 1bp = 0.01%p)입니다. 높을수록 시장이 부도 위험을 크게 봅니다. 유료 데이터라 기사·증권사 자료에 나온 값을 직접 기록하며, 괄호는 직전 기록 대비 변화입니다.</p>
         <div id="ch-cds"></div></div>
       <div class="card"><h3>오라클 RPO 수주잔고 ($B)</h3>
-        <p class="note">장기 컴퓨팅 계약의 총량(SEC) — 증가 정체·감소 전환 = 계약 취소/사용률 하락의
-          정량 프록시. AI 랩發 계약 리스크가 숫자로 처음 찍히는 곳</p>
+        <p class="note">오라클이 고객과 맺은 장기 클라우드 계약 중 아직 매출로 잡히지 않은 금액(수주잔고)입니다. 늘다가 멈추거나 줄기 시작하면 AI 회사들이 계약을 취소하거나 덜 쓰기 시작했다는 뜻으로, AI 계약 위험이 가장 먼저 숫자로 나타나는 곳입니다.</p>
         <div id="ch-rpo"></div></div>
     </div>
   </section>
 
   <section>
     <h2>경계 신호 체크리스트</h2>
-    <p class="desc">임계값은 ai_cycle_monitor.py 상단 TH 에서 조정</p>
+    <p class="desc">각 지표가 미리 정해 둔 기준을 넘으면 '경계'로 표시합니다.</p>
     <div class="card"><div class="alerts" id="alertTable"></div></div>
   </section>
 
@@ -490,8 +479,9 @@ function renderAll(){
       {labels:vac.map(v=>v.date),unit:'%',h:180});
     const vl=vac[vac.length-1], vp=vac.length>1?vac[vac.length-2]:null;
     document.getElementById('vacNote').textContent=
-      `CBRE 반기 보고서(${vl.region||''}, 수동 입력) — 최신 ${vl.date} ${fmt(vl.vacancy_pct)}%`+
-      (vp?` · 직전 ${vp.date} ${fmt(vp.vacancy_pct)}%`:'')+' · 반기마다 발표(다음: 하반기분, 이듬해 2~3월)';
+      `최신 ${vl.date} ${fmt(vl.vacancy_pct)}%`+(vp?` · 직전 ${vp.date} ${fmt(vp.vacancy_pct)}%`:'')+
+      ` — 데이터센터 중 비어 있는 비율입니다(CBRE${vl.region?', '+vl.region:''}, 반기마다 발표). 낮을수록 공간이 모자란다는 뜻이고, `+
+      `오르기 시작하면 너무 많이 지었다는 신호입니다. 다음 발표는 이듬해 2~3월(하반기분)입니다.`;
   } else {
     document.getElementById('ch-vac').innerHTML=
       '<div class="empty">manual_data.json 의 datacenter_vacancy 에 CBRE 공실률을 입력하세요</div>';
@@ -536,8 +526,9 @@ function renderAll(){
     const idx=a=>{const b=a.find(v=>v!=null);return a.map(v=>v==null?null:+(v/b*100).toFixed(1));};
     const L=tk.labels.length-1;
     document.getElementById('pxqNote').textContent=
-      `최근주 ${tk.labels[L]}: Q ${fmt(tk.tokens_t[L])}T 토큰 · P $${fmt(tk.price[L],3)}/1M · 지출 $${fmt(tk.spend_m[L])}M — `+
-      `주간 처리량(Q) × 사용량 가중 단가(P, 모델별 토큰×정가) = 지출 P×Q. 단가↓인데 지출↑ = 제번스 국면, 지출↓ = 효율이 수요를 이기는 전환 (OpenRouter 표본·정가 기준, 자동)`;
+      `최근 주(${tk.labels[L]}): 사용량 ${fmt(tk.tokens_t[L])}조 토큰 · 평균 가격 100만 토큰당 $${fmt(tk.price[L],3)} · 지출 $${fmt(tk.spend_m[L])}M(백만 달러) — `+
+      `AI 서비스 중개 사이트(OpenRouter)에서 1주일 동안 쓰인 사용량(Q)과 평균 가격(P), 둘을 곱한 지출(P×Q)입니다. 처음 주를 100으로 맞췄습니다. `+
+      `가격이 내려가는데 지출이 늘면 '싸지니까 더 많이 쓰는' 국면(제번스 효과)이고, 지출이 줄면 효율 개선이 수요를 앞지르기 시작했다는 뜻입니다.`;
     lineChart('ch-pxq',[
       {name:'Q 처리량',dates:tk.labels,values:idx(tk.tokens_t)},
       {name:'P 단가',dates:tk.labels,values:idx(tk.price)},
@@ -550,10 +541,10 @@ function renderAll(){
     const idx=a=>{const b=a.find(v=>v!=null);return b?a.map(v=>v==null?null:+(v/b*100).toFixed(1)):a;};
     const L=ct.labels.length-1, mm=DATA.metrics||{};
     document.getElementById('ctNote').textContent=
-      `최근주 ${ct.labels[L]}: 요청당 ${fmt(ct.tok_per_req[L],0)}토큰 · 요청 ${fmt(ct.requests_b[L])}B/주 · `+
-      `프론티어 $${fmt(ct.frontier_price[L],2)}/1M(전체 대비 ${fmt(ct.tier_gap[L])}배) · 중국계 점유율 ${fmt(ct.cn_share[L])}% · `+
-      `GPU 가동률 ${mm.gpu_util_pct!=null?fmt(mm.gpu_util_pct)+'%':'—'} — 작업당 계산량의 대리 지표. `+
-      `토큰에 안 잡히는 계산은 GPU 가동률(하드웨어 측)로만 확인되므로 짝으로 읽을 것`;
+      `최근 주(${ct.labels[L]}): 요청당 ${fmt(ct.tok_per_req[L],0)}토큰 · 요청 ${fmt(ct.requests_b[L])}B(10억 번)/주 · `+
+      `최고 성능 모델 가격 100만 토큰당 $${fmt(ct.frontier_price[L],2)}(평균의 ${fmt(ct.tier_gap[L])}배) · 중국 모델 점유율 ${fmt(ct.cn_share[L])}% · `+
+      `GPU 가동률 ${mm.gpu_util_pct!=null?fmt(mm.gpu_util_pct)+'%':'—'} — AI 작업 하나에 계산이 얼마나 드는지를 간접적으로 봅니다. `+
+      `요청당 토큰은 작업 크기, 요청 수는 작업 수입니다. 토큰으로 잡히지 않는 계산은 GPU 가동률로만 알 수 있어 같이 봐야 합니다.`;
     lineChart('ch-ct',[
       {name:'요청당 토큰',dates:ct.labels,values:idx(ct.tok_per_req)},
       {name:'요청 수',dates:ct.labels,values:idx(ct.requests_b)},
@@ -615,8 +606,9 @@ function renderAll(){
   const cstale=new Set(cds.stale||[]);
   if(Object.keys(clvl).length||Object.keys(cchg).length){
     document.getElementById('cdsNote').textContent=
-      `${cds.date||''} 기준 · ${cds.source||''} — 유료 데이터라 공개 자료(언론·증권사 차트) 스냅샷 수동 기록, `
-      +(hasPrev?`괄호=직전 스냅샷(${cds.prev.date||''}) 대비 변화(bp)`:'괄호=연초 대비(bp)');
+      `${cds.date||''} 기준 · ${cds.source||''} — 회사가 부도날 경우에 대비한 보험료(5년 CDS, 1bp = 0.01%p)로, 높을수록 시장이 부도 위험을 크게 봅니다. `
+      +`유료 데이터라 기사·증권사 자료에 나온 값을 직접 기록합니다. `
+      +(hasPrev?`괄호는 직전 기록(${cds.prev.date||''}) 대비 변화(bp)입니다.`:'괄호는 연초 대비 변화(bp)입니다.');
     // 레벨 막대 + 괄호: 직전 스냅샷이 있으면 그 대비 변화(직전 레벨이 없던 이름은 '첫 기록'), 없으면 연초 대비.
     // 레벨이 없으면 연초 대비 변화 막대로 폴백.
     const sgn=v=>(v>=0?'+':'')+v;
