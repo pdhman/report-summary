@@ -212,7 +212,27 @@ def _fred_csv_text(series_id, cosd=None):
             return r.text
         except Exception as e:
             _FRED_DIRECT_OK = False
-            log(f"FRED 직접 접속 실패({type(e).__name__}) → allorigins 프록시 폴백")
+            log(f"FRED 직접 접속 실패({type(e).__name__}) → r.jina.ai 프록시 폴백")
+    # 1순위 r.jina.ai — /data/<id>.txt 를 마크다운 표로 돌려준다(최근 약 3년).
+    # fredgraph.csv 는 jina 가 content-type(application/csv)을 거부해 못 쓴다.
+    # allorigins 가 520/522 를 연달아 낼 때(2026-11-04) 이 경로는 됐다.
+    import re
+    import time
+    for attempt in range(3):
+        try:
+            r = requests.get(f"https://r.jina.ai/https://fred.stlouisfed.org/data/{series_id}.txt",
+                             timeout=90, headers={"User-Agent": "Mozilla/5.0"})
+            r.raise_for_status()
+            # 휴장일 값은 "." 이라 숫자로 시작하는 칸만 잡는다
+            rows = re.findall(r"\|\s*(\d{4}-\d{2}-\d{2})\s*\|\s*(\d+(?:\.\d+)?)\s*\|", r.text)
+            rows = [(d, v) for d, v in rows if not cosd or d >= cosd]
+            if len(rows) < 5:
+                raise ValueError(f"jina 응답에 관측값이 없음: {r.text[:80]!r}")
+            return "observation_date," + series_id + "\n" + "\n".join(f"{d},{v}" for d, v in rows)
+        except Exception as e:
+            log(f"jina {series_id} 실패 {attempt + 1}/3 ({type(e).__name__}) → 재시도")
+            time.sleep(5 * (attempt + 1))
+    log(f"jina {series_id} 실패 → allorigins 프록시 폴백")
     # allorigins는 간헐적으로 5xx를 반환 → 백오프를 두고 raw/get 엔드포인트 교차 재시도
     import time
     q = urllib.parse.quote(url, safe="")
@@ -1520,7 +1540,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   </section>
 
   <footer>
-    데이터: Yahoo Finance(주가·분기매출) · FRED fredgraph.csv(신용 스프레드, 직접 차단 시 allorigins 프록시 폴백) ·
+    데이터: Yahoo Finance(주가·분기매출) · FRED(신용 스프레드, 직접 차단 시 r.jina.ai·allorigins 프록시 폴백) ·
     500.farm=vast.ai 통계 미러(GPU 임대중/가용 중앙값) ·
     CBRE 반기 보고서(공실률, 수동) · 각사 실적발표(클라우드 부문 YoY, 수동)<br>
     개별 회사채 스프레드(오라클 CDS/채권)와 사모신용 실측 데이터는 무료 소스가 없어 BBB OAS·BDC 프록시로 대체.
