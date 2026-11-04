@@ -64,6 +64,60 @@ TAGS = [
     ('O2', '알림만 설정, 행동 규칙 없음', '알람이 울려도 "더 갈 것"이라 판단', '없음'),
 ]
 TAG_NAME = {t[0]: t[1] for t in TAGS}
+
+# '실수코드' 설명 시트: 군(첫 글자)별 뜻, 코드별 쉬운 설명·내 기록 속 예시(실수태그_v0.md 근거에서 고름)
+GUIDE_SHEET = '실수코드'
+GROUPS = [
+    ('E', '진입 (Entry)', '사거나 들어가는 순간의 실수 — "언제, 왜 들어갔나"'),
+    ('X', '청산 (Exit)', '팔거나 나오는 순간의 실수 — "언제 나왔나, 왜 못 나왔나"'),
+    ('R', '리스크·규모 (Risk)', '얼마나 크게 걸었나 — 크기·빚·추가 매수'),
+    ('P', '심리 (Psych)', '마음 상태가 판단을 흔든 경우'),
+    ('O', '실행 (Ops)', '손가락·도구 실수 — 판단은 맞았는데 실행이 틀림'),
+]
+GUIDE = {
+    'E1': ('모양(컵핸들·박스 돌파)이 다 만들어지기 전에 "곧 뚫을 것 같아서" 미리 들어간다. 안 뚫리면 손절로 끝난다.',
+           '26.09.01 샌디스크 "컵핸들이 충분히 만들어지는 것을 봤어야 했는데"'),
+    'E2': ('떨어지기 시작하자마자 "많이 빠졌다"며 산다. 바닥은 보통 생각보다 아래에 있다.',
+           '26.10.21 SK하이닉스 "떨어질 때는 함부로 바닥을 예측하지 말자(최소 TD 9P까지 확인)"'),
+    'E3': ('남의 추천·뉴스·리포트만 믿고, 내 기준(차트·셋업)으로 확인하지 않고 산다.',
+           '25.09 이녹스·HDC·켄코아 / 25.12 비트마인·써클'),
+    'E4': ('잃은 돈을 빨리 되찾으려고 평소보다 크게 들어간다.',
+           '26.01~03 코오롱티슈진·큐렉소'),
+    'E5': ('"같은 업종이니 이것도 따라 오르겠지" 하고 덜 오른 종목을 산다.',
+           '26.04.20'),
+    'E6': ('실적·매크로 같은 "내 판단"을 차트 가격보다 먼저 믿는다. 가격이 반대로 가도 판단을 고집한다. (E3은 남의 말, E6은 내 판단)',
+           '26.10.27 10년물 소진 신호로 미리 진입 / 26.10.13 "가격이 우선인데 펀더멘탈에만 집중"'),
+    'X1': ('어디서 팔지 정해 두지 않고 들고 있다가 수익을 돌려준다. 목표가를 욕심으로 올리는 것도 여기.',
+           '26.10.30 SKHX 최대 +$400 → 본절 청산 / 26.11.02 SOXL·삼성전기 못 팖'),
+    'X2': ('이익이 났는데 손절선을 진입가 위로 올리지 않아, 이익이 손실로 바뀐다.',
+           '26.07.03 테스 / 24.09.19 FET -450불'),
+    'X3': ('손절 자리가 왔는데 "조금만 더" 하며 팔지 않는다.',
+           '26.10.27 희토류 -60% / 한화비전 -20%'),
+    'X4': ('너무 일찍 팔고, 그 뒤 더 오르는데 다시 타지 못한다.',
+           '25.12 하이닉스·현대로템·두산에너빌리티·조선'),
+    'R1': ('신용(빌린 돈)이나 레버리지 ETF를 너무 많이·너무 일찍 쓴다. 떨어지면 버틸 힘이 없어진다.',
+           '26.10.16 신용담보 151%(추가담보 직전) / 26.07.28'),
+    'R2': ('"손절하면 얼마 잃나"를 먼저 계산하지 않고, 사고 싶은 만큼 산다.',
+           '26.10 WTI -$103·SOXL -$80 (한 건 상한 $40)'),
+    'R3': ('손실 중인 포지션을 더 싸게 더 산다. 평균가는 내려가지만 잃을 수 있는 돈은 커진다.',
+           '26.07.31 "쉽사리 물타지 말고 손절" / 26.10 SKHX 추가 매수'),
+    'R4': ('위험을 줄이려고 산 자산이 같이 떨어진다.',
+           '26.01~03 현대로템·금'),
+    'P1': ('좋은 뉴스만 보고 나쁜 신호는 무시한다. 혼자 장밋빛 미래를 그린다.',
+           '26.08.19 "혼자서 환희에 차 있었다" / 26.10.13 / 26.11.02'),
+    'P2': ('남들 다 버는데 나만 놓칠까 봐 참지 못하고 산다.',
+           '26.03.31'),
+    'P3': ('손절한 종목에 그날 바로 다시 들어가거나, 연속 손절 뒤 오기로 더 크게 간다.',
+           '26.09 보고서 "손절한 종목은 그날 다시 들어가지 않는다"'),
+    'P4': ('몇 번 반등이 이어지자 "또 오르겠지" 하며 위험 감각이 무뎌진다.',
+           '26.07.28 "상승장에 취해 리스크 관리를 못 했다"'),
+    'P5': ('휴가·피로·음주처럼 대응하기 어려운 상황에서 포지션을 그냥 둔다.',
+           '26.08.19 휴가 중 방치'),
+    'O1': ('매수/매도 방향이나 수량을 잘못 누른다.',
+           '26.09.06 MU / 26.09.28 HYPE'),
+    'O2': ('알람은 걸어 뒀는데, 울렸을 때 할 행동을 정하지 않아 "더 가겠지" 하고 넘긴다.',
+           '26.08.19 삼전 피보나치 50 알람'),
+}
 ACCOUNT = {'prop': 'prop', 'my': '국내(my)', 'fx-company': 'FX(회사)', 'personal': '개인', 'unknown': ''}
 
 COLS = ['날짜', '태그', '실수 유형', '종목', '계좌', '무슨 일이 있었나', '결과·손익', '다음엔(규칙)', '출처', '재발(일)', 'ID']
@@ -161,7 +215,7 @@ def write_sheet(wb, rows):
     ws['A1'].fill = FILL_TITLE
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(COLS))
     ws['A2'] = ('아래 "실수 기록"에 한 줄씩 추가하면 요약이 자동 계산됩니다. 태그는 쉼표로 여러 개(예: R1, X1). '
-                '정의: 매매일지/실수태그_v0.md · 최근 90일 3회↑ 빨강 / 1회↑ 주황')
+                "코드 뜻은 옆 '실수코드' 시트 · 최근 90일 3회↑ 빨강 / 1회↑ 주황")
     ws['A2'].font = Font(size=9, color='808080')
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(COLS))
 
@@ -228,6 +282,67 @@ def write_sheet(wb, rows):
     return ws
 
 
+def write_guide(wb, n_rows):
+    """'실수코드' 시트: 코드를 군별로 묶어 쉬운 설명·내 기록 예시·막는 장치·횟수(반복실수 기록에서 수식)."""
+    if GUIDE_SHEET in wb.sheetnames:
+        del wb[GUIDE_SHEET]
+    ws = wb.create_sheet(GUIDE_SHEET)
+    wb.move_sheet(ws, offset=wb.sheetnames.index(SHEET) + 1 - wb.sheetnames.index(GUIDE_SHEET))
+    ws.sheet_properties.tabColor = 'C00000'
+    heads = ['코드', '실수 유형', '쉬운 설명', '내 기록 속 예시', '막는 장치(체크리스트)', '누적', '최근 90일']
+    widths = [8, 22, 54, 46, 30, 7, 9]
+
+    ws['A1'] = '실수 코드 설명 — 반복실수 시트의 코드가 무슨 뜻인지'
+    ws['A1'].font = Font(size=14, bold=True, color='FFFFFF')
+    ws['A1'].fill = FILL_TITLE
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(heads))
+    ws['A2'] = ('읽는 법: 앞 글자 = 실수가 난 단계(E 진입 · X 청산 · R 리스크 · P 심리 · O 실행), 숫자 = 그 안의 종류. '
+                '한 번의 실수에 코드가 여러 개 붙을 수 있다(예: R1, X1). 누적·최근 90일은 반복실수 기록에서 자동 계산.')
+    ws['A2'].font = Font(size=9, color='808080')
+    ws['A2'].alignment = WRAP
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(heads))
+    ws.row_dimensions[2].height = 30
+
+    first, last = LOG_ROW0 + 1, LOG_ROW0 + max(n_rows, 1) + 500     # 반복실수 요약과 같은 범위
+    tag_rng = f"'{SHEET}'!$B${first}:$B${last}"
+    date_rng = f"'{SHEET}'!$A${first}:$A${last}"
+    r = 4
+    for letter, gname, gdesc in GROUPS:
+        cell = ws.cell(r, 1, f'{letter}  {gname}')
+        cell.font = Font(size=12, bold=True)
+        ws.cell(r, 3, gdesc).font = Font(size=10, color='595959')
+        r += 1
+        for c, h in enumerate(heads, 1):
+            cell = ws.cell(r, c, h)
+            cell.font = Font(bold=True, color='FFFFFF')
+            cell.fill = FILL_HEAD
+            cell.alignment = CENTER
+            cell.border = BOX
+        r += 1
+        for code, name, _desc, guard in [t for t in TAGS if t[0].startswith(letter)]:
+            easy, example = GUIDE.get(code, ('', ''))
+            pat = f'"*{code}*"'
+            vals = [code, name, easy, example, guard,
+                    f'=COUNTIF({tag_rng},{pat})',
+                    f'=COUNTIFS({tag_rng},{pat},{date_rng},">="&(TODAY()-90))']
+            for c, v in enumerate(vals, 1):
+                cell = ws.cell(r, c, v)
+                cell.border = BOX
+                cell.alignment = CENTER if c in (1, 6, 7) else WRAP
+            ws.cell(r, 1).font = Font(bold=True)
+            if guard.startswith('없음'):
+                ws.cell(r, 5).font = Font(color='C00000')
+            ws.conditional_formatting.add(f'G{r}', CellIsRule(operator='greaterThanOrEqual', formula=['3'], fill=FILL_RED))
+            ws.conditional_formatting.add(f'G{r}', CellIsRule(operator='greaterThanOrEqual', formula=['1'], fill=FILL_ORANGE))
+            r += 1
+        r += 1
+    for c, w in enumerate(widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(c)].width = w
+    ws.freeze_panes = 'A4'
+    center_vertical(ws)
+    return ws
+
+
 def main():
     ap = argparse.ArgumentParser(description='반복실수 시트 갱신·기록 추가')
     ap.add_argument('--xlsx', default=DEFAULT_XLSX)
@@ -274,6 +389,7 @@ def main():
     rows.sort(key=lambda r: (r['날짜'], str(r.get('ID') or '')))
     add_recurrence(rows)
     write_sheet(wb, rows)
+    write_guide(wb, len(rows))
 
     cnt = {}
     for r in rows:
@@ -295,7 +411,7 @@ def main():
         print(f'백업: {bak}')
         prune_backups(BACKUP_DIR, os.path.basename(args.xlsx), KEEP_BACKUPS)
     wb.save(args.xlsx)
-    print(f'저장: {args.xlsx} [{SHEET}]')
+    print(f'저장: {args.xlsx} [{SHEET}, {GUIDE_SHEET}]')
 
 
 if __name__ == '__main__':
