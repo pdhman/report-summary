@@ -12,6 +12,8 @@ AI 사이클 대시보드 '③ 레버리지 — 하이일드(HY) OAS' 카드와 
 같은 데이터 날짜로는 한 번만 보낸다. 5거래일 조건만 걸린 날은 같은 방향 알림을
 직전 4거래일 안에 이미 보냈으면 건너뛴다(급변이 며칠 이어질 때 매일 같은 알림 방지).
 채널에는 보내지 않고 기본 DM(알파노트 봇 개인 대화)으로만 발송.
+메시지에는 BBB·CCC 스프레드도 같은 날짜 기준으로 함께 싣는다(판정에는 안 씀).
+'평소의 n배' = 5거래일 변화 ÷ 최근 1년 5거래일 변화의 표준편차.
 
 FRED 는 이 PC 에서 직접 접속이 막혀 ai_cycle_monitor 의 프록시 폴백을 그대로 쓴다.
 대시보드용 히스토리 CSV(추적 파일)는 건드리지 않는다.
@@ -37,6 +39,11 @@ from send_summary import CONFIG_PATH, add_target_arg, resolve_targets, send  # n
 
 SERIES = "BAMLH0A0HYM2"
 HIST_CSV = AICYCLE / "fred_hy_oas_history.csv"   # 읽기만 (주간 대시보드가 갱신)
+# 메시지에 함께 보여주는 등급(판정에는 안 씀) — (라벨, FRED id, 히스토리 CSV)
+COMPANIONS = [
+    ("BBB(투자등급 맨 아래)", "BAMLC0A4CBBB", AICYCLE / "fred_bbb_oas_history.csv"),
+    ("CCC(가장 위험한 등급)", "BAMLH0A3HYC", AICYCLE / "fred_ccc_oas_history.csv"),
+]
 STATE_PATH = HERE / "hy_alert_state.json"
 DASH_URL = "https://pdhman.github.io/report-summary/aicycle.html"
 
@@ -46,23 +53,29 @@ LEVEL_BP = 400.0   # 통과 여부를 보는 선
 REPEAT_DAYS = 4    # 5거래일 조건만 걸린 같은 방향 알림은 이 거래일 수 안에서 한 번
 
 
-def load_cached():
+_FRED_DOWN = False
+
+
+def load_cached(csv_path=HIST_CSV):
     """대시보드 히스토리 CSV(bp) → pandas Series. 없으면 None."""
     import pandas as pd
-    if not HIST_CSV.exists():
+    if not csv_path.exists():
         return None
-    s = pd.read_csv(HIST_CSV, header=None, names=["date", "bp"], parse_dates=["date"])
+    s = pd.read_csv(csv_path, header=None, names=["date", "bp"], parse_dates=["date"])
     return s.set_index("date")["bp"].dropna().sort_index()
 
 
-def load_series():
+def load_series(series_id=SERIES, csv_path=HIST_CSV):
     """최근 구간을 FRED(프록시 폴백)에서 받아 캐시 뒤에 붙인다. 실패하면 캐시만."""
     import pandas as pd
-    cached = load_cached()
+    global _FRED_DOWN
+    cached = load_cached(csv_path)
     try:
+        if _FRED_DOWN:   # 앞 시리즈가 실패했으면 프록시를 또 붙들지 않는다(시리즈당 최대 2.5분)
+            raise RuntimeError("앞 시리즈 수집 실패 — 재시도 생략")
         from ai_cycle_monitor import _fred_csv_text
         cosd = (date.today() - timedelta(days=60)).isoformat()
-        df = pd.read_csv(io.StringIO(_fred_csv_text(SERIES, cosd)))
+        df = pd.read_csv(io.StringIO(_fred_csv_text(series_id, cosd)))
         df.columns = ["date", "value"]
         df["date"] = pd.to_datetime(df["date"])
         fresh = (pd.to_numeric(df["value"], errors="coerce") * 100).round(0)
@@ -72,9 +85,10 @@ def load_series():
             return fresh, "FRED"
         return pd.concat([cached[cached.index < fresh.index[0]], fresh]).sort_index(), "FRED"
     except Exception as e:
-        print(f"FRED 수집 실패({type(e).__name__}: {e}) → 저장된 히스토리만 사용")
+        _FRED_DOWN = True
+        print(f"FRED {series_id} 수집 실패({type(e).__name__}: {e}) → 저장된 히스토리만 사용")
         if cached is None:
-            raise SystemExit("히스토리도 없습니다.")
+            raise SystemExit(f"{series_id} 히스토리도 없습니다.")
         return cached, "캐시"
 
 
@@ -104,23 +118,65 @@ def suppressed(ev, recent):
     return kinds == {"week"} and any(r == ev["dir"] for r in recent)
 
 
+def typical_5d(s, i):
+    """최근 1년 5거래일 변화의 표준편차(bp) — '평소 움직임' 크기."""
+    w = s.iloc[max(0, i - 256):i + 1].diff(5).dropna()
+    return float(w.std()) if len(w) > 20 else None
+
+
+def times(d5, sd):
+    return f" (평소의 {abs(d5) / sd:.1f}배)" if sd and d5 is not None else ""
+
+
+def companion_lines(ev):
+    """BBB·CCC 를 HY 와 같은 날짜 기준으로 한 줄씩 + 셋을 비교한 한 줄 해석."""
+    import pandas as pd
+    out, z = [], {}
+    for label, sid, csv in COMPANIONS:
+        s, src = load_series(sid, csv)
+        s = s[s.index <= pd.Timestamp(ev["date"])]
+        if len(s) < 6:
+            continue
+        i = len(s) - 1
+        now, d1, d5 = float(s.iloc[i]), float(s.iloc[i] - s.iloc[i - 1]), float(s.iloc[i] - s.iloc[i - 5])
+        sd = typical_5d(s, i)
+        z[sid] = d5 / sd if sd else 0.0
+        when = "" if s.index[i].date().isoformat() == ev["date"] else f" ({s.index[i].date()} 값)"
+        out.append(f"· {label} <b>{now:,.0f}bp</b> · 하루 {d1:+.0f} · 5거래일 {d5:+.0f}{times(d5, sd)}{when}"
+                   + ("" if src == "FRED" else " · 수집 실패, 저장된 값"))
+    if not out:
+        return []
+    hy_z = ev.get("z") or 0.0
+    bbb_z, ccc_z = z.get("BAMLC0A4CBBB", 0.0), z.get("BAMLH0A3HYC", 0.0)
+    if abs(bbb_z) >= 2 and bbb_z * hy_z > 0:
+        note = "→ 투자등급(BBB)까지 크게 같이 움직였습니다. 위험 회사채만이 아니라 신용 시장 전체의 변화입니다."
+    elif abs(ccc_z) >= 2 and ccc_z * hy_z > 0:
+        note = "→ BBB는 평소 수준인데 CCC가 크게 움직였습니다. 신용이 약한 회사 쪽에 몰린 변화입니다."
+    else:
+        note = "→ BBB·CCC는 평소 움직임 범위입니다."
+    return ["", "<b>등급별로 보면</b>"] + out + [note]
+
+
 def build_message(s, ev, source, forced):
     i = s.index.get_loc(ev["date"])
     win = s.iloc[max(0, i - 251):i + 1]          # 최근 약 1년(252거래일)
     pct = (win <= ev["bp"]).mean() * 100
     d20 = ev["bp"] - float(s.iloc[i - 20]) if i >= 20 else None
+    sd = typical_5d(s, i)
+    ev["z"] = ev["d5"] / sd if sd and ev["d5"] is not None else 0.0
     up = ev["dir"] == "up"
     head = ("🔺 넓어짐(신용 위험 ↑)" if up else "🔻 좁혀짐(신용 위험 ↓)") if ev["reasons"] else "변화 작음 — 기준 미달"
     lines = [f"🧯 <b>하이일드 스프레드 급변</b> · {ev['date']}" + (" · 수동 테스트" if forced else ""),
              f"{head}",
              "",
-             f"HY OAS <b>{ev['bp']:.0f}bp</b>",
+             f"하이일드(HY) 전체 <b>{ev['bp']:.0f}bp</b>",
              f"· 하루 {ev['d1']:+.0f}bp"
-             + (f" · 5거래일 {ev['d5']:+.0f}bp" if ev["d5"] is not None else "")
+             + (f" · 5거래일 {ev['d5']:+.0f}bp{times(ev['d5'], sd)}" if ev["d5"] is not None else "")
              + (f" · 20거래일 {d20:+.0f}bp" if d20 is not None else ""),
              f"· 최근 1년 범위 {win.min():.0f}~{win.max():.0f}bp, 지금은 아래에서 {pct:.0f}% 위치"]
     if ev["reasons"]:
         lines += ["", "<b>걸린 조건</b>"] + [f"· {t}" for _, t in ev["reasons"]]
+    lines += companion_lines(ev)
     lines += ["",
               ("하이일드 = 신용등급 낮은 회사채. 스프레드가 넓어지면 돈 빌리기가 비싸지고 "
                "시장이 부도 위험을 더 크게 본다는 뜻입니다. AI 인프라 기업의 자금 조달 여건을 보는 지표입니다.")
