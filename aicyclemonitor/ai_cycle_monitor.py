@@ -1399,12 +1399,13 @@ TEMPLATE = r"""<!DOCTYPE html>
   .status.serious{color:var(--critical);}
   section{margin-top:34px;}
   section>h2{font-size:16px;margin:0 0 2px;}
-  section>.desc{font-size:13px;color:var(--text-secondary);margin:0 0 12px;}
+  section>.desc{display:none;} /* 2026-11 사용자 요청: 제목 아래 설명 숨김(문구는 남겨 둠) */
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;}
   @media(max-width:920px){.cards{grid-template-columns:1fr;}}
   .card{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px 10px;}
   .card h3{font-size:13.5px;margin:0 0 2px;font-weight:600;}
-  .card .note{font-size:11.5px;color:var(--text-muted);margin:0 0 6px;}
+  .card .note{display:none;} /* 2026-11 사용자 요청: 카드 설명 숨김 — 다시 보이려면 이 줄을 원래 스타일로 */
+  .card .subhead{font-size:12.5px;font-weight:600;margin:14px 0 2px;}
   .legend{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0 4px;font-size:12px;color:var(--text-secondary);}
   .legend .key{display:inline-flex;align-items:center;gap:5px;}
   .legend .sw{width:10px;height:10px;border-radius:3px;display:inline-block;}
@@ -1477,8 +1478,7 @@ TEMPLATE = r"""<!DOCTYPE html>
           SEC 실적·최근2Q×2 런레이트(자동). 경계: 런레이트가 직전 4분기 합 아래로(가속 멈춤), 내년 컨센서스가
           직전 집계보다 5% 이상 하향 수정(집계 기준이 바뀐 달은 비교 안 함). SEC 현금 capex 기준이라 Bloomberg 합계와 정의가 소폭 다름</p>
         <div id="ch-capex"></div>
-        <p class="note" id="capexcf-note">아래: 영업현금흐름 vs capex 컨센서스 — FCF 적자가 'capex가 더 빨리 늘어서'인지
-          '돈을 덜 벌어서'인지 구분. 경계 = 내년 영업현금흐름 컨센서스 5% 이상 하향(Bloomberg 차트 판독 ±20B)</p>
+        <p class="subhead" id="capexcf-note">영업현금흐름 vs capex 컨센서스 ($B)</p>
         <div id="ch-capexcf"></div></div>
       <div class="card"><h3>메모리(MU) 매출 YoY (%)</h3>
         <p class="note">HBM 주문의 카나리아 — 마이크론은 회계분기(2·5·8·11월 마감)가 빨라
