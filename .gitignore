@@ -15,6 +15,7 @@ gdrive_sa.json
 !docs/data/*.json
 # 시장의 시선 일별 평가(사이트 빌드에 필요 — market_gaze.py)
 !docs/data/gaze/*.json
+!docs/thesis/index.json
 
 # 데이터 파일 (드라이브에서 관리됨)
 *.xlsx
@@ -78,3 +79,6 @@ thesis-lab/cache/
 thesis-lab/output/
 thesis-lab/build_log.txt
 thesis-lab/__pycache__/
+
+# 종목 리서치 가격 레벨(목표가·진입가·손절)은 PC 전용 — 공개 사이트에 올리지 않는다
+docs/thesis/private/

@@ -138,6 +138,9 @@
   .deep code { font-family: Consolas, monospace; font-size: 12px; background: var(--surface); padding: 1px 4px; border-radius: 4px; }
   .deep a { color: var(--accent); } .deep hr { border: none; border-top: 1px solid var(--grid); margin: 12px 0; }
   .deep .fm { display: none; }
+  .deep.priv { border: 1.5px dashed var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--soft)); max-height: none; }
+  .privhdr { font-weight: 700; color: var(--accent); font-size: 13px; margin-bottom: 4px; }
+  .kpi .v .warn { color: var(--neg); font-weight: 700; }
   .qt { font-size: 12px; }
   .qt th, .qt td { padding: 5px 8px; }
   .spark { vertical-align: middle; }
@@ -181,7 +184,7 @@
 
   <div class="card hidden" id="secDeepList">
     <h2>📝 심층 투자 논리 리포트 <span class="cnt" id="deepListCnt"></span><button class="fold" data-sec="secDeepList" onclick="toggleFold(this)">접기 ▲</button></h2>
-    <div class="meta">Claude Code 에서 <code>/thesis 종목명</code> 으로 생성한 15단계 리포트(웹 검색 증거 포함). 종목을 누르면 상세에서 본문을 보여줍니다.</div>
+    <div class="meta">Claude Code 에서 <code>/thesis 종목명</code> 으로 생성한 15단계 리포트(웹 검색 증거 포함), 또는 리서치팀 발표자료(PPT)를 옮긴 종목 리서치. 종목을 누르면 상세에서 '리서치 기준 대비 지금'(자동 숫자)과 본문을 보여줍니다. 목표가·진입가·손절 같은 가격 레벨은 PC 에서 열 때만 표시됩니다.</div>
     <div class="tblwrap"><table id="tblDeep"></table></div>
   </div>
 
@@ -257,6 +260,8 @@
     </div>
     <div id="cDeep" class="hidden">
       <h3>📝 심층 투자 논리 리포트 <span class="cnt" id="cDeepMeta"></span></h3>
+      <div id="cDeepDelta"></div>
+      <div class="deep priv hidden" id="cDeepPriv"></div>
       <div class="deep" id="cDeepBody"></div>
     </div>
     <details id="cTplWrap" open>
@@ -684,9 +689,10 @@ function renderDeepList() {
   const cols = [
     {h:'종목', l:true, v:r=>r.name, f:r=>`<b>${esc(r.name)}</b> <span class="code">${r.code}</span><span class="sub">${esc(r.ind||'')}</span>`},
     {h:'작성일', v:r=>r.date, f:r=>r.date||'-'},
-    {h:'심층 점수', v:r=>r.score, f:r=>r.score == null ? '-' : `${scBadge(r.score)}${r.prev_score != null ? `<span class="sub ${cls(r.score - r.prev_score)}">${chgTxt(r.score - r.prev_score)} (${r.prev_date||''})</span>` : ''}`},
+    {h:'유형', l:true, v:r=>r.src||'', f:r=>r.src === 'research' ? '<span class="tag t-mixed">리서치 PPT</span>' : '<span class="tag t-core">심층 /thesis</span>'},
+    {h:'점수', v:r=>r.score, f:r=>r.score == null ? '-' : ((r.scale||30) === 30 ? `${scBadge(r.score)}${r.prev_score != null ? `<span class="sub ${cls(r.score - r.prev_score)}">${chgTxt(r.score - r.prev_score)} (${r.prev_date||''})</span>` : ''}` : `<b>${r.score}</b><span class="sub">/${r.scale} 수동</span>`)},
     {h:'자동 점수(게시 시점)', v:r=>r.auto_score, f:r=>r.auto_score == null ? '-' : `${r.auto_score}<span class="sub">${r.auto_scale ? '/' + r.auto_scale : (r.date < '2026-09-30' ? '/30' : '/75')}</span>`},
-    {h:'분류', l:true, v:r=>r.cls||'', f:r=>r.cls ? `<span class="tag ${/Core|Tactical/.test(r.cls)?'t-core':/Beta/.test(r.cls)?'t-beta':'t-mixed'}">${esc(r.cls)}</span>` : '-'},
+    {h:'분류 · 판단', l:true, v:r=>r.cls||'', f:r=>(r.cls ? `<span class="tag ${/Core|Tactical/.test(r.cls)?'t-core':/Beta/.test(r.cls)?'t-beta':'t-mixed'}">${esc(r.cls)}</span>` : '-') + (r.verdict ? `<span class="sub">${esc(r.verdict)}</span>` : '')},
   ];
   makeTable($('#tblDeep'), cols, rows, 'deep', code => showCompany(code, true), curC);
 }
@@ -696,9 +702,55 @@ function showDeep(code) {
   if (!meta) { box.classList.add('hidden'); tw.open = true; hint.textContent = '— 심층 리포트 없음: 자동 채움(회색) + 내 메모. /thesis 로 심층 리포트를 만들 수 있습니다'; return; }
   tw.open = false; hint.textContent = '— 심층 리포트가 있어 접어 둠. 펼치면 자동 채움 + 내 메모';
   box.classList.remove('hidden');
-  $('#cDeepMeta').textContent = `${meta.date} · 심층 ${meta.score ?? '-'}/30 · ${meta.cls || ''}`;
-  $('#cDeepBody').innerHTML = '<div class="meta">불러오는 중…</div>';
-  fetch(meta.file, {cache:'no-store'}).then(r => r.text()).then(md => { $('#cDeepBody').innerHTML = mdToHtml(md.replace(/^---[\s\S]*?---\s*/, '')); }).catch(() => { $('#cDeepBody').innerHTML = '<div class="meta">리포트를 불러올 수 없습니다.</div>'; });
+  const isRes = meta.src === 'research', scale = meta.scale || 30;
+  $('#cDeepMeta').textContent = `${meta.date} · ${isRes ? '리서치 PPT' : '심층'} ${meta.score ?? '-'}/${scale} · ${meta.cls || ''}${meta.verdict ? ' · ' + meta.verdict : ''}`;
+  $('#cDeepDelta').innerHTML = ''; $('#cDeepBody').innerHTML = '<div class="meta">불러오는 중…</div>';
+  const pv = $('#cDeepPriv'); pv.classList.add('hidden'); pv.innerHTML = '';
+  // 공개 본문(docs/thesis/<code>.md) + 가격 레벨(docs/thesis/private/<code>.md, git 제외 → 공개 사이트에서는 404 → 표시 안 함)
+  const pubP = fetch(meta.file, {cache:'no-store'}).then(r => r.ok ? r.text() : Promise.reject(new Error('404')));
+  const privP = fetch(`thesis/private/${code}.md`, {cache:'no-store'}).then(r => r.ok ? r.text() : null).catch(() => null);
+  Promise.all([pubP, privP]).then(([md, pmd]) => {
+    if (curC !== code) return;
+    const fm = parseFm(md), pfm = pmd ? parseFm(pmd) : null;
+    $('#cDeepBody').innerHTML = mdToHtml(md.replace(/^---[\s\S]*?---\s*/, ''));
+    $('#cDeepDelta').innerHTML = deltaCard(code, meta, fm, pfm);
+    if (pmd) { pv.classList.remove('hidden'); pv.innerHTML = '<div class="privhdr">🔒 가격 레벨 — PC 전용 (git 제외, 공개 사이트에는 없음)</div>' + mdToHtml(pmd.replace(/^---[\s\S]*?---\s*/, '')); }
+  }).catch(() => { $('#cDeepBody').innerHTML = '<div class="meta">리포트를 불러올 수 없습니다.</div>'; });
+}
+// frontmatter(--- k: v ---) → 객체. 숫자는 숫자로
+function parseFm(md) {
+  const m = md.match(/^---\r?\n([\s\S]*?)\r?\n---/); const fm = {};
+  if (m) m[1].split(/\r?\n/).forEach(l => { const i = l.indexOf(':'); if (i > 0) { const k = l.slice(0, i).trim(); let v = l.slice(i + 1).trim(); if (/^-?\d+(\.\d+)?$/.test(v)) v = +v; fm[k] = v; } });
+  return fm;
+}
+// 📌 리서치 기준 대비 지금 — 리포트 frontmatter 의 base_* (작성 시점) vs thesis_data 의 현재 값
+function deltaCard(code, meta, fm, pfm) {
+  const c = C[code]; const base = String(fm.date || meta.date || '');
+  const pct = (a, b) => (a && b) ? (b / a - 1) * 100 : null;
+  const chg = (a, b, d = 1) => { const p = pct(a, b); return p == null ? '' : `<span class="${cls(p)}">${sg(p, d, '%')}</span>`; };
+  const head = `<div class="meta" style="margin:4px 2px 2px">📌 <b>리서치 기준(${base}) 대비 지금</b> — 자동 숫자, 시세·컨센서스는 데이터 기준일 ${D.asof}. 본문은 공시·실적 뒤 해당 STEP 만 손보면 됩니다.</div>`;
+  if (!c) return head + '<div class="meta">퀀트데이터에 없는 종목이라 자동 비교를 만들 수 없습니다.</div>';
+  const items = [];
+  const px = c.price;
+  if (fm.base_price) items.push(['주가 (기준 → 지금)', `${fmtInt(fm.base_price)} → <b>${fmtInt(px)}</b>`, `${chg(fm.base_price, px)} · 시총 ${fmtInt(c.mcap)}억`]);
+  else items.push(['주가 (지금)', `<b>${fmtInt(px)}</b>`, `시총 ${fmtInt(c.mcap)}억`]);
+  if (fm.base_eps_e) items.push(['올해 EPS(E) 컨센서스', `${fmtInt(fm.base_eps_e)} → <b>${fmtInt(c.eps_e)}</b>`, `${chg(fm.base_eps_e, c.eps_e)} · 4주 ${revTxt(c.eps_rev4w)}`]);
+  else items.push(['EPS(E) 4주 변화', `<span class="${cls(c.eps_rev4w)}">${revTxt(c.eps_rev4w)}</span>`, `OP(E) ${revTxt(c.op_rev4w)}`]);
+  if (fm.base_op_e) items.push(['올해 영업이익(E) 억', `${fmtInt(fm.base_op_e)} → <b>${fmtInt(c.op_e)}</b>`, `${chg(fm.base_op_e, c.op_e)} · 4주 ${revTxt(c.op_rev4w)}`]);
+  items.push(['PER(E) / 52주 고점 대비', `${nz(c.per_e,1,'x')} / <span class="${cls(c.off_high)}">${sg(c.off_high,1,'%')}</span>`, `MA200 ${sg(c.ma200,1,'%')} · 외인 ${nz(c.foreign_ratio,1,'%')} (${sg(c.foreign_ratio_chg,2,'pp')})`]);
+  if (c.q_periods && c.q_periods.length) { const n = c.q_periods.length - 1; items.push([`최근 분기 ${c.q_periods[n]}`, `매출 ${fmtInt(c.q_rev[n])} · OP <b>${fmtInt(c.q_op[n])}</b>`, `OPM ${nz(c.q_opm[n],1,'%')} · YoY ${sg(c.opm_yoy_pp,1,'pp')}`]); }
+  const newRep = (c.reports || []).filter(r => r.d > base).sort((a, b) => (b.d || '').localeCompare(a.d || ''));
+  items.push(['기준일 이후 리포트', `<b>${newRep.length}</b>건`, newRep.length ? `${newRep[0].d} ${esc(newRep[0].br || '')}${newRep[0].tp ? ' · 목표가 ' + fmtInt(newRep[0].tp) : ''}` : '새 리포트 없음 (60일 창)']);
+  const newDart = (c.dart || []).filter(h => h.d > base);
+  items.push(['기준일 이후 수주 공시', `<b>${newDart.length}</b>건`, newDart.length ? `${newDart[0].d} ${esc((newDart[0].content || newDart[0].nm || '').slice(0, 28))}` : '새 공급계약 공시 없음 (60일 창)']);
+  items.push(['다음 실적', c.next_earn_days != null ? `D-${c.next_earn_days}` : '-', c.next_earn_label || (fm.base_next_event ? '리서치 당시: ' + esc(String(fm.base_next_event)) : '')]);
+  if (c.score) items.push(['자동 점수 (게시 → 지금)', `${meta.auto_score ?? '-'} → <b>${c.score.total}</b>`, `/${c.score.max || 75}${c.score_chg != null ? ' · 전회 ' + chgTxt(c.score_chg) : ''}`]);
+  if (pfm && pfm.stop && px) {
+    const toStop = pct(px, pfm.stop), toT1 = pfm.target1 ? pct(px, pfm.target1) : null;
+    const warn = px <= pfm.stop ? '<span class="warn">🚨 손절선 이탈</span>' : px <= pfm.stop * 1.05 ? '<span class="warn">⚠️ 손절선 5% 이내</span>' : '';
+    items.push(['🔒 목표1 / 손절까지', `${toT1 != null ? sg(toT1, 0, '%') : '-'} / <span class="${cls(toStop)}">${sg(toStop, 0, '%')}</span>`, `목표1 ${fmtInt(pfm.target1)} · 손절 ${fmtInt(pfm.stop)} ${warn}`]);
+  }
+  return head + `<div class="kpis">${items.map(([k, v, s]) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}${s ? ` <small>${s}</small>` : ''}</div></div>`).join('')}</div>`;
 }
 function mdToHtml(md) {
   const inline = s => esc(s)
