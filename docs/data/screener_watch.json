@@ -1,33 +1,24 @@
 {
- "date": "2026-11-04",
+ "date": "2026-11-05",
  "high_52w_ratio": 0.65,
  "items": [
   {
    "name": "안랩",
    "ticker": "053800",
-   "close": 99200.0,
-   "change_ratio": -12.91,
-   "rs_score": 74.5,
-   "vol_ratio": 64.1,
-   "from_high": -27.7
+   "close": 98200.0,
+   "change_ratio": -2.39,
+   "rs_score": 75.2,
+   "vol_ratio": 49.3,
+   "from_high": -28.5
   },
   {
    "name": "삼성화재",
    "ticker": "000810",
-   "close": 653000.0,
-   "change_ratio": -0.15,
-   "rs_score": 63.7,
-   "vol_ratio": 82.1,
-   "from_high": -13.7
-  },
-  {
-   "name": "대한항공",
-   "ticker": "003490",
-   "close": 29600.0,
-   "change_ratio": 1.89,
-   "rs_score": 57.8,
-   "vol_ratio": 88.7,
-   "from_high": -8.9
+   "close": 652000.0,
+   "change_ratio": -1.66,
+   "rs_score": 67.9,
+   "vol_ratio": 90.9,
+   "from_high": -13.9
   }
  ]
 }
