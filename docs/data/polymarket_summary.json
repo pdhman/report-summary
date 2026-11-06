@@ -1,5 +1,5 @@
 {
- "date": "2026-11-06 07:08",
+ "date": "2026-11-06 16:04",
  "regime_icon": "🟢",
  "regime_name": "Goldilocks (근사)",
  "arrows": "Easing ↑ / Recession → / Inflation → / Risk →",
@@ -7,31 +7,31 @@
   "title": "Fed Decision in December?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.635,
-   "d24": -0.14
+   "prob": 0.665,
+   "d24": -0.11
   },
-  "mean": 15.93,
-  "mean_d24": -3.495,
+  "mean": 16.258,
+  "mean_d24": -2.976,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
   "prob": 0.045,
-  "d24": -0.01,
+  "d24": null,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
   "q": "December 31, 2027 · Russia x Ukraine ceasefire by December 31, 2027?",
-  "pmss": 84.9,
+  "pmss": 86.0,
   "band": "Strong Signal",
-  "d24": -0.115,
-  "prob": 0.42
+  "d24": -0.12,
+  "prob": 0.415
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.7,
-  "top_pmss": 84.9
+  "top_pmss": 86.0
  },
  "alerts": 7,
- "n_markets": 444,
+ "n_markets": 419,
  "source": "direct"
 }
