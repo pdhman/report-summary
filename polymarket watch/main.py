@@ -48,6 +48,10 @@ def _unit(ev: Event) -> str:
         return "bp"
     if "%" in text:
         return "%"
+    if "market-cap" in ev.slug and "$" in text and "t" in text:
+        return "조달러"            # "$4.00-$4.50T" → 1T = 1조
+    if ev.slug.startswith("gpu-rental-prices"):
+        return "$/시간"
     if "$" in text:
         return "$"
     if re.search(r"\d+k\b", text):
@@ -172,7 +176,9 @@ def run_once(dry: bool = False, base_net: float = 0.50, html: bool = True,
                                "desc": spec["desc"], "axis": spec["axis"], "events": ev_payloads})
 
     moves = {a: (axis_moves[a] / axis_w[a] if axis_w.get(a) else 0.0) for a in axis_moves}
-    regime = P.classify_regime(moves)
+    regime = P.classify_regime(moves, snap)
+    if regime.risk_off:
+        log.warning("Risk-Off 발동: %s (기저 레짐 %s)", " · ".join(regime.risk_off), regime.base_name)
     top = max((r["pmss"] for r in all_rows), default=0.0)
     new_net = P.exposure_adjustment(regime.name, top, base_net)
 
@@ -195,7 +201,7 @@ def run_once(dry: bool = False, base_net: float = 0.50, html: bool = True,
 
     # ── 히스토리 누적 ──
     hist_row = {
-        "ts": int(now), "regime": regime.name,
+        "ts": int(now), "regime": regime.name, "ro": 1 if regime.risk_off else 0,
         "e": round(regime.easing, 4), "r": round(regime.recession, 4),
         "i": round(regime.inflation, 4), "k": round(regime.risk, 4), "top": top,
         "p": {r["id"]: round(r["prob"], 3) for r in all_rows if r["hist7"] or r["id"] in key_ids},
@@ -226,7 +232,9 @@ def run_once(dry: bool = False, base_net: float = 0.50, html: bool = True,
         "stats": dict(STATS),
         "regime": {"icon": regime.icon, "name": regime.name, "easing": round(regime.easing, 4),
                    "recession": round(regime.recession, 4), "inflation": round(regime.inflation, 4),
-                   "risk": round(regime.risk, 4), "signals": regime.signals, "arrows": regime.arrows},
+                   "risk": round(regime.risk, 4), "signals": regime.signals, "arrows": regime.arrows,
+                   "base": regime.base_name, "risk_off": regime.risk_off,
+                   "risk_off_rule": C.RISK_OFF},
         "exposure": {"base": base_net, "suggested": new_net, "top_pmss": top},
         "assets": [{"ticker": t, "name": C.ASSETS[t], "chg": round(snap.chg_24h[t], 5),
                     "arrow": snap.arrow(t), "last": snap.last.get(t)}
@@ -267,6 +275,7 @@ def _summary(data: dict, rows: list[dict]) -> dict:
         "date": data["generated_at"][:16],
         "regime_icon": data["regime"]["icon"], "regime_name": data["regime"]["name"],
         "arrows": data["regime"]["arrows"],
+        "risk_off": data["regime"]["risk_off"], "regime_base": data["regime"]["base"],
         "fomc": fomc, "recession": rec,
         "top_signal": None if not top else {
             "q": (top["label"] + " · " if top["label"] else "") + top["q"],

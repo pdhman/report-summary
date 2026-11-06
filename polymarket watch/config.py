@@ -34,13 +34,15 @@ PROXY_TIMEOUT = 60
 # ─────────────────────────────────────────────
 TAGS = ["economy", "fed-rates", "macro-indicators", "Global-Rates", "inflation",
         "treasuries", "geopolitics", "oil", "tariffs", "trade-war",
-        "government-shutdown", "jobs-report", "gdp", "china"]
+        "government-shutdown", "jobs-report", "gdp", "china",
+        # AI · 반도체 정책 (2026-11 추가): 데이터센터 규제·AI 버블·빅테크 시총
+        "ai", "ai-regulation", "compute", "ai-bubble", "big-tech"]
 EVENTS_PER_TAG = 100
 MANUAL_EVENTS: list[str] = []     # 자동선별이 놓친 이벤트 slug 를 직접 등록
 
 # 어떤 그룹이든 무조건 제외 (스포츠·연예·기업가치·주택 등 비매크로)
-GLOBAL_EXCLUDE = (r"parlay|combo|temperature|emmy|oscar|nobel|net-worth|largest-company|"
-                  r"home-value|median-home|best-ai|ai-model|ai-company|bitcoin|crypto|ethereum|"
+GLOBAL_EXCLUDE = (r"parlay|combo|temperature|emmy|oscar|nobel|net-worth|2nd-largest|3rd-largest|largest-ipo|"
+                  r"largest-private|home-value|median-home|best-ai|ai-model|ai-company|bitcoin|crypto|ethereum|"
                   r"stripe|acquire|ipo-valuation|prime-minister|election|sports|rials|"
                   r"companies-will-the-us-take|eggs")
 
@@ -108,10 +110,28 @@ GROUPS = {
         "polarity": [(r"decrease|cut|lower", +1), (r"increase|hike|raise", -1)],
         "ev_sign": [(r".", 0)],
     },
+    "AI_POLICY": {
+        "title": "AI · 반도체 정책", "icon": "🤖", "axis": "risk", "importance": 7,
+        "desc": "데이터센터 모라토리엄(가동·신설 중지 법안) · AI 버블 · AI 인프라 신용 · 반도체 수출 통제 · 빅테크 시총 — 확률↑ 가 리스크↑(+) / 완화(−)",
+        "include": [r"data-center-moratorium", r"ai-bubble", r"coreweave-(announces-bankruptcy|downgraded)",
+                    r"openai-announces-bankruptcy", r"nvidias-market-cap", r"^largest-company-end-of-",
+                    r"^gpu-rental-prices-(h100|b200)-end-of-20\d\d-20", r"ai-safety-bill|federal-ai-framework|ai-frontier",
+                    r"(semiconductor|chip)s?-(tariff|export)|export-control|chip-export|nvidia-china|chips?-ban"],
+        "exclude": [r"released|release|arena|hle-|gpt-|gemini|outage|ipo|valuation|raise|lead-bank|app-store|"
+                    r"starship|in-space|agi|millennium|sandbox|hypothesis|higher-strikes|kevin-oleary|hochul"],
+        "max_events": 16,
+        # 거래량이 적어도 항상 보여줄 핵심 시장 (거래량순 상한보다 먼저 채움)
+        "pin": [r"data-center-moratorium", r"ai-bubble-burst", r"coreweave", r"nvidias-market-cap",
+                r"^largest-company-end-of-", r"ai-safety-bill", r"export-control|chip-export|chips?-ban"],
+        "polarity": [(r"pace the ai frontier", 0),
+                     (r"moratorium|bubble burst|bankruptcy|downgraded|ban|restrict|export control|safety bill|tariff", +1)],
+        # 분포형: 엔비디아 시총이 클수록 리스크↓(−1). GPU 임대료·최대 기업은 표시만(0)
+        "ev_sign": [(r"nvidias-market-cap", -1), (r".", 0)],
+    },
     "TRADE": {
         "title": "관세 · 무역", "icon": "🚢", "axis": "risk", "importance": 7,
         "desc": "관세 부과·완화, 무역합의, 수출통제 — 확률↑ 가 리스크↑ 인지(+) 리스크↓ 인지(−) 극성 표시",
-        "include": [r"tariff", r"trade-deal|trade-war|trade-deficit", r"sec-?232|section-232", r"export-control|chip-export"],
+        "include": [r"tariff", r"trade-deal|trade-war|trade-deficit", r"sec-?232|section-232"],
         "exclude": [r"apple|cxmt|cuba|carney|dividend"],
         "max_events": 8,
         "polarity": [(r"lower|remove|lift|agreement|deal|exempt|pause|reduce", -1),
@@ -166,7 +186,21 @@ KEY_SERIES = [
     (r"^us-iran-final-nuclear-deal", r"december", "미-이란 핵합의(12월까지)"),
     (r"^will-china-invade-taiwan-before-2027", r".", "중국의 대만 침공(2026)"),
     (r"^russia-x-ukraine-ceasefire-by", r"december", "러-우 휴전(12월까지)"),
+    (r"^ai-bubble-burst", r"june", "AI 버블 붕괴(2027년 6월까지)"),
+    (r"^ai-bubble-burst", r"december", "AI 버블 붕괴(연내)"),
+    (r"^will-any-state-enact-a-data-center-moratorium", r".", "주 데이터센터 모라토리엄(연내)"),
+    (r"^largest-company-end-of-december", r"^nvidia", "엔비디아 세계 시총 1위(연말)"),
 ]
+
+# ─────────────────────────────────────────────
+# 급락 안전장치 → Risk-Off(급락·공포) 레짐 (2026-11-06 추가)
+#   Cross-asset 24h 변화가 아래 중 하나라도 해당하면 4분면 판정 대신 Risk-Off 로 표시하고
+#   비중 확대 제안을 막는다(기본 비중 유지).
+# ─────────────────────────────────────────────
+RISK_OFF = {
+    "vix_ticker": "^VIX", "vix_up": 0.30,          # VIX 하루 +30% 이상
+    "nasdaq_ticker": "NQ=F", "nasdaq_down": -0.03,  # 나스닥 선물 하루 −3% 이하
+}
 MAX_SIGNAL_HISTORY = 70      # 1주 60분봉 히스토리를 받을 시장 수 상한 (프록시 분당 20회 고려)
 SIGNAL_MIN_PROB = 0.03       # 분포형 이벤트에서 이 확률 미만 구간은 히스토리 생략
 

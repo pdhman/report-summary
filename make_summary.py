@@ -648,6 +648,9 @@ def build():
             return f' <span class="k-diff {cls}">{"+" if v > 0 else ""}{v:.{dec}f}{unit}</span>'
         body = (f'<div class="krow"><span class="k-name">레짐</span>'
                 f'<span class="k-val">{esc(c["regime_icon"])} {esc(c["regime_name"])}</span></div>')
+        if c.get("risk_off"):
+            # 급락 안전장치 발동: 사유(VIX·나스닥)를 카드에 바로 보여준다
+            body += f'<div class="sc-note">🚨 {esc(" · ".join(c["risk_off"]))}</div>'
         fomc = c.get("fomc")
         if fomc and fomc.get("top"):
             body += (f'<div class="krow"><span class="k-name">{esc(fomc["title"].replace("?", ""))}</span>'

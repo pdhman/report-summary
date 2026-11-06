@@ -61,6 +61,9 @@
   .pill b{color:var(--text-primary)}
   .regime .sigs{font-size:13px;color:var(--text-secondary);margin-top:4px}
   .regime .sigs b{color:var(--text-primary)}
+  .robox{margin:6px 0 8px;padding:8px 12px;border-radius:8px;font-size:13px;color:var(--text-primary);
+    border:1px solid color-mix(in srgb,#8e6bd8 45%,transparent);background:color-mix(in srgb,#8e6bd8 10%,transparent)}
+  .robox .rosub{margin-top:3px;font-size:12px;color:var(--text-secondary)}
   @media(max-width:600px){.regime{grid-template-columns:1fr}.regime .big{font-size:30px}}
 
   .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0 8px;}
@@ -238,7 +241,10 @@ function spark(h, color){
 /* ── 레짐 배너 ── */
 function renderRegime(){
   const r=DATA.regime, x=DATA.exposure;
-  const col={'🟢':INK.good,'🔵':SLOT[0],'🟠':SLOT[1],'🔴':INK.critical,'⚪':INK.baseline}[r.icon]||INK.baseline;
+  const col={'🟢':INK.good,'🔵':SLOT[0],'🟠':SLOT[1],'🔴':INK.critical,'⚪':INK.baseline,'🟣':'#8e6bd8'}[r.icon]||INK.baseline;
+  const ro=(r.risk_off&&r.risk_off.length)?`<div class="robox"><b>🚨 급락 안전장치 발동</b> — ${r.risk_off.map(esc).join(' · ')}
+      <div class="rosub">폴리마켓 확률로만 보면 <b>${esc(r.base||'—')}</b> 이지만, 실제 시장이 공포 상태라 그 판정을 쓰지 않고 비중 확대 제안도 막았습니다.
+      이런 날 '완화↑'는 호재가 아니라 "급락 때문에 연준이 덜 올릴 것"이라는 뜻일 수 있습니다.</div></div>`:'';
   const ax=[['easing','완화(Easing)'],['recession','침체(Recession)'],['inflation','물가(Inflation)'],['risk','리스크(Risk)']]
     .map(([k,n])=>{const v=r[k]*100; const a=v>2?'↑':v<-2?'↓':'→'; const cls=v>2?'up':v<-2?'down':'flat';
       return `<span class="pill">${n} <b class="${cls}">${a} ${v>0?'+':''}${v.toFixed(1)}%p</b></span>`;}).join('');
@@ -247,6 +253,7 @@ function renderRegime(){
   document.getElementById('regime').style.setProperty('--rc',col);
   document.getElementById('regime').innerHTML=`<div class="big">${r.icon}</div><div>
     <h2>Macro Regime: ${esc(r.name)}</h2>
+    ${ro}
     <div class="axes">${ax}</div>
     <div class="sigs">${sig}</div>
     <div class="sigs" style="margin-top:6px">Net Exposure 제안 <b>${(x.base*100).toFixed(0)}% → <span class="${netCls}">${(x.suggested*100).toFixed(0)}%</span></b>
@@ -270,6 +277,10 @@ function renderTiles(){
   if(hike){const m=hike.markets[0];tiles.push({label:'2026년 내 연준 금리 인상',value:pct(m.prob),delta:`24h ${dp(m.d24)} · 7일 ${dp(m.d7)}`});}
   const rec=findEv(e=>/^us-recession-by-end-of-2026/.test(e.slug));
   if(rec){const m=rec.markets[0];tiles.push({label:'2026년 미국 경기침체',value:pct(m.prob),delta:`24h ${dp(m.d24)} · 7일 ${dp(m.d7)}`});}
+  const bub=findEv(e=>/^ai-bubble-burst/.test(e.slug));
+  if(bub&&bub.markets.length){const m=bub.markets[bub.markets.length-1];
+    tiles.push({label:'AI 버블 붕괴 ('+esc(m.label||'')+'까지)',value:pct(m.prob),delta:`24h ${dp(m.d24)} · 7일 ${dp(m.d7)}`+
+      (bub.markets.length>1?` · 연내 ${pct(bub.markets[0].prob)}`:'')});}
   const cpi=findEv(e=>e.kind==='dist'&&/inflation-us-monthly/.test(e.slug));
   if(cpi&&cpi.mean!=null){tiles.push({label:esc(cpi.title)+' (내재 기대)',value:`${cpi.mean>0?'+':''}${fmt(cpi.mean,2)}<small>%</small>`,
     delta:`최유력 ${esc(cpi.top.label)} ${pct(cpi.top.prob)} · 24h ${dv(cpi.mean_d24,2,'%p')}`});}
@@ -344,9 +355,22 @@ function cbTable(events){
       <td style="text-align:left">${s?esc(s.label||s.q):'—'}</td><td>${s?pct(s.prob):'—'}</td><td>${money(e.vol24)}</td></tr>`;}).join('');
   return `<div class="card wide"><div class="tblwrap"><table class="cbtable"><tr><th>회의</th><th style="text-align:left">최유력</th><th>확률</th><th>24h</th><th style="text-align:left">차순위</th><th>확률</th><th>거래량 24h</th></tr>${rows}</table></div></div>`;
 }
+/* 주별 데이터센터 모라토리엄: 주마다 사다리가 따로 있어 카드 대신 한 표로 모은다 */
+function moratoriumTable(events){
+  const labels=[]; events.forEach(e=>e.markets.forEach(m=>{const l=m.label||m.q; if(!labels.includes(l)) labels.push(l);}));
+  const head=labels.map(l=>`<th>${esc(l)}</th>`).join('');
+  const rows=events.slice().sort((a,b)=>{const pa=a.markets[0]?.prob||0, pb=b.markets[0]?.prob||0; return pb-pa;}).map(e=>{
+    const st=e.title.replace(/\s+enacts? .*$/i,'');
+    const by={}; e.markets.forEach(m=>by[m.label||m.q]=m);
+    const cells=labels.map(l=>{const m=by[l]; return m?`<td><b>${pct(m.prob)}</b> <span class="sub" style="display:inline">${dp(m.d24)}</span></td>`:'<td>—</td>';}).join('');
+    return `<tr><td><a href="${esc(e.url)}" target="_blank">${esc(st)}</a></td>${cells}<td>${money(e.vol24)}</td></tr>`;}).join('');
+  return `<div class="card wide"><h3>주별 데이터센터 모라토리엄 — 기한까지 법 시행 확률 <span class="badge pol risk">리스크↑</span></h3>
+    <p class="meta">모라토리엄 = 데이터센터 신설·가동을 일정 기간 멈추게 하는 주 법. 확률 옆 작은 숫자는 24h 변화</p>
+    <div class="tblwrap"><table class="cbtable"><tr><th>주</th>${head}<th>거래량 24h</th></tr>${rows}</table></div></div>`;
+}
 function renderGroups(){
   const host=document.getElementById('groups'); host.innerHTML='';
-  const order=['FED','INFLATION','GROWTH','GEOPOLITICS','TRADE','FISCAL','ENERGY','RATES','GLOBAL_CB'];
+  const order=['FED','INFLATION','GROWTH','AI_POLICY','GEOPOLITICS','TRADE','FISCAL','ENERGY','RATES','GLOBAL_CB'];
   const gs=DATA.groups.slice().sort((a,b)=>order.indexOf(a.key)-order.indexOf(b.key));
   let n=0;
   for(const g of gs){
@@ -354,7 +378,13 @@ function renderGroups(){
     n++;
     const evs=g.events.slice().sort((a,b)=>b.vol24-a.vol24);
     let body;
+    const card=e=>e.kind==='dist'?distCard(e,g.axis):e.kind==='ladder'?ladderCard(e,g.axis):binaryCard(e,g.axis);
     if(g.key==='GLOBAL_CB') body='<div class="cards">'+cbTable(evs)+'</div>';
+    else if(g.key==='AI_POLICY'){
+      const isMor=e=>e.kind==='ladder'&&/data-center-moratorium/.test(e.slug);
+      const mor=evs.filter(isMor), rest=evs.filter(e=>!isMor(e));
+      body='<div class="cards">'+(mor.length?moratoriumTable(mor):'')+rest.map(card).join('')+'</div>';
+    }
     else body='<div class="cards">'+evs.map(e=>e.kind==='dist'?distCard(e,g.axis):e.kind==='ladder'?ladderCard(e,g.axis):binaryCard(e,g.axis)).join('')+'</div>';
     const axisTxt=g.axis!=='none'?` · 레짐 축: <b>${AXIS_KO[g.axis]}</b>`:'';
     host.insertAdjacentHTML('beforeend',`<section><h2>${g.icon} ${esc(g.title)}</h2><p class="desc">${esc(g.desc)}${axisTxt} · 이벤트 ${evs.length}개</p>${body}</section>`);
@@ -470,6 +500,7 @@ function renderTrend(){
     {title:'미국 경기침체 (2026)',note:'확률(%)',series:byName(/침체/)},
     {title:'지정학 — 이란·호르무즈',note:'정상화·핵합의·침공 확률(%)',series:byName(/호르무즈|핵합의|이란/)},
     {title:'지정학 — 대만·우크라이나',note:'확률(%)',series:byName(/대만|러-우/)},
+    {title:'AI · 빅테크',note:'AI 버블 붕괴 · 주 데이터센터 모라토리엄 · 엔비디아 시총 1위 확률(%)',series:byName(/AI 버블|모라토리엄|엔비디아/)},
   ].filter(c=>c.series.length);
   cards.forEach((c,i)=>{host.insertAdjacentHTML('beforeend',`<div class="card"><h3>${esc(c.title)}</h3><p class="meta">${esc(c.note)}</p><div id="tr-${i}"></div></div>`);});
   cards.forEach((c,i)=>lineChart(`tr-${i}`,c.series,{unit:'%',dec:0,tdec:1,h:210,ymin:0}));
@@ -495,6 +526,7 @@ function renderFooter(){
     <b>유동성</b> A: 24h 거래량 ≥ $1M & 스프레드 ≤ 2%p · B: ≥ $250K & ≤ 4%p (또는 유동성 ≥ $50K) · X: 그 외(스프레드 &gt; 5%p 는 신호 무시).
     <b>알림</b> |ΔP1H| ≥ ${(a.dp_1h*100)||8}%p 또는 |ΔP24H| ≥ ${(a.dp_24h*100)||15}%p 또는 |Z| ≥ ${a.z||2}, 유동성 ≠ X, PMSS ≥ ${a.pmss_min||55}, 같은 시장·방향 ${a.cooldown_hours||6}시간 내 미발송.<br>
     <b>레짐</b> 완화·침체·물가 축의 24h 가중 ΔP 부호로 Goldilocks / Hard Landing / Reflation / Stagflation 판정(→ 는 −로 근사). 분포형 이벤트는 내재 평균 기준 상단(+)/하단(−) 구간에 극성 부여.
+    <b>급락 안전장치</b> VIX 24h ≥ +${((DATA.regime.risk_off_rule||{}).vix_up||0.3)*100}% 또는 나스닥 선물 24h ≤ ${((DATA.regime.risk_off_rule||{}).nasdaq_down||-0.03)*100}% 이면 🟣 Risk-Off(급락·공포)로 표시하고 비중 확대 제안을 막음(기본 비중 유지).
     Polymarket = 선행 신호 · 채권/FX/선물(yfinance 24h) = 확인 신호 · Net Exposure 조절 변수(종목 선정 아님). Cross-asset 24h 는 최근 1시간봉 기준.<br>
     데이터: Polymarket Gamma/CLOB 공개 API (${esc(DATA.source)}, 호출 ${JSON.stringify(DATA.stats)}) · 선별 규칙·극성은 polymarket watch/config.py 의 GROUPS.
     ${ra?'<br><b>최근 알림</b> '+ra:''}<br>본 페이지는 자동 수집·계산된 참고 자료이며 투자 판단의 책임은 이용자에게 있습니다.`;

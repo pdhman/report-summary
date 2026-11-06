@@ -3,7 +3,7 @@ PMSS 100점 모델 (문서 12장) + Macro Regime 판정 (문서 8~9장) + 노출
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import config as C
 from cross_asset import Confirmation
@@ -63,6 +63,9 @@ REGIMES = {
 }
 
 
+RISK_OFF_SIGNALS = {"Equity": "--", "Duration": "+", "Semis": "--", "Korea": "--"}
+
+
 @dataclass
 class Regime:
     icon: str
@@ -72,6 +75,8 @@ class Regime:
     inflation: float
     risk: float
     signals: dict[str, str]
+    base_name: str = ""                                   # 위험 회피 발동 시 원래(4분면) 레짐
+    risk_off: list[str] = field(default_factory=list)     # 발동 사유 (비어 있으면 미발동)
 
     @property
     def arrows(self) -> str:
@@ -85,10 +90,31 @@ def _sgn(v: float, th: float = 0.02) -> int:
     return 1 if v > th else (-1 if v < -th else 0)
 
 
-def classify_regime(axis_moves: dict[str, float]) -> Regime:
+def risk_off_reasons(snap) -> list[str]:
+    """급락 안전장치: 실제 시장이 공포 상태면 사유 목록을 돌려준다(아니면 빈 목록).
+
+    폴리마켓의 '완화 축↑'은 급락 때문에 연준이 덜 올릴 거라는 뜻일 수 있다
+    (2026-11-06 AI 반도체 급락 때 모델이 Goldilocks·비중 70% 를 낸 사고).
+    그래서 확률 이동보다 실제 가격의 공포 신호를 우선한다.
+    """
+    if snap is None or not getattr(snap, "ok", False):
+        return []
+    R = C.RISK_OFF
+    out = []
+    vix = snap.chg_24h.get(R["vix_ticker"])
+    if vix is not None and vix >= R["vix_up"]:
+        out.append(f"VIX {vix*100:+.1f}% (기준 +{R['vix_up']*100:.0f}%)")
+    nq = snap.chg_24h.get(R["nasdaq_ticker"])
+    if nq is not None and nq <= R["nasdaq_down"]:
+        out.append(f"나스닥 선물 {nq*100:+.1f}% (기준 {R['nasdaq_down']*100:.0f}%)")
+    return out
+
+
+def classify_regime(axis_moves: dict[str, float], snap=None) -> Regime:
     """
     axis_moves: {"easing": +0.12, "recession": -0.01, ...}
       = 카테고리 내 시장들의 polarity·유동성 가중 24h ΔP 합
+    snap: Cross-asset 스냅샷. 급락 조건(RISK_OFF)이면 4분면 대신 Risk-Off 레짐.
     """
     e = axis_moves.get("easing", 0.0)
     r = axis_moves.get("recession", 0.0)
@@ -107,13 +133,23 @@ def classify_regime(axis_moves: dict[str, float]) -> Regime:
     sigs = dict(sigs)
     if k > 0.05:
         sigs["Risk"] = "⚠ Geopolitical/Tariff ↑"
-    return Regime(icon, name, e, r, i, k, sigs)
+
+    reasons = risk_off_reasons(snap)
+    if reasons:
+        ro_sigs = dict(RISK_OFF_SIGNALS)
+        if "Risk" in sigs:
+            ro_sigs["Risk"] = sigs["Risk"]
+        return Regime("🟣", "Risk-Off (급락·공포)", e, r, i, k, ro_sigs, base_name=name, risk_off=reasons)
+    return Regime(icon, name, e, r, i, k, sigs, base_name=name)
 
 
 def exposure_adjustment(regime_name: str, pmss: float, base_net: float = 0.50) -> float:
     """
     문서 13장: Polymarket은 종목 선정이 아니라 Net Exposure(베타) 조절 변수.
     """
+    # 위험 회피(급락·공포) 중에는 비중 확대를 제안하지 않는다 — 기본 비중 유지
+    if regime_name.startswith("Risk-Off"):
+        return base_net
     if pmss < 55:
         return base_net
     step = 0.10 if pmss < 80 else 0.20

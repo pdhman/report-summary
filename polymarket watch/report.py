@@ -71,7 +71,10 @@ def format_alert(r: dict, regime, snap: AssetSnapshot, base_net: float, new_net:
         f"<b>PMSS {r['pmss']:.0f}/100</b>  "
         f"(Shock {r['s_shock']:.0f} · Confirm {r['s_confirm']:.0f} · Liq {r['s_liq']:.0f} · "
         f"Persist {r['s_persist']:.0f} · Imp {r['s_imp']:.0f})\n\n"
-        f"{regime.icon} <b>Regime: {regime.name}</b>\n{regime.arrows}\n"
+        f"{regime.icon} <b>Regime: {regime.name}</b>\n"
+        + (f"⚠ 급락 안전장치: {' · '.join(regime.risk_off)} (기저 {regime.base_name}) — 비중 확대 차단\n"
+           if regime.risk_off else "")
+        + f"{regime.arrows}\n"
         + " · ".join(f"{k} {v}" for k, v in regime.signals.items()) + "\n"
         f"Net Exposure 제안: {base_net*100:.0f}% → <b>{new_net*100:.0f}%</b>\n\n"
         f"{r['url']}"

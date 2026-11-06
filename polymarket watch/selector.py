@@ -138,8 +138,14 @@ def build_event(ev: dict, group: str) -> Event | None:
         for m in mks:
             m.polarity = _polarity(spec, m) if spec["axis"] != "none" else 0
         if kind == "ladder":
-            # 날짜 사다리는 Gamma 순서(대개 시간순), 숫자 사다리는 값 오름차순
-            if all(m.value is not None for m in mks) and len({m.value for m in mks}) == len(mks):
+            # 날짜 사다리("by June 30, 2027")는 날짜순. 라벨 숫자를 값으로 정렬하면
+            # 6/30(30) 이 12/31(31) 보다 앞서는 식으로 뒤섞인다(2026-11 수정).
+            dates = [_label_date(m.label, m.end_date) for m in mks]
+            if all(d is not None for d in dates):
+                order = sorted(range(len(mks)), key=lambda j: dates[j])
+                mks[:] = [mks[j] for j in order]
+            # 숫자 사다리는 값 오름차순
+            elif all(m.value is not None for m in mks) and len({m.value for m in mks}) == len(mks):
                 mks.sort(key=lambda m: m.value)
         else:
             mks.sort(key=lambda m: -m.volume24h)
@@ -175,7 +181,13 @@ def select_events() -> list[Event]:
 
     out: list[Event] = []
     for g in C.GROUP_ORDER:
-        evs = sorted(by_group[g], key=lambda e: -e.volume24h)[: C.GROUPS[g]["max_events"]]
+        spec = C.GROUPS[g]
+        ranked = sorted(by_group[g], key=lambda e: -e.volume24h)
+        # pin: 거래량이 적어도 항상 포함할 핵심 이벤트를 먼저 채우고, 나머지는 거래량순
+        pins = spec.get("pin") or []
+        pinned = [e for e in ranked if _match_any(pins, e.slug.lower())] if pins else []
+        rest = [e for e in ranked if e not in pinned]
+        evs = (pinned + rest)[: max(spec["max_events"], len(pinned))]
         out.extend(evs)
         log.info("group %s: %d events (%d markets)", g, len(evs), sum(len(e.markets) for e in evs))
     return out
