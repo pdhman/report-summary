@@ -1,8 +1,13 @@
 {
- "date": "2026-11-06 16:04",
- "regime_icon": "🟢",
- "regime_name": "Goldilocks (근사)",
- "arrows": "Easing ↑ / Recession → / Inflation → / Risk →",
+ "date": "2026-11-06 17:26",
+ "regime_icon": "🟣",
+ "regime_name": "Risk-Off (급락·공포)",
+ "arrows": "Easing ↑ / Recession ↑ / Inflation → / Risk →",
+ "risk_off": [
+  "VIX +69.9% (기준 +30%)",
+  "나스닥 선물 -4.8% (기준 -3%)"
+ ],
+ "regime_base": "Hard Landing (근사)",
  "fomc": {
   "title": "Fed Decision in December?",
   "top": {
@@ -10,8 +15,8 @@
    "prob": 0.665,
    "d24": -0.11
   },
-  "mean": 16.258,
-  "mean_d24": -2.976,
+  "mean": 16.312,
+  "mean_d24": -2.922,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
@@ -21,17 +26,17 @@
  },
  "top_signal": {
   "q": "December 31, 2027 · Russia x Ukraine ceasefire by December 31, 2027?",
-  "pmss": 86.0,
-  "band": "Strong Signal",
+  "pmss": 91.6,
+  "band": "Event Shock",
   "d24": -0.12,
   "prob": 0.415
  },
  "exposure": {
   "base": 0.5,
-  "suggested": 0.7,
-  "top_pmss": 86.0
+  "suggested": 0.5,
+  "top_pmss": 91.6
  },
- "alerts": 7,
- "n_markets": 419,
+ "alerts": 8,
+ "n_markets": 489,
  "source": "direct"
 }
