@@ -1,22 +1,19 @@
 {
- "date": "2026-11-06 17:26",
- "regime_icon": "🟣",
- "regime_name": "Risk-Off (급락·공포)",
- "arrows": "Easing ↑ / Recession ↑ / Inflation → / Risk →",
- "risk_off": [
-  "VIX +69.9% (기준 +30%)",
-  "나스닥 선물 -4.8% (기준 -3%)"
- ],
- "regime_base": "Hard Landing (근사)",
+ "date": "2026-11-07 01:03",
+ "regime_icon": "⚪",
+ "regime_name": "Neutral / Mixed (근사)",
+ "arrows": "Easing → / Recession ↑ / Inflation → / Risk →",
+ "risk_off": [],
+ "regime_base": "Neutral / Mixed (근사)",
  "fomc": {
   "title": "Fed Decision in December?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.665,
-   "d24": -0.11
+   "prob": 0.765,
+   "d24": 0.11
   },
-  "mean": 16.312,
-  "mean_d24": -2.922,
+  "mean": 19.343,
+  "mean_d24": 3.315,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
@@ -25,18 +22,18 @@
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "December 31, 2027 · Russia x Ukraine ceasefire by December 31, 2027?",
-  "pmss": 91.6,
-  "band": "Event Shock",
-  "d24": -0.12,
-  "prob": 0.415
+  "q": "November 30 · US-Iran Final Nuclear Deal by November 30, 2026?",
+  "pmss": 57.8,
+  "band": "Interest",
+  "d24": 0.024,
+  "prob": 0.041
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 91.6
+  "top_pmss": 57.8
  },
- "alerts": 8,
- "n_markets": 489,
+ "alerts": 3,
+ "n_markets": 466,
  "source": "direct"
 }
