@@ -339,8 +339,6 @@ def _write_report(today, date_str):
     </div>
   </section>
 
-  {_watch_section(date_str)}
-
   <section>
     <h2>산업 분포</h2>
     <div class="chart-card">{pie_html if pie_html else '<p class="muted">데이터 없음</p>'}</div>
@@ -350,6 +348,8 @@ def _write_report(today, date_str):
     <h2>연속 등장 종목 <span class="h2sub">(2일 이상)</span></h2>
     <div class="chart-card">{streak_html if streak_html else '<p class="muted">2일 이상 연속 등장한 종목이 없습니다.</p>'}</div>
   </section>
+
+  {_watch_section(date_str)}  <!-- 참고 목록이라 맨 아래 (2026-11-10 사용자 요청) -->
 
   <footer>
     <p class="muted">본 리포트는 자동 생성된 참고 자료이며 투자 권유가 아닙니다. · RS: 상대강도(백분위) · 거래대금 단위: 백만원</p>
