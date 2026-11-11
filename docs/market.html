@@ -109,8 +109,8 @@
     <div class="grid2">
       <div class="chart-block"><div class="ct">VKOSPI <span class="cd">KRX 코스피200 변동성지수</span></div><div id="ch-vk"></div></div>
       <div class="chart-block"><div class="ct">코스피 실현변동성 <span class="cd">20일 · 연율화 %</span></div><div id="ch-rv"></div></div>
-      <div class="chart-block"><div class="ct">풋콜비율 <span class="cd">KRX 코스피200옵션 거래량 · 풋÷콜 · 로그 눈금(같은 배수 = 같은 높이) · <b style="color:var(--gray)">5일 평균</b></span></div><div id="ch-pc"></div></div>
-      <div class="chart-block"><div class="ct">풋·콜 거래량 <span class="cd">만 계약 · 로그 눈금 · <b style="color:var(--dn)">풋</b> · <b style="color:var(--up)">콜</b> · 비율이 움직인 이유(풋 증가 vs 콜 감소) 확인용</span></div><div id="ch-pcvol"></div></div>
+      <div class="chart-block"><div class="ct">풋콜비율 <span class="cd">KRX 코스피200옵션 거래량 · 풋÷콜 · 로그 눈금(같은 배수 = 같은 높이) · <b style="color:var(--gray)">5일 평균</b> · <b style="color:var(--violet)">┊</b> 옵션 만기일</span></div><div id="ch-pc"></div></div>
+      <div class="chart-block"><div class="ct">풋·콜 거래량 <span class="cd">만 계약 · 로그 눈금 · <b style="color:var(--dn)">풋</b> · <b style="color:var(--up)">콜</b> · <b style="color:var(--violet)">┊</b> 옵션 만기일(둘째 목요일) — 만기로 갈수록 거래가 늘었다 급감</span></div><div id="ch-pcvol"></div></div>
     </div>
   </section>
 
@@ -312,6 +312,7 @@ var state = { m:'all', n:126, d:null, date:null };   // d = 선택일 인덱스(
 /* ================= 범용 차트 =================
    cfg: { series:[{data,label,color,type:'line'|'bar'|'area',width,dots}], dates,
           h, yfmt, refs:[{y,label}], zero(0 기준 대칭 여부), markers:[{i,color}], endLabels,
+          vlines:[{i,label}](날짜 세로 점선 — 옵션 만기일 등. label 은 툴팁에 표시),
           log(세로축 로그 눈금 — 값이 모두 양수인 선 차트용. 같은 '배수' 변화가 같은 높이로 보인다) } */
 function drawChart(container, cfg){
   var W = container.clientWidth || 500, H = cfg.h || 190;
@@ -376,6 +377,11 @@ function drawChart(container, cfg){
   if((cfg.zero || hasBar) && lo < 0 && hi > 0)
     svg += '<line x1="' + padL + '" x2="' + (padL+pw) + '" y1="' + Y(0) + '" y2="' + Y(0) + '" style="stroke:var(--muted);stroke-width:1;opacity:.5"/>';
 
+  // 날짜 세로 점선(옵션 만기일 등) — 선 뒤에 깔리도록 시리즈보다 먼저 그린다
+  (cfg.vlines||[]).forEach(function(vl){
+    svg += '<line x1="' + X(vl.i).toFixed(1) + '" x2="' + X(vl.i).toFixed(1) + '" y1="' + padT + '" y2="' + (padT+ph) +
+           '" style="stroke:var(--violet);stroke-width:1;stroke-dasharray:2 3;opacity:.55"/>';
+  });
   // 시리즈
   var bw = Math.max(1, pw / n - 1);
   cfg.series.forEach(function(s){
@@ -480,6 +486,10 @@ function drawChart(container, cfg){
       var v = s.data[i];
       html += '<div class="tr"><i style="background:' + s.color + '"></i>' + s.label +
               '<b>' + (v == null ? '–' : (s.fmt ? s.fmt(v) : fmt(v, s.nd != null ? s.nd : 1))) + '</b></div>';
+    });
+    (cfg.vlines||[]).forEach(function(vl){
+      if(vl.i !== i || !vl.label) return;
+      html += '<div class="tr" style="margin-top:3px;color:var(--violet);font-weight:700">' + vl.label + '</div>';
     });
     // 해당 날짜의 마커(다이버전스·90% 데이·스러스트) 이름
     (cfg.markers||[]).forEach(function(mk){
@@ -690,6 +700,24 @@ function renderMom(){
     yfmt:function(v){ return fmt(v,0) + '%'; } });
 }
 
+// 코스피200옵션 월물 만기일 = 매월 둘째 목요일(휴장이면 그 달의 직전 거래일).
+// dates(거래일 목록) 안에서만 찾고, 아직 오지 않은 이번 달 만기는 표시하지 않는다.
+// 2025-02~2026-10 21개월 중 20개월에서 풋+콜 거래량 최대일과 일치(2025-10 은 추석 연휴로 10-02).
+function expiryLines(dates){
+  var out = [], seen = {}, last = dates[dates.length - 1];
+  dates.forEach(function(d){
+    var ym = d.slice(0, 7); if(seen[ym]) return; seen[ym] = 1;
+    var y = +d.slice(0, 4), m = +d.slice(5, 7);
+    var off = (4 - new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 7) % 7;      // 첫 목요일까지 일수
+    var dd = 1 + off + 7, th2 = ym + '-' + (dd < 10 ? '0' : '') + dd;
+    if(th2 > last) return;
+    var k = -1;
+    for(var i = 0; i < dates.length; i++){ if(dates[i].slice(0, 7) === ym && dates[i] <= th2) k = i; }
+    if(k >= 0) out.push({ i:k, label:'옵션 만기일' });
+  });
+  return out;
+}
+
 function renderVol(){
   var dates = sl(D.dates);
   // VKOSPI 는 수집 시작일 이후만 값이 있으므로 첫 값부터 잘라 빈 공간을 없앤다
@@ -711,7 +739,7 @@ function renderVol(){
         for(var k = Math.max(0, i - 4); k <= i; k++){ if(pcAll[k] != null){ sum += pcAll[k]; c++; } }
         return c >= 3 ? sum / c : null; });
       var f2 = function(v){ return fmt(v,2); };
-      drawChart(el('ch-pc'), { dates:dates.slice(pf), h:190, log:true,
+      drawChart(el('ch-pc'), { dates:dates.slice(pf), h:190, log:true, vlines:expiryLines(dates.slice(pf)),
         refs:[{ y:1, label:'풋=콜' }],
         yfmt:function(v){ return fmt(v, v >= 10 ? 0 : (v >= 1 ? 1 : 2)); },
         series:[
@@ -727,7 +755,7 @@ function renderVol(){
     if(!isFinite(vf)){ el('ch-pcvol').innerHTML = '<div class="empty">데이터 준비 중</div>'; }
     else {
       var man = function(v){ return fmt(v, v >= 10 ? 1 : 2) + '만'; };
-      drawChart(el('ch-pcvol'), { dates:dates.slice(vf), h:190, log:true,
+      drawChart(el('ch-pcvol'), { dates:dates.slice(vf), h:190, log:true, vlines:expiryLines(dates.slice(vf)),
         yfmt:function(v){ return fmt(v, v >= 10 ? 0 : 1) + '만'; },
         series:[
           { data:cv.slice(vf), label:'콜', color:'var(--up)', width:1.6, fmt:man },
