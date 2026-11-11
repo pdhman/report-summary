@@ -118,6 +118,46 @@ if ($LASTEXITCODE -eq 0) {
         Write-Host "잠시 후 이 스크립트를 다시 실행하거나 클로드에게 알려주세요." -ForegroundColor Red
     }
 }
+
+# 4.5) 원본 md 가 GitHub 에 실제로 올라갔는지 확인, 빠졌으면 다시 올린다 (최대 3회)
+#   (2026-11-05, 11-11 실사고: 08:40 시장의 시선 작업이 같은 순간 git 을 쓰면서 md 가 커밋되지 않았다.
+#    HTML 은 그 작업 커밋에 쓸려 올라가 사이트는 잠깐 정상이었지만, 이후 GitHub Actions 가
+#    원격에 없는 오늘 md 대신 어제 글로 홈 카드를 다시 만들어 날짜가 하루 전으로 돌아갔다.)
+$ErrorActionPreference = 'Continue'   # git 의 stderr 가 PS5.1 에서 종료 오류로 바뀌지 않게
+$rel = "briefs/$date.md"
+function Test-MdOnOrigin {
+    git fetch origin main 2>&1 | Out-Null
+    $remote = (git rev-parse ("origin/main:{0}" -f $rel) 2>$null)
+    $local = (git hash-object --path=$rel $md 2>$null)
+    return ($remote -and $local -and ($remote.Trim() -eq $local.Trim()))
+}
+function Wait-GitIdle {
+    $g = Join-Path $proj '.git'
+    for ($w = 0; $w -lt 60; $w++) {
+        if (-not ((Test-Path "$g\index.lock") -or (Test-Path "$g\rebase-merge") -or (Test-Path "$g\rebase-apply"))) { return }
+        Start-Sleep -Seconds 2
+    }
+}
+$onOrigin = Test-MdOnOrigin
+for ($v = 1; ($v -le 3) -and (-not $onOrigin); $v++) {
+    Write-Host ("원본이 GitHub 에 없습니다 - 다시 올립니다 ({0}/3)" -f $v) -ForegroundColor Yellow
+    Start-Sleep -Seconds 5
+    Wait-GitIdle
+    & $py -u -c "import make_summary; make_summary.build()" | Out-Null
+    git add $rel docs/ 2>&1 | Out-Null
+    git diff --staged --quiet
+    if ($LASTEXITCODE -ne 0) { git commit -m ("시황 브리핑 {0} 게시" -f $date) 2>&1 | Out-Null }
+    Wait-GitIdle
+    git pull --rebase --autostash origin main 2>&1 | Out-Null
+    git push origin main 2>&1 | Out-Null
+    $onOrigin = Test-MdOnOrigin
+}
+if ($onOrigin) {
+    Write-Host ("원본 확인: GitHub 에 {0} 이 올라가 있습니다." -f $rel) -ForegroundColor Green
+} else {
+    Write-Host ("원본이 3번 시도에도 GitHub 에 올라가지 않았습니다 - 클로드에게 알려주세요. ({0})" -f $rel) -ForegroundColor Red
+}
+
 # 5) 게시 확인 (2026-10-22): 실제 사이트에 오늘 시황 본문·홈 카드 날짜가 반영됐는지 최대 10분 확인해
 #    텔레그램 개인 DM 으로 알린다. 이 창을 붙잡지 않도록 숨김 백그라운드로 띄운다(창을 닫아도 계속 돈다).
 #    (2026-10-22 실사고: 게시 직후 다른 자동 작업이 페이지를 빈 안내문으로 덮어써도 조용히 지나갔다)
