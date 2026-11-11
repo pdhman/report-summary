@@ -1,24 +1,15 @@
 {
- "date": "2026-11-10",
+ "date": "2026-11-11",
  "high_52w_ratio": 0.65,
  "items": [
   {
-   "name": "삼성E&A",
-   "ticker": "028050",
-   "close": 64600.0,
-   "change_ratio": 6.78,
-   "rs_score": 89.7,
-   "vol_ratio": 68.1,
-   "from_high": -4.6
-  },
-  {
-   "name": "안랩",
-   "ticker": "053800",
-   "close": 108200.0,
-   "change_ratio": 2.17,
-   "rs_score": 81.6,
-   "vol_ratio": 87.2,
-   "from_high": -21.2
+   "name": "대한항공",
+   "ticker": "003490",
+   "close": 31500.0,
+   "change_ratio": -3.37,
+   "rs_score": 64.2,
+   "vol_ratio": 89.2,
+   "from_high": -4.0
   }
  ]
 }
