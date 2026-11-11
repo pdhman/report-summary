@@ -973,7 +973,10 @@ def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
         "putcall": _round(recent.get("putcall", pd.Series(index=recent.index)), 3),
         # 풋·콜 거래량(만 계약) — 풋콜비율 옆 차트
         "pc_vol": {"put": _round(recent.get("put_vol", pd.Series(index=recent.index)) / 1e4, 2),
-                   "call": _round(recent.get("call_vol", pd.Series(index=recent.index)) / 1e4, 2)},
+                   "call": _round(recent.get("call_vol", pd.Series(index=recent.index)) / 1e4, 2),
+                   # 거래대금(억원)
+                   "put_amt": _round(recent.get("put_amt", pd.Series(index=recent.index)), 0),
+                   "call_amt": _round(recent.get("call_amt", pd.Series(index=recent.index)), 0)},
         # 코스피 거래대금(조원, KRX 공식) + 20일 평균 — 투기 열기 섹션 차트
         "trdval": {"v": _round(recent.get("kospi_trdval", pd.Series(index=recent.index)), 2),
                    "prov": _round(recent.get("kospi_trdval_prov", pd.Series(index=recent.index)), 0),
@@ -1127,6 +1130,20 @@ def main():
             hist = apply_series(hist, cv, "call_vol")
             log.info("풋·콜 거래량(KRX) %d일 갱신 (최근 %s = 풋 %.0f / 콜 %.0f 계약)",
                      len(pv), pv.index[-1].date(), pv.iloc[-1], cv.iloc[-1])
+            # 거래대금(억원, 2026-11-11): 계약 수는 만기 주간에 싼 옵션이 대량 거래돼 부풀므로
+            # 실제 오간 돈은 금액으로 본다(1만 계약당 금액이 날마다 31억~756억으로 다름).
+            _oa = {}
+
+            def _opt_amt(day, k):
+                if day not in _oa:
+                    _oa[day] = krx_api.option_volumes(day, by="value")
+                return None if _oa[day] is None else _oa[day][k] / 1e8
+            pa = fetch_krx_series(hist, "put_amt", lambda day: _opt_amt(day, 0))
+            ca = fetch_krx_series(hist, "call_amt", lambda day: _opt_amt(day, 1))
+            hist = apply_series(hist, pa, "put_amt")
+            hist = apply_series(hist, ca, "call_amt")
+            log.info("풋·콜 거래대금(KRX) %d일 갱신 (최근 %s = 풋 %.0f / 콜 %.0f 억원)",
+                     len(pa), pa.index[-1].date(), pa.iloc[-1], ca.iloc[-1])
         except Exception as e:
             log.warning("풋·콜 거래량 수집 실패(기존 값 유지): %s", e)
 

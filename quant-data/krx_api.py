@@ -153,13 +153,13 @@ def vkospi(bas_dd) -> float | None:
 
 
 def option_volumes(bas_dd, by: str = "volume") -> tuple[float, float] | None:
-    """코스피200옵션 (풋, 콜) 합계 — 계약 수. by='volume'(거래량) 또는 'oi'(미결제약정).
+    """코스피200옵션 (풋, 콜) 합계. by='volume'(거래량·계약), 'oi'(미결제약정·계약), 'value'(거래대금·원).
 
     옵션 일별매매정보는 미니·위클리·코스닥150 옵션까지 한 목록에 오므로
     PROD_NM 이 정확히 '코스피200 옵션'(공백 유무 무관)인 행만 쓴다.
     휴장·미게시(해당 행 없음)는 None.
     """
-    col = "ACC_TRDVOL" if by == "volume" else "ACC_OPNINT_QTY"
+    col = {"volume": "ACC_TRDVOL", "oi": "ACC_OPNINT_QTY", "value": "ACC_TRDVAL"}[by]
     call = put = 0.0
     seen = False
     for row in fetch("option", bas_dd):
