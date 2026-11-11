@@ -210,6 +210,14 @@
       <div class="card"><h3>CoreWeave 분기 capex ($B)</h3>
         <p class="note">코어위브가 분기마다 시설에 쓰는 돈입니다(공시 기준). 코어위브는 GPU를 담보로 빌린 돈으로 데이터센터를 짓기 때문에, 이 금액이 갑자기 줄면 돈줄이 막혔다는 신호입니다.</p>
         <div id="ch-crwv"></div></div>
+      <div class="card"><h3>CoreWeave 영업이익 vs 이자비용 ($B, 최근 4분기 합계)</h3>
+        <p class="note" id="crwvFinNote">코어위브가 1년 동안 영업으로 버는 돈(영업이익)과 빚에 내는 이자를 비교합니다. 날짜 뒤에 E가 붙은 분기는 증권가 예상(Bloomberg)입니다.
+          점선(영업이익−이자비용)이 0 아래면 영업으로 번 돈으로 이자도 다 못 낸다는 뜻이고, 0 위로 올라오면 이자를 감당하기 시작한다는 뜻입니다.
+          그래프의 영업이익은 Bloomberg 집계 기준이라 회사 발표(회계 기준)와 조금 다릅니다. 아래 차트는 앞으로 받기로 계약된 금액(수주잔고)입니다.
+          내년 영업이익 예상이 지난 집계보다 10% 넘게 깎이면 경계입니다.</p>
+        <div id="ch-crwvfin"></div>
+        <p class="subhead" id="crwvbl-head">수주잔고 ($B)</p>
+        <div id="ch-crwvbl"></div></div>
       <div class="card"><h3>빅테크·AI 인프라 5Y CDS 레벨 (bp)</h3>
         <p class="note" id="cdsNote">회사가 부도날 경우에 대비한 보험료(5년 CDS, 1bp = 0.01%p)입니다. 높을수록 시장이 부도 위험을 크게 봅니다. 유료 데이터라 기사·증권사 자료에 나온 값을 직접 기록하며, 괄호는 직전 기록 대비 변화입니다.</p>
         <div id="ch-cds"></div></div>
@@ -599,6 +607,22 @@ function renderAll(){
     lineChart('ch-crwv',[{name:'CRWV capex',dates:cwc.labels,values:cwc.values}],{labels:cwc.labels,unit:'B',h:190});
   } else {
     document.getElementById('ch-crwv').innerHTML='<div class="empty">SEC 수집 대기</div>';
+  }
+  const cfn=DATA.leverage.crwv_fin||{};
+  if(cfn.labels&&cfn.labels.length){
+    lineChart('ch-crwvfin',[
+      {name:'영업이익',dates:cfn.labels,values:cfn.op},
+      {name:'이자비용',dates:cfn.labels,values:cfn.interest},
+      {name:'영업이익−이자비용',dates:cfn.labels,values:cfn.spread,dash:true}],{labels:cfn.labels,unit:'B',h:190});
+    lineChart('ch-crwvbl',[{name:'수주잔고',dates:cfn.labels,values:cfn.backlog}],{labels:cfn.labels,unit:'B',h:160});
+    const lt=cfn.latest||{}, nt=document.getElementById('crwvFinNote');
+    if(lt.quarter&&nt){
+      nt.textContent=`최근 분기(${lt.quarter}, 회사 발표): 매출 $${fmt(lt.revenue,2)}B · 영업이익 $${fmt(lt.op,2)}B · `+
+        `순이자비용 $${fmt(lt.interest,2)}B(영업이익의 ${fmt(lt.interest/lt.op,1)}배) · 수주잔고 $${fmt(lt.backlog)}B(1년 전보다 +${fmt(lt.backlog_yoy_pct,0)}%). `+
+        `예상치는 Bloomberg ${cfn.vintage||''} 집계 — `+nt.textContent.trim().replace(/\s+/g,' ');
+    }
+  } else {
+    ['ch-crwvfin','ch-crwvbl','crwvbl-head'].forEach(id=>document.getElementById(id).style.display='none');
   }
   const cds=DATA.leverage.cds||{}, cchg=cds.ytd_chg||{}, clvl=cds.level||{};
   const cprev=(cds.prev||{}).level||{}, hasPrev=Object.keys(cprev).length>0;

@@ -105,6 +105,7 @@ TH = {
     "gpu_util_floor": 60.0,        # GPU 가동률 프록시(임대중 비율 %) 이 값 미만 → 경계 (유휴 GPU 증가)
     "neocloud_drawdown": -50.0,    # 네오클라우드 평균 52주 낙폭(%) → 경계
     "crwv_capex_yoy": 0.0,         # CRWV 분기 capex YoY(%) 이 값 이하(감소 전환) → 경계
+    "crwv_op_consensus_rev": -10.0,  # 코어위브 내년 영업이익 컨센서스가 직전 집계 대비 이 % 이하 → 경계
     "orcl_drawdown": -40.0,        # 오라클 52주 낙폭(%) → 경계
     "bdc_chg_180d": -15.0,         # BDC 프록시 6개월 수익률(%) → 경계
 }
@@ -838,6 +839,24 @@ def collect_live():
     crwv_capex = {"labels": [f"{d[:4]}Q{(int(d[5:7]) - 1) // 3 + 1}" for d, _ in crwv_cx],
                   "values": [round(v / 1e9, 2) for _, v in crwv_cx]}
 
+    # ── 레버리지: CoreWeave 영업이익 vs 이자비용·수주잔고 (실적 + Bloomberg 컨센서스, 수동) ──
+    cfin = manual.get("crwv_financials_bil", {}) or {}
+    crwv_fin = {}
+    if cfin.get("labels"):
+        fe = cfin.get("first_estimate") or "9999"
+        crwv_fin = {"labels": [lb + ("E" if lb >= fe else "") for lb in cfin["labels"]],
+                    "op": cfin["op_ttm"], "interest": cfin["interest_ttm"],
+                    "spread": [round(o - i, 2) for o, i in zip(cfin["op_ttm"], cfin["interest_ttm"])],
+                    "backlog": cfin["backlog"], "vintage": cfin.get("vintage"),
+                    "latest": cfin.get("latest", {})}
+    crwv_op_rev = None
+    cv = {k: v for k, v in (manual.get("crwv_op_consensus_vintages", {}) or {}).items() if not k.startswith("_")}
+    cvd = sorted(cv)
+    if len(cvd) >= 2:
+        key = str(int(this_year) + 1)
+        if cv[cvd[-1]].get(key) and cv[cvd[-2]].get(key):
+            crwv_op_rev = pct(cv[cvd[-1]][key], cv[cvd[-2]][key])
+
     # ── 레버리지: 오라클 RPO (장기 계약 잔고 — 취소/사용률 하락의 정량 프록시) ──
     rp = sorted(fetch_orcl_rpo().items())
     orcl_rpo = {"labels": [d[:7] for d, _ in rp],
@@ -928,6 +947,7 @@ def collect_live():
                 if d[:4] == str(int(last_d[:4]) - 1) and d[5:7] == last_d[5:7]]
         metrics["crwv_capex_yoy"] = pct(last_v, prev[0]) if prev else None
         metrics["crwv_capex_last_bil"] = round(last_v / 1e9, 1)
+    metrics["crwv_op_consensus_rev"] = crwv_op_rev
     if len(rp) >= 2:
         metrics["orcl_rpo_qoq"] = pct(rp[-1][1], rp[-2][1])
         metrics["orcl_rpo_last_bil"] = round(rp[-1][1] / 1e9, 0)
@@ -967,6 +987,7 @@ def collect_live():
             "orcl_indexed": indexed([ORACLE]),
             "drawdowns": dd,
             "crwv_capex": crwv_capex,
+            "crwv_fin": crwv_fin,
             "cds": manual.get("bigtech_cds_5y_bp", {}),
             "orcl_rpo": orcl_rpo,
         },
@@ -1290,6 +1311,9 @@ def judge(data):
     v = m.get("crwv_capex_yoy")
     add("레버리지", "CoreWeave 분기 capex YoY (SEC)", v, "%",
         f"{TH['crwv_capex_yoy']:.0f}% 이하 (감소 전환)", v is not None and v <= TH["crwv_capex_yoy"])
+    v = m.get("crwv_op_consensus_rev")
+    add("레버리지", "코어위브 내년 영업이익 컨센서스 수정폭 (직전 집계 대비, 수동)", v, "%",
+        f"{TH['crwv_op_consensus_rev']:.0f}% 이하 (하향 수정)", v is not None and v <= TH["crwv_op_consensus_rev"])
     cds = data["leverage"].get("cds") or {}
     v = (cds.get("level") or {}).get("ORCL")
     add("레버리지", f"오라클 5Y CDS (수동 스냅샷 {cds.get('date', '')})", v, "bp",
@@ -1521,6 +1545,14 @@ TEMPLATE = r"""<!DOCTYPE html>
       <div class="card"><h3>CoreWeave 분기 capex ($B)</h3>
         <p class="note">코어위브가 분기마다 시설에 쓰는 돈입니다(공시 기준). 코어위브는 GPU를 담보로 빌린 돈으로 데이터센터를 짓기 때문에, 이 금액이 갑자기 줄면 돈줄이 막혔다는 신호입니다.</p>
         <div id="ch-crwv"></div></div>
+      <div class="card"><h3>CoreWeave 영업이익 vs 이자비용 ($B, 최근 4분기 합계)</h3>
+        <p class="note" id="crwvFinNote">코어위브가 1년 동안 영업으로 버는 돈(영업이익)과 빚에 내는 이자를 비교합니다. 날짜 뒤에 E가 붙은 분기는 증권가 예상(Bloomberg)입니다.
+          점선(영업이익−이자비용)이 0 아래면 영업으로 번 돈으로 이자도 다 못 낸다는 뜻이고, 0 위로 올라오면 이자를 감당하기 시작한다는 뜻입니다.
+          그래프의 영업이익은 Bloomberg 집계 기준이라 회사 발표(회계 기준)와 조금 다릅니다. 아래 차트는 앞으로 받기로 계약된 금액(수주잔고)입니다.
+          내년 영업이익 예상이 지난 집계보다 10% 넘게 깎이면 경계입니다.</p>
+        <div id="ch-crwvfin"></div>
+        <p class="subhead" id="crwvbl-head">수주잔고 ($B)</p>
+        <div id="ch-crwvbl"></div></div>
       <div class="card"><h3>빅테크·AI 인프라 5Y CDS 레벨 (bp)</h3>
         <p class="note" id="cdsNote">회사가 부도날 경우에 대비한 보험료(5년 CDS, 1bp = 0.01%p)입니다. 높을수록 시장이 부도 위험을 크게 봅니다. 유료 데이터라 기사·증권사 자료에 나온 값을 직접 기록하며, 괄호는 직전 기록 대비 변화입니다.</p>
         <div id="ch-cds"></div></div>
@@ -1910,6 +1942,22 @@ function renderAll(){
     lineChart('ch-crwv',[{name:'CRWV capex',dates:cwc.labels,values:cwc.values}],{labels:cwc.labels,unit:'B',h:190});
   } else {
     document.getElementById('ch-crwv').innerHTML='<div class="empty">SEC 수집 대기</div>';
+  }
+  const cfn=DATA.leverage.crwv_fin||{};
+  if(cfn.labels&&cfn.labels.length){
+    lineChart('ch-crwvfin',[
+      {name:'영업이익',dates:cfn.labels,values:cfn.op},
+      {name:'이자비용',dates:cfn.labels,values:cfn.interest},
+      {name:'영업이익−이자비용',dates:cfn.labels,values:cfn.spread,dash:true}],{labels:cfn.labels,unit:'B',h:190});
+    lineChart('ch-crwvbl',[{name:'수주잔고',dates:cfn.labels,values:cfn.backlog}],{labels:cfn.labels,unit:'B',h:160});
+    const lt=cfn.latest||{}, nt=document.getElementById('crwvFinNote');
+    if(lt.quarter&&nt){
+      nt.textContent=`최근 분기(${lt.quarter}, 회사 발표): 매출 $${fmt(lt.revenue,2)}B · 영업이익 $${fmt(lt.op,2)}B · `+
+        `순이자비용 $${fmt(lt.interest,2)}B(영업이익의 ${fmt(lt.interest/lt.op,1)}배) · 수주잔고 $${fmt(lt.backlog)}B(1년 전보다 +${fmt(lt.backlog_yoy_pct,0)}%). `+
+        `예상치는 Bloomberg ${cfn.vintage||''} 집계 — `+nt.textContent.trim().replace(/\s+/g,' ');
+    }
+  } else {
+    ['ch-crwvfin','ch-crwvbl','crwvbl-head'].forEach(id=>document.getElementById(id).style.display='none');
   }
   const cds=DATA.leverage.cds||{}, cchg=cds.ytd_chg||{}, clvl=cds.level||{};
   const cprev=(cds.prev||{}).level||{}, hasPrev=Object.keys(cprev).length>0;
