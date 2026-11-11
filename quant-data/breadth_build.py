@@ -971,6 +971,9 @@ def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
         },
         "vkospi": _round(recent.get("vkospi", pd.Series(index=recent.index)), 2),
         "putcall": _round(recent.get("putcall", pd.Series(index=recent.index)), 3),
+        # 풋·콜 거래량(만 계약) — 풋콜비율 옆 차트
+        "pc_vol": {"put": _round(recent.get("put_vol", pd.Series(index=recent.index)) / 1e4, 2),
+                   "call": _round(recent.get("call_vol", pd.Series(index=recent.index)) / 1e4, 2)},
         # 코스피 거래대금(조원, KRX 공식) + 20일 평균 — 투기 열기 섹션 차트
         "trdval": {"v": _round(recent.get("kospi_trdval", pd.Series(index=recent.index)), 2),
                    "prov": _round(recent.get("kospi_trdval_prov", pd.Series(index=recent.index)), 0),
@@ -1109,6 +1112,23 @@ def main():
                      len(pc), pc.index[-1].date(), pc.iloc[-1])
         except Exception as e:
             log.warning("풋콜비율 수집 실패(기존 값 유지): %s", e)
+        # 풋·콜 거래량(계약, 2026-11-11 추가) — 비율이 움직인 이유가 '풋 증가'인지 '콜 감소'인지 구분용.
+        # 같은 날을 풋·콜 두 번 묻지 않도록 하루치 결과를 기억해 둔다(과거일은 krx_api 디스크 캐시).
+        try:
+            _ov = {}
+
+            def _opt_vol(day, k):
+                if day not in _ov:
+                    _ov[day] = krx_api.option_volumes(day)
+                return None if _ov[day] is None else _ov[day][k]
+            pv = fetch_krx_series(hist, "put_vol", lambda day: _opt_vol(day, 0))
+            cv = fetch_krx_series(hist, "call_vol", lambda day: _opt_vol(day, 1))
+            hist = apply_series(hist, pv, "put_vol")
+            hist = apply_series(hist, cv, "call_vol")
+            log.info("풋·콜 거래량(KRX) %d일 갱신 (최근 %s = 풋 %.0f / 콜 %.0f 계약)",
+                     len(pv), pv.index[-1].date(), pv.iloc[-1], cv.iloc[-1])
+        except Exception as e:
+            log.warning("풋·콜 거래량 수집 실패(기존 값 유지): %s", e)
 
     # 코스피 거래대금(조원, 2026-10-21 추가) — KRX 공식값. 폭 지표의 거래대금(종가×거래량 근사)은
     # 공식값과 1~2% 차이, 날에 따라 7%까지 벌어져 화면용 절대 금액은 공식값을 쓴다.

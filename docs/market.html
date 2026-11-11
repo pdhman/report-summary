@@ -110,6 +110,7 @@
       <div class="chart-block"><div class="ct">VKOSPI <span class="cd">KRX 코스피200 변동성지수</span></div><div id="ch-vk"></div></div>
       <div class="chart-block"><div class="ct">코스피 실현변동성 <span class="cd">20일 · 연율화 %</span></div><div id="ch-rv"></div></div>
       <div class="chart-block"><div class="ct">풋콜비율 <span class="cd">KRX 코스피200옵션 거래량 · 풋÷콜 · 로그 눈금(같은 배수 = 같은 높이) · <b style="color:var(--gray)">5일 평균</b></span></div><div id="ch-pc"></div></div>
+      <div class="chart-block"><div class="ct">풋·콜 거래량 <span class="cd">만 계약 · 로그 눈금 · <b style="color:var(--dn)">풋</b> · <b style="color:var(--up)">콜</b> · 비율이 움직인 이유(풋 증가 vs 콜 감소) 확인용</span></div><div id="ch-pcvol"></div></div>
     </div>
   </section>
 
@@ -716,6 +717,21 @@ function renderVol(){
         series:[
           { data:sl(ma5).slice(pf), label:'5일 평균', color:'var(--gray)', width:1.5, nd:2, fmt:f2 },
           { data:pc.slice(pf), label:'풋콜비율', color:'var(--amber)', nd:2, fmt:f2 }] });
+    }
+  }
+  // 풋·콜 거래량(만 계약, 2026-11-11): 비율만 보면 '풋이 늘었는지 콜이 줄었는지' 알 수 없다
+  // (2026-06 비율 9배는 풋 급증이 아니라 콜 거래 증발). 수십 배 차이가 나므로 로그 눈금.
+  if(el('ch-pcvol')){
+    var pv = sl((D.pc_vol || {}).put || []), cv = sl((D.pc_vol || {}).call || []);
+    var vf = Math.min.apply(null, [pv, cv].map(function(a){ var k = a.findIndex(function(v){ return v != null; }); return k < 0 ? Infinity : k; }));
+    if(!isFinite(vf)){ el('ch-pcvol').innerHTML = '<div class="empty">데이터 준비 중</div>'; }
+    else {
+      var man = function(v){ return fmt(v, v >= 10 ? 1 : 2) + '만'; };
+      drawChart(el('ch-pcvol'), { dates:dates.slice(vf), h:190, log:true,
+        yfmt:function(v){ return fmt(v, v >= 10 ? 0 : 1) + '만'; },
+        series:[
+          { data:cv.slice(vf), label:'콜', color:'var(--up)', width:1.6, fmt:man },
+          { data:pv.slice(vf), label:'풋', color:'var(--dn)', width:1.6, fmt:man }] });
     }
   }
 }

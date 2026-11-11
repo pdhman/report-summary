@@ -152,27 +152,36 @@ def vkospi(bas_dd) -> float | None:
     return None
 
 
-def putcall_ratio(bas_dd, by: str = "volume") -> float | None:
-    """코스피200옵션 풋/콜 비율. by='volume'(거래량) 또는 'oi'(미결제약정).
+def option_volumes(bas_dd, by: str = "volume") -> tuple[float, float] | None:
+    """코스피200옵션 (풋, 콜) 합계 — 계약 수. by='volume'(거래량) 또는 'oi'(미결제약정).
 
     옵션 일별매매정보는 미니·위클리·코스닥150 옵션까지 한 목록에 오므로
     PROD_NM 이 정확히 '코스피200 옵션'(공백 유무 무관)인 행만 쓴다.
+    휴장·미게시(해당 행 없음)는 None.
     """
     col = "ACC_TRDVOL" if by == "volume" else "ACC_OPNINT_QTY"
     call = put = 0.0
+    seen = False
     for row in fetch("option", bas_dd):
         prod = str(row.get("PROD_NM", "")).replace(" ", "")
         if prod != "코스피200옵션":
             continue
+        seen = True
         v = num(row.get(col)) or 0.0
         side = str(row.get("RGHT_TP_NM", "")).upper()
         if side.startswith("C") or side == "콜":
             call += v
         elif side.startswith("P") or side == "풋":
             put += v
-    if call <= 0:
+    return (put, call) if seen else None
+
+
+def putcall_ratio(bas_dd, by: str = "volume") -> float | None:
+    """코스피200옵션 풋/콜 비율(= option_volumes 의 풋÷콜). 콜이 0 이면 None."""
+    pc = option_volumes(bas_dd, by)
+    if pc is None or pc[1] <= 0:
         return None
-    return round(put / call, 3)
+    return round(pc[0] / pc[1], 3)
 
 
 def _norm(s) -> str:
