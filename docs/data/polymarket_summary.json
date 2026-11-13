@@ -1,39 +1,39 @@
 {
- "date": "2026-11-13 07:20",
+ "date": "2026-11-14 01:35",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing → / Recession → / Inflation → / Risk ↑",
+ "arrows": "Easing → / Recession → / Inflation → / Risk →",
  "risk_off": [],
  "regime_base": "Neutral / Mixed (근사)",
  "fomc": {
   "title": "Fed Decision in December?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.875,
-   "d24": 0.02
+   "prob": 0.905,
+   "d24": 0.0
   },
-  "mean": 26.945,
-  "mean_d24": 0.311,
+  "mean": 25.377,
+  "mean_d24": -0.209,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
   "prob": 0.0225,
-  "d24": 0.0,
+  "d24": 0.001,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "December 31 · US-Iran Final Nuclear Deal by December 31, 2026?",
-  "pmss": 66.0,
-  "band": "Interest",
-  "d24": -0.05,
-  "prob": 0.075
+  "q": "November 15 · US x Iran Effective Ceasefire by November 15?",
+  "pmss": 76.1,
+  "band": "Tactical Signal",
+  "d24": -0.175,
+  "prob": 0.35
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 66.0
+  "top_pmss": 76.1
  },
- "alerts": 1,
- "n_markets": 529,
+ "alerts": 2,
+ "n_markets": 503,
  "source": "direct"
 }
