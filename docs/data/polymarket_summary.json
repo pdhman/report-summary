@@ -1,5 +1,5 @@
 {
- "date": "2026-11-14 01:35",
+ "date": "2026-11-14 09:56",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -9,31 +9,31 @@
   "title": "Fed Decision in December?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.905,
-   "d24": 0.0
+   "prob": 0.885,
+   "d24": 0.01
   },
-  "mean": 25.377,
-  "mean_d24": -0.209,
+  "mean": 25.88,
+  "mean_d24": -0.985,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
   "prob": 0.0225,
-  "d24": 0.001,
+  "d24": 0.0,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "November 15 · US x Iran Effective Ceasefire by November 15?",
-  "pmss": 76.1,
-  "band": "Tactical Signal",
-  "d24": -0.175,
-  "prob": 0.35
+  "q": "June 30, 2027 · AI bubble burst by June 30, 2027?",
+  "pmss": 59.9,
+  "band": "Interest",
+  "d24": -0.07,
+  "prob": 0.185
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 76.1
+  "top_pmss": 59.9
  },
- "alerts": 2,
- "n_markets": 503,
+ "alerts": 1,
+ "n_markets": 499,
  "source": "direct"
 }
