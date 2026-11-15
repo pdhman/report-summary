@@ -1,5 +1,5 @@
 {
- "date": "2026-11-15 03:21",
+ "date": "2026-11-15 09:00",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -9,11 +9,11 @@
   "title": "Fed Decision in December?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.875,
-   "d24": -0.03
+   "prob": 0.845,
+   "d24": -0.04
   },
-  "mean": 26.051,
-  "mean_d24": 0.826,
+  "mean": 26.139,
+  "mean_d24": 0.378,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
@@ -23,15 +23,15 @@
  },
  "top_signal": {
   "q": "March 31 · US announces end of Iranian blockade by March 31, 2027?",
-  "pmss": 58.7,
+  "pmss": 61.0,
   "band": "Interest",
-  "d24": -0.04,
-  "prob": 0.545
+  "d24": -0.05,
+  "prob": 0.535
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 58.7
+  "top_pmss": 61.0
  },
  "alerts": 1,
  "n_markets": 508,
