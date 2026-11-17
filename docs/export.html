@@ -64,6 +64,9 @@
   .pos { color: var(--pos); } .neg { color: var(--neg); }
   .tag { display: inline-block; background: var(--soft); border-radius: 999px; padding: 1px 8px; font-size: 12px; margin-right: 4px; }
   .dim { color: var(--muted); font-size: 12px; }
+  .lk { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; margin-right: 6px; border: 1px solid var(--border); color: var(--muted); }
+  .lk-a { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .lk-b { background: var(--soft); color: var(--ink); }
   svg.spark { width: 110px; height: 24px; vertical-align: middle; }
   svg.spark { cursor: crosshair; touch-action: pan-y; }
   .sparktip { position: fixed; z-index: 50; display: none; pointer-events: none; white-space: nowrap;
@@ -108,11 +111,12 @@
       <button class="chipbtn" id="fGap">수출 상위 35% · 주가 3개월 하락</button>
       <button class="chipbtn" id="fAcc">수출 가속 중</button>
       <button class="chipbtn" id="fWeak">수출 하위 35%</button>
+      <button class="chipbtn" id="fLink">실적 직결만</button>
       <span class="dim" id="count"></span>
     </div>
     <div class="tblwrap"><table id="stocks"><thead></thead><tbody></tbody></table></div>
     <div class="attrib">수출 순위 = 연결 종목 안에서의 백분위(100 이 가장 강함). 종목 값은 연결된 품목군 수출 YoY 의 평균이며 개별 기업의 수출 실적이 아닙니다.
-      수익률·RS·영업이익 전망·PER 은 주간 수집 자료 기준이라 수출 기준월과 날짜가 다릅니다.</div>
+      수익률·RS·영업이익 전망·PER 은 주간 수집 자료 기준이라 수출 기준월과 날짜가 다릅니다.<br>실적 연동 = 지난 분기들에서 연결된 품목군의 수출 YoY 와 회사 매출 YoY 가 같이 움직인 정도(순위 상관, 1 에 가까울수록 같이 움직임. DART 분기 실적 2016년~). 직결 = 상관 0.5 이상 · 방향 일치 65% 이상 · 분기 20개 이상, 보통 = 0.3 이상, 약함 = 그 밖. 과거 기록이고 분기 수가 적어 우연이 섞입니다 — 종목을 고르는 기준이 아니라 품목군 연결이 맞는지 보는 용도입니다.</div>
   </div>
 
   <div class="attrib">출처: 관세청 품목별 수출입실적(공공데이터포털), 한국은행 ECOS 수출금액·물량지수. 매월 16일경 전월분 반영.
@@ -133,6 +137,9 @@ const spark = a => {
   const pts = a.map((x, i) => x == null ? null : `${(i / (a.length - 1) * W).toFixed(1)},${y(x).toFixed(1)}`).filter(Boolean).join(' ');
   return `<svg class="spark" viewBox="0 0 ${W} ${H}"><line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--grid)"/><polyline fill="none" stroke="var(--accent)" stroke-width="1.5" points="${pts}"/><circle r="2.5" fill="var(--accent)" visibility="hidden"/></svg>`;
 };
+const linkCell = s => !s.tier || s.tier === '부족' ? '<td class="dim" title="분기 자료가 12개 미만">–</td>'
+  : `<td title="분기 ${s.linkN}개 · 방향 일치 ${s.linkHit}%"><span class="lk lk-${{ 직결: 'a', 보통: 'b', 약함: 'c' }[s.tier]}">${s.tier}</span>${s.link.toFixed(2)}</td>`;
+let onlyLink = false;
 let gSort = { k: 'e3m', dir: -1 }, sSort = { k: 'e3m', dir: -1 }, group = null, filter = 'all';
 const sortBy = (rows, s) => [...rows].sort((a, b) => {
   const x = a[s.k], y = b[s.k];
@@ -145,7 +152,7 @@ const gCols = () => [['name', '품목군', 'l'], ['sector', '업종', 'l'], ['e3
   ...(isHs() ? [] : [['vol', '물량 YoY'], ['price', '단가 YoY']]),
   ['accel', '가속(%p)'], ['mom', '전월 대비(%p)'], ['streak', '연속(개월)'], ...(isHs() ? [['usd', '수출액(백만$)']] : []), ['n', '연결 종목'], ['spark', '최근 24개월', 'l']];
 const sCols = () => [['name', '종목', 'l'], ['groupText', '품목군', 'l'], ['e3m', '수출 YoY'], ...(isHs() ? [] : [['vol', '물량 YoY']]),
-  ['accel', '가속(%p)'], ['pct', '수출 순위'], ['ret3m', '3개월 수익률'], ['rs3m', 'RS 3개월'], ['opYoY', '영업이익 YoY(E)'], ['perE', 'PER(E)'], ['cap', '시총(억)']];
+  ['accel', '가속(%p)'], ['pct', '수출 순위'], ['link', '실적 연동'], ['ret3m', '3개월 수익률'], ['rs3m', 'RS 3개월'], ['opYoY', '영업이익 YoY(E)'], ['perE', 'PER(E)'], ['cap', '시총(억)']];
 for (const d of Object.values(SRC)) if (d) {
   d.groups.forEach(g => { g.n = g.stocks.length; const a = g.spark, x = a[a.length - 1], y = a[a.length - 2]; g.mom = x == null || y == null ? null : +(x - y).toFixed(1); });
   d.stocks.forEach(s => s.groupText = s.groups.join(', '));
@@ -161,11 +168,12 @@ function drawStocks() {
   if (filter === 'gap') rows = rows.filter(s => s.pct >= 65 && s.ret3m != null && s.ret3m < 0);
   if (filter === 'acc') rows = rows.filter(s => s.accel != null && s.accel > 0 && s.e3m > 0);
   if (filter === 'weak') rows = rows.filter(s => s.pct != null && s.pct <= 35);
+  if (onlyLink) rows = rows.filter(s => s.tier === '직결');
   $('stockTitle').textContent = group ? `종목 — ${group}` : '종목 — 전체';
   $('count').textContent = `${rows.length}종목`;
   $('stocks').tHead.innerHTML = head(sCols(), sSort);
   $('stocks').tBodies[0].innerHTML = sortBy(rows, sSort).map(s =>
-    `<tr><td>${esc(s.name)} <span class="dim">${esc(s.code)}</span></td><td class="l">${s.groups.map(g => `<span class="tag">${esc(g)}</span>`).join('')}</td>${cell(s.e3m)}${isHs() ? '' : cell(s.vol)}${cell(s.accel, 1, '')}<td>${s.pct ?? '–'}</td>${cell(s.ret3m)}<td>${s.rs3m ?? '–'}</td>${cell(s.opYoY)}<td>${s.perE ?? '–'}</td><td>${s.cap == null ? '–' : s.cap.toLocaleString()}</td></tr>`).join('');
+    `<tr><td>${esc(s.name)} <span class="dim">${esc(s.code)}</span></td><td class="l">${s.groups.map(g => `<span class="tag">${esc(g)}</span>`).join('')}</td>${cell(s.e3m)}${isHs() ? '' : cell(s.vol)}${cell(s.accel, 1, '')}<td>${s.pct ?? '–'}</td>${linkCell(s)}${cell(s.ret3m)}<td>${s.rs3m ?? '–'}</td>${cell(s.opYoY)}<td>${s.perE ?? '–'}</td><td>${s.cap == null ? '–' : s.cap.toLocaleString()}</td></tr>`).join('');
 }
 $('groups').tHead.onclick = e => { const k = e.target.closest('th')?.dataset.k; if (!k || k === 'spark') return; gSort = { k, dir: gSort.k === k ? -gSort.dir : (k === 'name' || k === 'sector' ? 1 : -1) }; drawGroups(); };
 $('stocks').tHead.onclick = e => { const k = e.target.closest('th')?.dataset.k; if (!k) return; sSort = { k, dir: sSort.k === k ? -sSort.dir : (k === 'name' || k === 'groupText' ? 1 : -1) }; drawStocks(); };
@@ -194,7 +202,9 @@ $('groups').tBodies[0].addEventListener('pointermove', e => {
 $('groups').tBodies[0].addEventListener('pointerleave', hideTip);
 addEventListener('scroll', hideTip, true);
 for (const [id, f] of [['fAll', 'all'], ['fGap', 'gap'], ['fAcc', 'acc'], ['fWeak', 'weak']])
-  $(id).onclick = () => { filter = f; if (f === 'all') group = null; ['fAll', 'fGap', 'fAcc', 'fWeak'].forEach(b => $(b).classList.toggle('on', b === id)); drawGroups(); drawStocks(); };
+  $(id).onclick = () => { filter = f; if (f === 'all') { group = null; onlyLink = false; $('fLink').classList.remove('on'); } ['fAll', 'fGap', 'fAcc', 'fWeak'].forEach(b => $(b).classList.toggle('on', b === id)); drawGroups(); drawStocks(); };
+
+$('fLink').onclick = () => { onlyLink = !onlyLink; $('fLink').classList.toggle('on', onlyLink); drawStocks(); };
 
 function load(key) {
   if (!SRC[key]) return;
