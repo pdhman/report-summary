@@ -97,8 +97,8 @@
     <h2>품목군</h2>
     <div class="hint">행을 누르면 아래 종목 표가 그 품목군으로 좁혀집니다. 제목을 누르면 정렬됩니다.</div>
     <div class="tblwrap"><table id="groups"><thead></thead><tbody></tbody></table></div>
-    <div class="attrib" id="noteHs">금액 YoY = 최근 3개월 수출액(달러) 합 ÷ 전년 같은 3개월 − 1. 12M 표시 품목군(조선·방산)은 인도 시점에 한꺼번에 잡혀 12개월 누적으로 계산. 가속 = 3개월 전 값 대비 변화(%p). 연속 = YoY 가 계속 양수였던 개월 수. 수출액 = 최근 누적 구간 합계. ≈ 표시는 HS 코드에 다른 제품이 섞여 신호가 흐릿한 품목군.</div>
-    <div class="attrib" id="noteEcos">금액 YoY = 최근 3개월 수출금액지수 합 ÷ 전년 같은 3개월 − 1. 물량 YoY = 같은 계산을 수출물량지수로(가격 변동을 뺀 수량). 단가 YoY = 금액과 물량의 차이(금액 = 물량 × 단가). 가속 = 금액 YoY 의 3개월 전 대비 변화(%p). 연속 = YoY 가 계속 양수였던 개월 수. ≈ 표시는 통계 품목이 실제 제품보다 넓어 신호가 흐릿한 품목군.</div>
+    <div class="attrib" id="noteHs">금액 YoY = 최근 3개월 수출액(달러) 합 ÷ 전년 같은 3개월 − 1. 12M 표시 품목군(조선·방산)은 인도 시점에 한꺼번에 잡혀 12개월 누적으로 계산. 가속 = 3개월 전 값 대비 변화(%p). 전월 대비 = 한 달 전 값 대비 변화(%p, 두 달이 겹쳐 한 달치 변동에 민감). 연속 = YoY 가 계속 양수였던 개월 수. 수출액 = 최근 누적 구간 합계. ≈ 표시는 HS 코드에 다른 제품이 섞여 신호가 흐릿한 품목군.</div>
+    <div class="attrib" id="noteEcos">금액 YoY = 최근 3개월 수출금액지수 합 ÷ 전년 같은 3개월 − 1. 물량 YoY = 같은 계산을 수출물량지수로(가격 변동을 뺀 수량). 단가 YoY = 금액과 물량의 차이(금액 = 물량 × 단가). 가속 = 금액 YoY 의 3개월 전 대비 변화(%p). 전월 대비 = 한 달 전 대비 변화(%p, 두 달이 겹쳐 한 달치 변동에 민감). 연속 = YoY 가 계속 양수였던 개월 수. ≈ 표시는 통계 품목이 실제 제품보다 넓어 신호가 흐릿한 품목군.</div>
   </div>
 
   <div class="card">
@@ -143,18 +143,18 @@ const head = (cols, s) => '<tr>' + cols.map(c => `<th data-k="${c[0]}" class="${
 const isHs = () => src === 'hs';
 const gCols = () => [['name', '품목군', 'l'], ['sector', '업종', 'l'], ['e3m', '금액 YoY'],
   ...(isHs() ? [] : [['vol', '물량 YoY'], ['price', '단가 YoY']]),
-  ['accel', '가속(%p)'], ['streak', '연속(개월)'], ...(isHs() ? [['usd', '수출액(백만$)']] : []), ['n', '연결 종목'], ['spark', '최근 24개월', 'l']];
+  ['accel', '가속(%p)'], ['mom', '전월 대비(%p)'], ['streak', '연속(개월)'], ...(isHs() ? [['usd', '수출액(백만$)']] : []), ['n', '연결 종목'], ['spark', '최근 24개월', 'l']];
 const sCols = () => [['name', '종목', 'l'], ['groupText', '품목군', 'l'], ['e3m', '수출 YoY'], ...(isHs() ? [] : [['vol', '물량 YoY']]),
   ['accel', '가속(%p)'], ['pct', '수출 순위'], ['ret3m', '3개월 수익률'], ['rs3m', 'RS 3개월'], ['opYoY', '영업이익 YoY(E)'], ['perE', 'PER(E)'], ['cap', '시총(억)']];
 for (const d of Object.values(SRC)) if (d) {
-  d.groups.forEach(g => g.n = g.stocks.length);
+  d.groups.forEach(g => { g.n = g.stocks.length; const a = g.spark, x = a[a.length - 1], y = a[a.length - 2]; g.mom = x == null || y == null ? null : +(x - y).toFixed(1); });
   d.stocks.forEach(s => s.groupText = s.groups.join(', '));
 }
 
 function drawGroups() {
   $('groups').tHead.innerHTML = head(gCols(), gSort);
   $('groups').tBodies[0].innerHTML = sortBy(D.groups, gSort).map(g =>
-    `<tr data-g="${esc(g.name)}" class="${group === g.name ? 'sel' : ''}"><td>${esc(g.name)}${g.approx ? ' ≈' : ''}${g.window > 3 ? ` <span class="dim">${g.window}M</span>` : ''}</td><td class="l">${esc(g.sector)}</td>${cell(g.e3m)}${isHs() ? '' : cell(g.vol) + cell(g.price)}${cell(g.accel, 1, '')}<td>${g.streak}</td>${isHs() ? `<td>${g.usd == null ? '–' : g.usd.toLocaleString()}</td>` : ''}<td>${g.n}</td><td class="l">${spark(g.spark)}</td></tr>`).join('');
+    `<tr data-g="${esc(g.name)}" class="${group === g.name ? 'sel' : ''}"><td>${esc(g.name)}${g.approx ? ' ≈' : ''}${g.window > 3 ? ` <span class="dim">${g.window}M</span>` : ''}</td><td class="l">${esc(g.sector)}</td>${cell(g.e3m)}${isHs() ? '' : cell(g.vol) + cell(g.price)}${cell(g.accel, 1, '')}${cell(g.mom, 1, '')}<td>${g.streak}</td>${isHs() ? `<td>${g.usd == null ? '–' : g.usd.toLocaleString()}</td>` : ''}<td>${g.n}</td><td class="l">${spark(g.spark)}</td></tr>`).join('');
 }
 function drawStocks() {
   let rows = D.stocks.filter(s => !group || s.groups.includes(group));
