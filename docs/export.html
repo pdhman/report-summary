@@ -185,7 +185,8 @@ $('groups').tBodies[0].addEventListener('pointermove', e => {
   if (tipDot && tipDot !== dot) tipDot.setAttribute('visibility', 'hidden');
   tipDot = dot;
   dot.setAttribute('cx', (i / (a.length - 1) * 110).toFixed(1)); dot.setAttribute('cy', sparkY(a)(a[i]).toFixed(1)); dot.setAttribute('visibility', 'visible');
-  tip.textContent = `${D.months[i].replace('-', '년 ')}월 · ${fmt(a[i])}`;
+  const [ey, em] = D.months[i].split('-').map(Number), w = g.window || 3, s0 = ey * 12 + em - w, sy = Math.floor(s0 / 12), sm = s0 % 12 + 1;
+  tip.textContent = `${sy === ey ? `${ey}년 ${sm}~${em}월` : `${sy}년 ${sm}월~${ey}년 ${em}월`} · 전년 대비 ${fmt(a[i])}`;
   tip.style.display = 'block';
   tip.style.left = Math.max(4, Math.min(innerWidth - tip.offsetWidth - 4, e.clientX - tip.offsetWidth / 2)) + 'px';
   tip.style.top = Math.max(4, r.top - tip.offsetHeight - 6) + 'px';
