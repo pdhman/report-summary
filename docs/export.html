@@ -60,7 +60,7 @@
   th.on { color: var(--accent); }
   tbody tr:hover { background: var(--soft); }
   tr.sel { background: var(--soft); }
-  #groups tbody tr { cursor: pointer; }
+  #groups tbody tr, #sectors tbody tr { cursor: pointer; }
   .pos { color: var(--pos); } .neg { color: var(--neg); }
   .tag { display: inline-block; background: var(--soft); border-radius: 999px; padding: 1px 8px; font-size: 12px; margin-right: 4px; }
   .dim { color: var(--muted); font-size: 12px; }
@@ -96,6 +96,13 @@
     <button class="chipbtn" id="srcEcos">한국은행 (물량·단가 분해)</button>
   </div>
   <div class="kpis" id="cards"></div>
+
+  <div class="card" id="sectorCard">
+    <h2>업종</h2>
+    <div class="hint">품목군을 업종으로 묶어 수출·실적·주가를 나란히 봅니다. 행을 누르면 아래 품목군·종목 표가 그 업종으로 좁혀집니다.</div>
+    <div class="tblwrap"><table id="sectors"><thead></thead><tbody></tbody></table></div>
+    <div class="attrib">수출 YoY = 업종에 속한 품목군의 수출액을 더해 계산(한국은행 보기는 품목군 YoY 의 평균, 조선·방산은 12개월 누적). 실적 연동 = 업종 수출 YoY 와 연결 종목 매출 합계 YoY 가 같이 움직인 정도(순위 상관, 지주형·중복 모회사 제외). 주가 RS·3개월 수익률 = 연결 종목의 중앙값. 주식 업종 = 연결 종목이 가장 많이 속한 주식 업종(네이버 분류)과 RS 탭의 종합 RS. 수출↑·주가↓ = 수출이 늘고 가속 중인데 연결 종목 RS 중앙값이 40 미만, 수출↓·주가↑ = 수출이 줄고 있는데 60 초과.</div>
+  </div>
 
   <div class="card">
     <h2>품목군</h2>
@@ -147,7 +154,7 @@ const structCell = s => {
   const tags = (s.kind ? `<span class="lk lk-b">${s.kind}</span>` : '') + (s.dup ? '<span class="lk lk-d">중복</span>' : '') + (!s.dup && s.parent ? '<span class="lk">자회사</span>' : '');
   return `<td title="${esc(tips)}">${tags}${s.ofs == null ? '–' : s.ofs + '%'}</td>`;
 };
-let onlyLink = false, noHolding = false;
+let onlyLink = false, noHolding = false, sector = null, secSort = { k: 'e3m', dir: -1 };
 let gSort = { k: 'e3m', dir: -1 }, sSort = { k: 'e3m', dir: -1 }, group = null, filter = 'all';
 const sortBy = (rows, s) => [...rows].sort((a, b) => {
   const x = a[s.k], y = b[s.k];
@@ -166,24 +173,37 @@ for (const d of Object.values(SRC)) if (d) {
   d.stocks.forEach(s => s.groupText = s.groups.join(', '));
 }
 
+const secCols = () => [['name', '업종', 'l'], ['e3m', '수출 YoY'], ['accel', '가속(%p)'], ...(isHs() ? [['usd', '수출액(백만$)']] : []),
+  ['nGroups', '품목군'], ['n', '종목'], ['link', '실적 연동'], ['rs3m', '주가 RS 3개월'], ['ret3m', '3개월 수익률'], ['indRs', '주식 업종 (RS)', 'l'], ['gap', '수출 vs 주가', 'l'], ['spark', '최근 24개월', 'l']];
+const secGroups = () => sector ? (D.sectors.find(x => x.name === sector) || { groups: [] }).groups : null;
+function drawSectors() {
+  $('sectorCard').style.display = D.sectors ? '' : 'none';
+  if (!D.sectors) return;
+  $('sectors').tHead.innerHTML = head(secCols(), secSort);
+  $('sectors').tBodies[0].innerHTML = sortBy(D.sectors, secSort).map(s =>
+    `<tr data-s="${esc(s.name)}" class="${sector === s.name ? 'sel' : ''}"><td>${esc(s.name)}${s.window > 3 ? ` <span class="dim">${s.window}M</span>` : ''}</td>${cell(s.e3m)}${cell(s.accel, 1, '')}${isHs() ? `<td>${s.usd == null ? '–' : s.usd.toLocaleString()}</td>` : ''}<td>${s.nGroups}</td><td>${s.n}</td><td title="분기 ${s.linkN}개 · 방향 일치 ${s.linkHit ?? '–'}%">${s.link == null ? '–' : s.link.toFixed(2)}</td><td>${s.rs3m ?? '–'}</td>${cell(s.ret3m)}<td class="l" title="연결 종목의 ${s.indShare ?? '–'}%가 이 주식 업종">${s.ind ? `${esc(s.ind)} <span class="dim">${s.indRs ?? '–'}</span>` : '–'}</td><td class="l">${s.gap ? `<span class="lk ${s.gap.startsWith('수출↑') ? 'lk-a' : 'lk-d'}">${s.gap}</span>` : ''}</td><td class="l">${spark(s.spark)}</td></tr>`).join('');
+}
 function drawGroups() {
   $('groups').tHead.innerHTML = head(gCols(), gSort);
-  $('groups').tBodies[0].innerHTML = sortBy(D.groups, gSort).map(g =>
+  $('groups').tBodies[0].innerHTML = sortBy(D.groups.filter(g => !sector || g.sector === sector), gSort).map(g =>
     `<tr data-g="${esc(g.name)}" class="${group === g.name ? 'sel' : ''}"><td>${esc(g.name)}${g.approx ? ' ≈' : ''}${g.window > 3 ? ` <span class="dim">${g.window}M</span>` : ''}</td><td class="l">${esc(g.sector)}</td>${cell(g.e3m)}${isHs() ? '' : cell(g.vol) + cell(g.price)}${cell(g.accel, 1, '')}${cell(g.mom, 1, '')}<td>${g.streak}</td>${isHs() ? `<td>${g.usd == null ? '–' : g.usd.toLocaleString()}</td>` : ''}<td>${g.n}</td><td class="l">${spark(g.spark)}</td></tr>`).join('');
 }
 function drawStocks() {
-  let rows = D.stocks.filter(s => !group || s.groups.includes(group));
+  const sg = secGroups();
+  let rows = D.stocks.filter(s => (!group || s.groups.includes(group)) && (!sg || s.groups.some(g => sg.includes(g))));
   if (filter === 'gap') rows = rows.filter(s => s.pct >= 65 && s.ret3m != null && s.ret3m < 0);
   if (filter === 'acc') rows = rows.filter(s => s.accel != null && s.accel > 0 && s.e3m > 0);
   if (filter === 'weak') rows = rows.filter(s => s.pct != null && s.pct <= 35);
   if (onlyLink) rows = rows.filter(s => s.tier === '직결');
   if (noHolding) rows = rows.filter(s => s.kind !== '지주형' && !s.dup);
-  $('stockTitle').textContent = group ? `종목 — ${group}` : '종목 — 전체';
+  $('stockTitle').textContent = `종목 — ${group || sector || '전체'}`;
   $('count').textContent = `${rows.length}종목`;
   $('stocks').tHead.innerHTML = head(sCols(), sSort);
   $('stocks').tBodies[0].innerHTML = sortBy(rows, sSort).map(s =>
     `<tr><td>${esc(s.name)} <span class="dim">${esc(s.code)}</span></td><td class="l">${s.groups.map(g => `<span class="tag">${esc(g)}</span>`).join('')}</td>${cell(s.e3m)}${isHs() ? '' : cell(s.vol)}${cell(s.accel, 1, '')}<td>${s.pct ?? '–'}</td>${linkCell(s)}${structCell(s)}${cell(s.ret3m)}<td>${s.rs3m ?? '–'}</td>${cell(s.opYoY)}<td>${s.perE ?? '–'}</td><td>${s.cap == null ? '–' : s.cap.toLocaleString()}</td></tr>`).join('');
 }
+$('sectors').tHead.onclick = e => { const k = e.target.closest('th')?.dataset.k; if (!k || k === 'spark') return; secSort = { k, dir: secSort.k === k ? -secSort.dir : (k === 'name' || k === 'gap' ? 1 : -1) }; drawSectors(); };
+$('sectors').tBodies[0].onclick = e => { const n = e.target.closest('tr')?.dataset.s; if (!n) return; sector = sector === n ? null : n; group = null; drawSectors(); drawGroups(); drawStocks(); };
 $('groups').tHead.onclick = e => { const k = e.target.closest('th')?.dataset.k; if (!k || k === 'spark') return; gSort = { k, dir: gSort.k === k ? -gSort.dir : (k === 'name' || k === 'sector' ? 1 : -1) }; drawGroups(); };
 $('stocks').tHead.onclick = e => { const k = e.target.closest('th')?.dataset.k; if (!k) return; sSort = { k, dir: sSort.k === k ? -sSort.dir : (k === 'name' || k === 'groupText' ? 1 : -1) }; drawStocks(); };
 $('groups').tBodies[0].onclick = e => { const g = e.target.closest('tr')?.dataset.g; if (!g) return; group = group === g ? null : g; drawGroups(); drawStocks(); };
@@ -192,9 +212,9 @@ const sparkY = a => { const v = a.filter(x => x != null), lo = Math.min(...v, 0)
 const tip = document.body.appendChild(Object.assign(document.createElement('div'), { className: 'sparktip' }));
 let tipDot = null;
 const hideTip = () => { tip.style.display = 'none'; if (tipDot) { tipDot.setAttribute('visibility', 'hidden'); tipDot = null; } };
-$('groups').tBodies[0].addEventListener('pointermove', e => {
+const sparkMove = find => e => {
   const svg = e.target.closest('svg.spark'); if (!svg) return hideTip();
-  const g = D.groups.find(x => x.name === svg.closest('tr').dataset.g); if (!g) return hideTip();
+  const g = find(svg.closest('tr')); if (!g) return hideTip();
   const a = g.spark, r = svg.getBoundingClientRect();
   const i = Math.max(0, Math.min(a.length - 1, Math.round((e.clientX - r.left) / r.width * (a.length - 1))));
   if (a[i] == null) return hideTip();
@@ -207,18 +227,21 @@ $('groups').tBodies[0].addEventListener('pointermove', e => {
   tip.style.display = 'block';
   tip.style.left = Math.max(4, Math.min(innerWidth - tip.offsetWidth - 4, e.clientX - tip.offsetWidth / 2)) + 'px';
   tip.style.top = Math.max(4, r.top - tip.offsetHeight - 6) + 'px';
-});
-$('groups').tBodies[0].addEventListener('pointerleave', hideTip);
+};
+for (const [id, find] of [['groups', tr => D.groups.find(x => x.name === tr.dataset.g)], ['sectors', tr => (D.sectors || []).find(x => x.name === tr.dataset.s)]]) {
+  $(id).tBodies[0].addEventListener('pointermove', sparkMove(find)); $(id).tBodies[0].addEventListener('pointerleave', hideTip);
+}
 addEventListener('scroll', hideTip, true);
 for (const [id, f] of [['fAll', 'all'], ['fGap', 'gap'], ['fAcc', 'acc'], ['fWeak', 'weak']])
-  $(id).onclick = () => { filter = f; if (f === 'all') { group = null; onlyLink = noHolding = false; $('fLink').classList.remove('on'); $('fPure').classList.remove('on'); } ['fAll', 'fGap', 'fAcc', 'fWeak'].forEach(b => $(b).classList.toggle('on', b === id)); drawGroups(); drawStocks(); };
+  $(id).onclick = () => { filter = f; if (f === 'all') { group = sector = null; onlyLink = noHolding = false; $('fLink').classList.remove('on'); $('fPure').classList.remove('on'); } ['fAll', 'fGap', 'fAcc', 'fWeak'].forEach(b => $(b).classList.toggle('on', b === id)); drawSectors(); drawGroups(); drawStocks(); };
 
 $('fLink').onclick = () => { onlyLink = !onlyLink; $('fLink').classList.toggle('on', onlyLink); drawStocks(); };
 $('fPure').onclick = () => { noHolding = !noHolding; $('fPure').classList.toggle('on', noHolding); drawStocks(); };
 
 function load(key) {
   if (!SRC[key]) return;
-  src = key; D = SRC[key]; group = null;
+  src = key; D = SRC[key]; group = sector = null;
+  if (!secCols().some(c => c[0] === secSort.k)) secSort = { k: 'e3m', dir: -1 };
   if (!gCols().some(c => c[0] === gSort.k)) gSort = { k: 'e3m', dir: -1 };
   if (!sCols().some(c => c[0] === sSort.k)) sSort = { k: 'e3m', dir: -1 };
   $('srcHs').classList.toggle('on', isHs()); $('srcEcos').classList.toggle('on', !isHs());
@@ -232,7 +255,7 @@ function load(key) {
     ['수출 증가 품목군', `${up} / ${D.groups.length}`, ''],
     ['가속 중인 품목군', `${acc} / ${D.groups.length}`, ''],
   ].map(c => `<div class="kpi"><div class="k">${c[0]}</div><div class="v ${c[2]}">${c[1]}</div></div>`).join('');
-  drawGroups(); drawStocks();
+  drawSectors(); drawGroups(); drawStocks();
 }
 $('srcHs').onclick = () => load('hs'); $('srcEcos').onclick = () => load('ecos');
 if (!SRC.hs) $('srcHs').style.display = 'none';
