@@ -158,6 +158,40 @@ if ($onOrigin) {
     Write-Host ("원본이 3번 시도에도 GitHub 에 올라가지 않았습니다 - 클로드에게 알려주세요. ({0})" -f $rel) -ForegroundColor Red
 }
 
+# 4.6) GitHub 의 홈(index.html) '오늘의 뉴스' 카드 날짜가 최신 시황과 같은지 확인, 다르면 다시 만들어 올린다 (최대 3회)
+#   (2026-11-17 실사고: 09:25 GitHub Actions(insights)가 오늘 md 가 올라가기 전에 홈을 어제 날짜로 만들어 두었고,
+#    09:40 게시의 pull --rebase 에서 index.html 이 충돌 → 위 충돌 처리(checkout --ours = 원격 채택)가
+#    방금 만든 오늘 홈을 버리고 원격의 어제 홈을 남겼다. md 는 올라가 4.5 를 통과했지만 카드는 하루 전.)
+#   생성물은 '재생성이 진리' — 리베이스가 끝난 뒤 다시 만들어 비교하고, 다르면 우리 쪽(-X theirs)으로 올린다.
+$latestMd = (Get-ChildItem (Join-Path $proj 'briefs') -Filter '20*.md' | Sort-Object Name | Select-Object -Last 1).BaseName
+function Get-OriginCardDate {
+    git fetch origin main 2>&1 | Out-Null
+    $html = (git show origin/main:docs/index.html 2>$null) -join "`n"
+    $m = [regex]::Match($html, 'href="briefs\.html"[\s\S]*?sc-date">([0-9-]{10})')
+    if ($m.Success) { return $m.Groups[1].Value } else { return '' }
+}
+$card = Get-OriginCardDate
+for ($h = 1; ($h -le 3) -and ($card -ne $latestMd); $h++) {
+    Write-Host ("홈 카드 날짜가 {0} 입니다(최신 시황 {1}) - 홈을 다시 만들어 올립니다 ({2}/3)" -f $card, $latestMd, $h) -ForegroundColor Yellow
+    Wait-GitIdle
+    git pull --rebase --autostash origin main 2>&1 | Out-Null      # 원격 최신 위에서 다시 만든다
+    & $py -u -c "import make_summary; make_summary.build()" | Out-Null
+    # make_summary 는 홈 말고도 docs/ 의 허브 몇 개를 다시 쓴다 — 미커밋으로 남기면 다른 자동화 pull 이 막히므로 함께 올린다
+    git add docs/ 2>&1 | Out-Null
+    git diff --staged --quiet
+    if ($LASTEXITCODE -ne 0) { git commit -m ("시황 브리핑 {0} 홈 카드 갱신" -f $latestMd) 2>&1 | Out-Null }
+    Wait-GitIdle
+    git pull --rebase --autostash -X theirs origin main 2>&1 | Out-Null   # 충돌 시 방금 만든 홈을 채택
+    git push origin main 2>&1 | Out-Null
+    Start-Sleep -Seconds 3
+    $card = Get-OriginCardDate
+}
+if ($card -eq $latestMd) {
+    Write-Host ("홈 카드 확인: '오늘의 뉴스' 날짜 {0}" -f $card) -ForegroundColor Green
+} else {
+    Write-Host ("홈 카드 날짜가 아직 {0} 입니다(최신 {1}) - 클로드에게 알려주세요." -f $card, $latestMd) -ForegroundColor Red
+}
+
 # 5) 게시 확인 (2026-10-22): 실제 사이트에 오늘 시황 본문·홈 카드 날짜가 반영됐는지 최대 10분 확인해
 #    텔레그램 개인 DM 으로 알린다. 이 창을 붙잡지 않도록 숨김 백그라운드로 띄운다(창을 닫아도 계속 돈다).
 #    (2026-10-22 실사고: 게시 직후 다른 자동 작업이 페이지를 빈 안내문으로 덮어써도 조용히 지나갔다)
