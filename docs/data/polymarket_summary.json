@@ -1,5 +1,5 @@
 {
- "date": "2026-11-17 12:00",
+ "date": "2026-11-17 22:41",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -9,31 +9,31 @@
   "title": "Fed Decision in December?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.915,
-   "d24": 0.04
+   "prob": 0.925,
+   "d24": 0.05
   },
-  "mean": 24.938,
-  "mean_d24": -0.972,
+  "mean": 25.012,
+  "mean_d24": -0.644,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
-  "prob": 0.0245,
-  "d24": 0.0,
+  "prob": 0.023,
+  "d24": -0.0015,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "November 30 · US x Iran Effective Ceasefire by November 30?",
-  "pmss": 61.2,
-  "band": "Interest",
-  "d24": 0.15,
-  "prob": 0.765
+  "q": "25 bps increase · Will the Fed increase interest rates by 25 bps after the December 2026 meeting?",
+  "pmss": 52.3,
+  "band": "Watch",
+  "d24": 0.05,
+  "prob": 0.925
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 61.2
+  "top_pmss": 52.3
  },
- "alerts": 2,
- "n_markets": 488,
+ "alerts": 0,
+ "n_markets": 490,
  "source": "direct"
 }
