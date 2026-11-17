@@ -126,7 +126,7 @@
     </div>
     <div class="tblwrap"><table id="stocks"><thead></thead><tbody></tbody></table></div>
     <div class="attrib">수출 순위 = 연결 종목 안에서의 백분위(100 이 가장 강함). 종목 값은 연결된 품목군 수출 YoY 의 평균이며 개별 기업의 수출 실적이 아닙니다.
-      수익률·RS·영업이익 전망·PER 은 주간 수집 자료 기준이라 수출 기준월과 날짜가 다릅니다.<br>실적 연동 = 지난 분기들에서 연결된 품목군의 수출 YoY 와 회사 매출 YoY 가 같이 움직인 정도(순위 상관, 1 에 가까울수록 같이 움직임. DART 분기 실적 2016년~). 직결 = 상관 0.5 이상 · 방향 일치 65% 이상 · 분기 20개 이상, 보통 = 0.3 이상, 약함 = 그 밖. 과거 기록이고 분기 수가 적어 우연이 섞입니다 — 종목을 고르는 기준이 아니라 품목군 연결이 맞는지 보는 용도입니다.<br>본사 비중 = 별도 매출 ÷ 연결 매출(최근 4분기). 낮을수록 실적이 자회사(해외 공장이나 다른 사업)에서 나와 국내 수출 통계와 멀어집니다. 지주형 = 15% 미만, 자회사↑ = 50% 미만. 중복 = 같은 품목군에 상장 자회사가 함께 연결돼 같은 수출이 두 종목에 잡히는 모회사(DART 최대주주 현황, 지분 20% 이상). 칸에 마우스를 올리면 자회사·모회사 이름이 보입니다.</div>
+      수익률·RS·영업이익 전망·PER 은 주간 수집 자료 기준이라 수출 기준월과 날짜가 다릅니다.<br>실적 연동 = 지난 분기들에서 연결된 품목군의 수출 YoY 와 회사 매출 YoY 가 같이 움직인 정도(순위 상관, 1 에 가까울수록 같이 움직임. DART 분기 실적 2016년~). 직결 = 상관 0.5 이상 · 방향 일치 65% 이상 · 분기 20개 이상, 보통 = 0.3 이상, 약함 = 그 밖. 과거 기록이고 분기 수가 적어 우연이 섞입니다 — 종목을 고르는 기준이 아니라 품목군 연결이 맞는지 보는 용도입니다.<br>본사 비중 = 별도 매출 ÷ 연결 매출(최근 4분기). 낮을수록 실적이 자회사(해외 공장이나 다른 사업)에서 나와 국내 수출 통계와 멀어집니다. 지주형 = 15% 미만, 자회사↑ = 50% 미만. 중복 = 같은 품목군에 상장 자회사가 함께 연결돼 같은 수출이 두 종목에 잡히는 모회사(DART 최대주주 현황, 지분 20% 이상). 칸에 마우스를 올리면 자회사·모회사 이름이 보입니다.<br>수출 비중 = 최근 사업보고서에 회사가 적은 수출 ÷ (수출 + 내수). 회사마다 기준(본사·연결, 간접 수출 포함 여부)이 달라 참고용이고, 20% 미만이면 '낮음'으로 표시합니다(수출이 적으면 수출 통계로 실적을 읽기 어렵습니다). 공시 표를 못 읽은 회사는 – 입니다. 칸에 마우스를 올리면 공시상 주력 제품과 매출 비중이 보입니다.</div>
   </div>
 
   <div class="attrib">출처: 관세청 품목별 수출입실적(공공데이터포털), 한국은행 ECOS 수출금액·물량지수. 매월 16일경 전월분 반영.
@@ -155,6 +155,7 @@ const structCell = s => {
   const tags = (s.kind ? `<span class="lk lk-b">${s.kind}</span>` : '') + (s.dup ? '<span class="lk lk-d">중복</span>' : '') + (!s.dup && s.parent ? '<span class="lk">자회사</span>' : '');
   return `<td title="${esc(tips)}">${tags}${s.ofs == null ? '–' : s.ofs + '%'}</td>`;
 };
+const expCell = s => `<td title="${esc(s.products ? '공시상 주력 제품: ' + s.products : '공시 표에서 제품 비중을 못 읽음')}">${s.exp != null && s.exp < 20 ? '<span class="lk lk-d">낮음</span>' : ''}${s.exp == null ? '–' : s.exp + '%'}</td>`;
 let onlyLink = false, noHolding = false, sector = null, secSort = { k: 'e3m', dir: -1 };
 let gSort = { k: 'e3m', dir: -1 }, sSort = { k: 'e3m', dir: -1 }, group = null, filter = 'all';
 const sortBy = (rows, s) => [...rows].sort((a, b) => {
@@ -168,7 +169,7 @@ const gCols = () => [['name', '품목군', 'l'], ['sector', '업종', 'l'], ['e3
   ...(isHs() ? [] : [['vol', '물량 YoY'], ['price', '단가 YoY']]),
   ['accel', '가속(%p)'], ['mom', '전월 대비(%p)'], ['streak', '연속(개월)'], ...(isHs() ? [['usd', '수출액(백만$)']] : []), ['n', '연결 종목'], ['spark', '최근 24개월', 'l']];
 const sCols = () => [['name', '종목', 'l'], ['groupText', '품목군', 'l'], ['e3m', '수출 YoY'], ...(isHs() ? [] : [['vol', '물량 YoY']]),
-  ['accel', '가속(%p)'], ['pct', '수출 순위'], ['link', '실적 연동'], ['ofs', '본사 비중'], ['ret3m', '3개월 수익률'], ['rs3m', 'RS 3개월'], ['opYoY', '영업이익 YoY(E)'], ['perE', 'PER(E)'], ['cap', '시총(억)']];
+  ['accel', '가속(%p)'], ['pct', '수출 순위'], ['link', '실적 연동'], ['ofs', '본사 비중'], ['exp', '수출 비중'], ['ret3m', '3개월 수익률'], ['rs3m', 'RS 3개월'], ['opYoY', '영업이익 YoY(E)'], ['perE', 'PER(E)'], ['cap', '시총(억)']];
 for (const d of Object.values(SRC)) if (d) {
   d.groups.forEach(g => { g.n = g.stocks.length; const a = g.spark, x = a[a.length - 1], y = a[a.length - 2]; g.mom = x == null || y == null ? null : +(x - y).toFixed(1); });
   d.stocks.forEach(s => s.groupText = s.groups.join(', '));
@@ -201,7 +202,7 @@ function drawStocks() {
   $('count').textContent = `${rows.length}종목`;
   $('stocks').tHead.innerHTML = head(sCols(), sSort);
   $('stocks').tBodies[0].innerHTML = sortBy(rows, sSort).map(s =>
-    `<tr><td>${esc(s.name)} <span class="dim">${esc(s.code)}</span></td><td class="l">${s.groups.map(g => `<span class="tag">${esc(g)}</span>`).join('')}</td>${cell(s.e3m)}${isHs() ? '' : cell(s.vol)}${cell(s.accel, 1, '')}<td>${s.pct ?? '–'}</td>${linkCell(s)}${structCell(s)}${cell(s.ret3m)}<td>${s.rs3m ?? '–'}</td>${cell(s.opYoY)}<td>${s.perE ?? '–'}</td><td>${s.cap == null ? '–' : s.cap.toLocaleString()}</td></tr>`).join('');
+    `<tr><td>${esc(s.name)} <span class="dim">${esc(s.code)}</span></td><td class="l">${s.groups.map(g => `<span class="tag">${esc(g)}</span>`).join('')}</td>${cell(s.e3m)}${isHs() ? '' : cell(s.vol)}${cell(s.accel, 1, '')}<td>${s.pct ?? '–'}</td>${linkCell(s)}${structCell(s)}${expCell(s)}${cell(s.ret3m)}<td>${s.rs3m ?? '–'}</td>${cell(s.opYoY)}<td>${s.perE ?? '–'}</td><td>${s.cap == null ? '–' : s.cap.toLocaleString()}</td></tr>`).join('');
 }
 $('sectors').tHead.onclick = e => { const k = e.target.closest('th')?.dataset.k; if (!k || k === 'spark') return; secSort = { k, dir: secSort.k === k ? -secSort.dir : (k === 'name' || k === 'gap' ? 1 : -1) }; drawSectors(); };
 $('sectors').tBodies[0].onclick = e => { const n = e.target.closest('tr')?.dataset.s; if (!n) return; sector = sector === n ? null : n; group = null; drawSectors(); drawGroups(); drawStocks(); };
