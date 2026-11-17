@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수출 모멘텀</title>
+<script src="export_hs.js"></script>
+<script src="export_data.js"></script>
+<style>
+  :root {
+    --page: #f6f7f9; --surface: #ffffff; --ink: #1a1d21; --ink-2: #4b5563;
+    --muted: #6b7280; --grid: #e6e8eb; --soft: #f1f3f5; --border: #e6e8eb;
+    --pos: #16a34a; --neg: #dc2626;
+    --accent: #3b5bdb; --tool: #eb6834;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #0f1216; --surface: #171b21; --ink: #e8eaed; --ink-2: #c2c7cf;
+      --muted: #9aa2ad; --grid: #252b33; --soft: #1f2530; --border: #252b33;
+      --pos: #22c55e; --neg: #f87171; --accent: #748ffc;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #0f1216; --surface: #171b21; --ink: #e8eaed; --ink-2: #c2c7cf;
+    --muted: #9aa2ad; --grid: #252b33; --soft: #1f2530; --border: #252b33;
+    --pos: #22c55e; --neg: #f87171; --accent: #748ffc;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    background: var(--page); color: var(--ink); padding: 24px 28px 40px;
+  }
+  .pagehead { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
+  h1 { font-size: 22px; display: flex; align-items: center; gap: 8px; }
+  .subtabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .stab { text-decoration: none; font-size: 13px; font-weight: 700; padding: 8px 16px;
+    border-radius: 999px; border: 1px solid var(--grid); color: var(--muted); background: var(--surface); }
+  .stab:hover { border-color: var(--tool); color: var(--tool); }
+  .stab.on { background: var(--tool); border-color: var(--tool); color: #fff; }
+  .stab.on:hover { color: #fff; }
+  .subtitle { color: var(--muted); font-size: 13px; margin: 6px 0 14px; line-height: 1.5; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chipbtn { font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--grid); background: var(--surface); color: var(--muted); }
+  .chipbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .chipbtn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 14px 0; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .kpi .k { color: var(--muted); font-size: 12px; }
+  .kpi .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .card h2 { font-size: 15px; margin-bottom: 4px; }
+  .hint { color: var(--muted); font-size: 12.5px; margin-bottom: 10px; }
+  .tblwrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid var(--grid); text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child, th.l, td.l { text-align: left; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; cursor: pointer; user-select: none; }
+  th.on { color: var(--accent); }
+  tbody tr:hover { background: var(--soft); }
+  tr.sel { background: var(--soft); }
+  #groups tbody tr { cursor: pointer; }
+  .pos { color: var(--pos); } .neg { color: var(--neg); }
+  .tag { display: inline-block; background: var(--soft); border-radius: 999px; padding: 1px 8px; font-size: 12px; margin-right: 4px; }
+  .dim { color: var(--muted); font-size: 12px; }
+  svg.spark { width: 110px; height: 24px; vertical-align: middle; }
+  .attrib { font-size: 11.5px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+  @media (max-width: 640px) { body { padding: 16px 12px 110px; } }
+</style>
+</head>
+<body>
+  <div class="pagehead">
+    <h1>📊 분석</h1>
+    <div class="subtabs">
+      <a class="stab" href="chart.html">📈 차트</a>
+      <a class="stab" href="seasonality.html">☀️ 계절성</a>
+      <a class="stab" href="rs.html">🔥 RS</a>
+      <a class="stab" href="thesis.html">🧭 논리</a>
+      <a class="stab" href="memory.html">💾 메모리</a>
+      <a class="stab on" href="export.html">📦 수출</a>
+    </div>
+  </div>
+  <div class="subtitle">수출 모멘텀 — 어떤 품목의 수출이 빨라지고 있는지, 그 품목에 연결된 종목은 무엇인지. <span id="asof"></span></div>
+
+  <div class="row">
+    <button class="chipbtn" id="srcHs">관세청 HS 코드 (품목군 세분 · 조선·방산 포함)</button>
+    <button class="chipbtn" id="srcEcos">한국은행 (물량·단가 분해)</button>
+  </div>
+  <div class="kpis" id="cards"></div>
+
+  <div class="card">
+    <h2>품목군</h2>
+    <div class="hint">행을 누르면 아래 종목 표가 그 품목군으로 좁혀집니다. 제목을 누르면 정렬됩니다.</div>
+    <div class="tblwrap"><table id="groups"><thead></thead><tbody></tbody></table></div>
+    <div class="attrib" id="noteHs">금액 YoY = 최근 3개월 수출액(달러) 합 ÷ 전년 같은 3개월 − 1. 12M 표시 품목군(조선·방산)은 인도 시점에 한꺼번에 잡혀 12개월 누적으로 계산. 가속 = 3개월 전 값 대비 변화(%p). 연속 = YoY 가 계속 양수였던 개월 수. 수출액 = 최근 누적 구간 합계. ≈ 표시는 HS 코드에 다른 제품이 섞여 신호가 흐릿한 품목군.</div>
+    <div class="attrib" id="noteEcos">금액 YoY = 최근 3개월 수출금액지수 합 ÷ 전년 같은 3개월 − 1. 물량 YoY = 같은 계산을 수출물량지수로(가격 변동을 뺀 수량). 단가 YoY = 금액과 물량의 차이(금액 = 물량 × 단가). 가속 = 금액 YoY 의 3개월 전 대비 변화(%p). 연속 = YoY 가 계속 양수였던 개월 수. ≈ 표시는 통계 품목이 실제 제품보다 넓어 신호가 흐릿한 품목군.</div>
+  </div>
+
+  <div class="card">
+    <h2 id="stockTitle">종목</h2>
+    <div class="row" style="margin:8px 0 10px">
+      <button class="chipbtn on" id="fAll">전체</button>
+      <button class="chipbtn" id="fGap">수출 상위 35% · 주가 3개월 하락</button>
+      <button class="chipbtn" id="fAcc">수출 가속 중</button>
+      <button class="chipbtn" id="fWeak">수출 하위 35%</button>
+      <span class="dim" id="count"></span>
+    </div>
+    <div class="tblwrap"><table id="stocks"><thead></thead><tbody></tbody></table></div>
+    <div class="attrib">수출 순위 = 연결 종목 안에서의 백분위(100 이 가장 강함). 종목 값은 연결된 품목군 수출 YoY 의 평균이며 개별 기업의 수출 실적이 아닙니다.
+      수익률·RS·영업이익 전망·PER 은 주간 수집 자료 기준이라 수출 기준월과 날짜가 다릅니다.</div>
+  </div>
+
+  <div class="attrib">출처: 관세청 품목별 수출입실적(공공데이터포털), 한국은행 ECOS 수출금액·물량지수. 매월 16일경 전월분 반영.
+    품목군 분류와 종목 연결은 공개된 사업 내용을 바탕으로 손으로 묶은 것이라 실제 매출 구성과 다를 수 있습니다.
+    아이디어 참고: 미래에셋증권 「Agentic Quant」(2026-11-16). 투자 권유가 아닌 참고용 화면입니다.</div>
+
+<script>
+const SRC = { hs: window.EXPORT_HS, ecos: window.EXPORT_DATA }, $ = id => document.getElementById(id);
+let src = SRC.hs ? 'hs' : 'ecos', D = SRC[src];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = (v, d = 1, unit = '%') => v == null ? '–' : (v > 0 ? '+' : '') + v.toFixed(d) + unit;
+const cls = v => v == null ? '' : v > 0 ? 'pos' : v < 0 ? 'neg' : '';
+const cell = (v, d, unit) => `<td class="${cls(v)}">${fmt(v, d, unit)}</td>`;
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const spark = a => {
+  const v = a.filter(x => x != null); if (v.length < 2) return '';
+  const lo = Math.min(...v, 0), hi = Math.max(...v, 0), W = 110, H = 24, y = x => H - 2 - (x - lo) / (hi - lo || 1) * (H - 4);
+  const pts = a.map((x, i) => x == null ? null : `${(i / (a.length - 1) * W).toFixed(1)},${y(x).toFixed(1)}`).filter(Boolean).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}"><line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--grid)"/><polyline fill="none" stroke="var(--accent)" stroke-width="1.5" points="${pts}"/></svg>`;
+};
+let gSort = { k: 'e3m', dir: -1 }, sSort = { k: 'e3m', dir: -1 }, group = null, filter = 'all';
+const sortBy = (rows, s) => [...rows].sort((a, b) => {
+  const x = a[s.k], y = b[s.k];
+  if (x == null) return 1; if (y == null) return -1;
+  return typeof x === 'string' ? s.dir * x.localeCompare(y, 'ko') : s.dir * (x - y);
+});
+const head = (cols, s) => '<tr>' + cols.map(c => `<th data-k="${c[0]}" class="${c[2] || ''} ${s.k === c[0] ? 'on' : ''}">${c[1]}${s.k === c[0] ? (s.dir < 0 ? ' ▼' : ' ▲') : ''}</th>`).join('') + '</tr>';
+const isHs = () => src === 'hs';
+const gCols = () => [['name', '품목군', 'l'], ['sector', '업종', 'l'], ['e3m', '금액 YoY'],
+  ...(isHs() ? [] : [['vol', '물량 YoY'], ['price', '단가 YoY']]),
+  ['accel', '가속(%p)'], ['streak', '연속(개월)'], ...(isHs() ? [['usd', '수출액(백만$)']] : []), ['n', '연결 종목'], ['spark', '최근 24개월', 'l']];
+const sCols = () => [['name', '종목', 'l'], ['groupText', '품목군', 'l'], ['e3m', '수출 YoY'], ...(isHs() ? [] : [['vol', '물량 YoY']]),
+  ['accel', '가속(%p)'], ['pct', '수출 순위'], ['ret3m', '3개월 수익률'], ['rs3m', 'RS 3개월'], ['opYoY', '영업이익 YoY(E)'], ['perE', 'PER(E)'], ['cap', '시총(억)']];
+for (const d of Object.values(SRC)) if (d) {
+  d.groups.forEach(g => g.n = g.stocks.length);
+  d.stocks.forEach(s => s.groupText = s.groups.join(', '));
+}
+
+function drawGroups() {
+  $('groups').tHead.innerHTML = head(gCols(), gSort);
+  $('groups').tBodies[0].innerHTML = sortBy(D.groups, gSort).map(g =>
+    `<tr data-g="${esc(g.name)}" class="${group === g.name ? 'sel' : ''}"><td>${esc(g.name)}${g.approx ? ' ≈' : ''}${g.window > 3 ? ` <span class="dim">${g.window}M</span>` : ''}</td><td class="l">${esc(g.sector)}</td>${cell(g.e3m)}${isHs() ? '' : cell(g.vol) + cell(g.price)}${cell(g.accel, 1, '')}<td>${g.streak}</td>${isHs() ? `<td>${g.usd == null ? '–' : g.usd.toLocaleString()}</td>` : ''}<td>${g.n}</td><td class="l">${spark(g.spark)}</td></tr>`).join('');
+}
+function drawStocks() {
+  let rows = D.stocks.filter(s => !group || s.groups.includes(group));
+  if (filter === 'gap') rows = rows.filter(s => s.pct >= 65 && s.ret3m != null && s.ret3m < 0);
+  if (filter === 'acc') rows = rows.filter(s => s.accel != null && s.accel > 0 && s.e3m > 0);
+  if (filter === 'weak') rows = rows.filter(s => s.pct != null && s.pct <= 35);
+  $('stockTitle').textContent = group ? `종목 — ${group}` : '종목 — 전체';
+  $('count').textContent = `${rows.length}종목`;
+  $('stocks').tHead.innerHTML = head(sCols(), sSort);
+  $('stocks').tBodies[0].innerHTML = sortBy(rows, sSort).map(s =>
+    `<tr><td>${esc(s.name)} <span class="dim">${esc(s.code)}</span></td><td class="l">${s.groups.map(g => `<span class="tag">${esc(g)}</span>`).join('')}</td>${cell(s.e3m)}${isHs() ? '' : cell(s.vol)}${cell(s.accel, 1, '')}<td>${s.pct ?? '–'}</td>${cell(s.ret3m)}<td>${s.rs3m ?? '–'}</td>${cell(s.opYoY)}<td>${s.perE ?? '–'}</td><td>${s.cap == null ? '–' : s.cap.toLocaleString()}</td></tr>`).join('');
+}
+$('groups').tHead.onclick = e => { const k = e.target.closest('th')?.dataset.k; if (!k || k === 'spark') return; gSort = { k, dir: gSort.k === k ? -gSort.dir : (k === 'name' || k === 'sector' ? 1 : -1) }; drawGroups(); };
+$('stocks').tHead.onclick = e => { const k = e.target.closest('th')?.dataset.k; if (!k) return; sSort = { k, dir: sSort.k === k ? -sSort.dir : (k === 'name' || k === 'groupText' ? 1 : -1) }; drawStocks(); };
+$('groups').tBodies[0].onclick = e => { const g = e.target.closest('tr')?.dataset.g; if (!g) return; group = group === g ? null : g; drawGroups(); drawStocks(); };
+for (const [id, f] of [['fAll', 'all'], ['fGap', 'gap'], ['fAcc', 'acc'], ['fWeak', 'weak']])
+  $(id).onclick = () => { filter = f; if (f === 'all') group = null; ['fAll', 'fGap', 'fAcc', 'fWeak'].forEach(b => $(b).classList.toggle('on', b === id)); drawGroups(); drawStocks(); };
+
+function load(key) {
+  if (!SRC[key]) return;
+  src = key; D = SRC[key]; group = null;
+  if (!gCols().some(c => c[0] === gSort.k)) gSort = { k: 'e3m', dir: -1 };
+  if (!sCols().some(c => c[0] === sSort.k)) sSort = { k: 'e3m', dir: -1 };
+  $('srcHs').classList.toggle('on', isHs()); $('srcEcos').classList.toggle('on', !isHs());
+  $('noteHs').style.display = isHs() ? '' : 'none'; $('noteEcos').style.display = isHs() ? 'none' : '';
+  const up = D.groups.filter(g => g.e3m > 0).length, acc = D.groups.filter(g => g.accel > 0).length;
+  const [y, m] = D.month.split('-').map(Number);
+  $('asof').innerHTML = `수출 기준월 <b>${y}년 ${m}월</b> (그 달까지 3개월 누적) · 생성 ${esc(D.built)}`;
+  $('cards').innerHTML = [
+    ['전체 수출 금액 YoY', fmt(D.total.e3m), cls(D.total.e3m)],
+    isHs() ? ['전체 수출 가속', fmt(D.total.accel, 1, '%p'), cls(D.total.accel)] : ['전체 수출 물량 YoY', fmt(D.total.vol), cls(D.total.vol)],
+    ['수출 증가 품목군', `${up} / ${D.groups.length}`, ''],
+    ['가속 중인 품목군', `${acc} / ${D.groups.length}`, ''],
+  ].map(c => `<div class="kpi"><div class="k">${c[0]}</div><div class="v ${c[2]}">${c[1]}</div></div>`).join('');
+  drawGroups(); drawStocks();
+}
+$('srcHs').onclick = () => load('hs'); $('srcEcos').onclick = () => load('ecos');
+if (!SRC.hs) $('srcHs').style.display = 'none';
+if (!SRC.ecos) $('srcEcos').style.display = 'none';
+if (D) load(src); else $('asof').textContent = '데이터를 불러오지 못했습니다.';
+</script>
+<nav class="bottomnav">
+  <a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a>
+  <a class="nav-cell" href="strategy.html"><span class="ni">📝</span><span class="nl">마켓 인사이트</span></a>
+  <a class="nav-cell" href="screener.html"><span class="ni">🔎</span><span class="nl">종목탐색</span></a>
+  <a class="nav-cell active" href="chart.html"><span class="ni">📈</span><span class="nl">분석</span></a>
+  <a class="nav-cell" href="briefs.html"><span class="ni">📰</span><span class="nl">뉴스</span></a>
+</nav>
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('theme');
+    if(t){ document.documentElement.dataset.theme = t; }
+  } catch(e) {}
+})();
+</script>
+<script>
+(function(){
+  if(!/^https?:$/.test(location.protocol)) return;   // file:// 등에서는 동작 안 함
+  var POLL = 5 * 60 * 1000;                          // 5분마다 확인
+  var tag = null;
+  function stamp(res){
+    return res.headers.get('etag') || res.headers.get('last-modified')
+        || res.headers.get('content-length');
+  }
+  function check(){
+    fetch(location.pathname, { method:'HEAD', cache:'no-store' }).then(function(res){
+      if(!res.ok) return;
+      var s = stamp(res);
+      if(!s) return;                  // 판별 정보가 없으면 새로고침하지 않는다
+      if(tag === null){ tag = s; return; }   // 첫 확인은 기준값만 기록
+      if(s !== tag){ try{sessionStorage.setItem("gc-skip","1")}catch(x){} location.reload(); }
+    }).catch(function(){});
+  }
+  window.__checkUpdate = check;       // 콘솔에서 즉시 확인용
+  check();
+  setInterval(check, POLL);
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') check();
+  });
+})();
+</script>
+<style>
+  .bottomnav { position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:center; gap:2px;
+    background:color-mix(in srgb,var(--surface) 92%,transparent); backdrop-filter:blur(10px);
+    border-top:1px solid var(--grid); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); }
+  .bottomnav .nav-cell { display:flex; flex-direction:column; align-items:center; gap:3px; text-decoration:none; color:var(--muted);
+    padding:6px 4px; border-radius:12px; flex:1 1 0; max-width:96px; transition:color .15s,background .15s; }
+  .bottomnav .nav-cell:hover { color:var(--accent); }
+  .bottomnav .nav-cell.active { color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  .bottomnav .ni { font-size:20px; line-height:1; }
+  .bottomnav .nl { font-size:11px; font-weight:600; }
+  body { padding-bottom: 110px; }
+</style>
+<script id="embed-hide">(function(){var e=window.self!==window.top,q=null;try{q=new URLSearchParams(location.search).get("theme")}catch(x){}if(q==="dark"||q==="light"){document.documentElement.dataset.theme=q;if(e){try{localStorage.setItem("theme",q)}catch(x){}}}if(e){var s=document.createElement("style");s.textContent=".bottomnav,#theme-toggle{display:none!important}body{padding-bottom:0!important}";document.head.appendChild(s);}})();</script><script id="gc-cfg">(function(){var s=false;try{s=sessionStorage.getItem("gc-skip")==="1";sessionStorage.removeItem("gc-skip")}catch(x){}window.goatcounter={no_onload:s,path:function(){return location.host+(window.self!==window.top?"/embed":"")+location.pathname}}})();</script><script data-goatcounter="https://park.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script></body>
+</html>
