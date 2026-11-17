@@ -11,6 +11,7 @@ Set-Location $proj
 # --- 브랜치 가드: 게시는 항상 main 기준 (실습 브랜치에 있으면 전환) ---
 # -f 금지: `checkout -f main` 은 이미 main 이어도 미커밋 수정을 전부 버린다
 # (2026-09-15 docs/market.html 유실 실사고). 전환이 막히면 건드리지 않고 중단한다.
+$ErrorActionPreference = 'Continue'   # git stderr 가 종료 오류로 바뀌지 않게(4단계 주석 참고) — 브랜치 가드 동안만
 if (Test-Path (Join-Path $proj '.git/rebase-merge')) { git rebase --quit 2>$null }
 $branch = (git rev-parse --abbrev-ref HEAD 2>$null)
 if ($branch -ne 'main') {
@@ -21,6 +22,7 @@ if ($branch -ne 'main') {
         Read-Host "엔터를 누르면 종료"; exit 1
     }
 }
+$ErrorActionPreference = 'Stop'
 
 # 1) 클립보드 읽기
 $text = Get-Clipboard -Raw
@@ -64,6 +66,11 @@ if ($LASTEXITCODE -ne 0) {
 & $py -u -c "import make_summary; make_summary.build()"
 
 # 4) 커밋 & 푸시 (브랜치 서빙: push 가 곧 배포)
+# 여기부터 git 단계는 'Continue' 필수 (2026-11-17 확인): Windows PowerShell 5.1 은 'Stop' 상태에서
+# `git push 2>&1 | Out-Null` 처럼 stderr 를 돌리면 git 의 정상 안내문("To https://...")도 종료 오류로 바꿔
+# 스크립트를 그 자리에서 끝낸다. 그래서 push 직후의 4.5(원본 확인)·4.6(홈 카드 확인)·5(게시 확인)가
+# 한 번도 돌지 못했다(11-13 원본 누락·11-17 홈 날짜 회귀가 그대로 남은 이유).
+$ErrorActionPreference = 'Continue'
 $ymd = $date -replace '-', ''
 git add ("briefs/{0}.md" -f $date) docs/
 git diff --staged --quiet
