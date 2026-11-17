@@ -65,6 +65,10 @@
   .tag { display: inline-block; background: var(--soft); border-radius: 999px; padding: 1px 8px; font-size: 12px; margin-right: 4px; }
   .dim { color: var(--muted); font-size: 12px; }
   svg.spark { width: 110px; height: 24px; vertical-align: middle; }
+  svg.spark { cursor: crosshair; touch-action: pan-y; }
+  .sparktip { position: fixed; z-index: 50; display: none; pointer-events: none; white-space: nowrap;
+    background: #1f2937; color: #fff; font-size: 12px; line-height: 1; padding: 6px 8px; border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25); font-variant-numeric: tabular-nums; }
   .attrib { font-size: 11.5px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
   @media (max-width: 640px) { body { padding: 16px 12px 110px; } }
 </style>
@@ -127,7 +131,7 @@ const spark = a => {
   const v = a.filter(x => x != null); if (v.length < 2) return '';
   const lo = Math.min(...v, 0), hi = Math.max(...v, 0), W = 110, H = 24, y = x => H - 2 - (x - lo) / (hi - lo || 1) * (H - 4);
   const pts = a.map((x, i) => x == null ? null : `${(i / (a.length - 1) * W).toFixed(1)},${y(x).toFixed(1)}`).filter(Boolean).join(' ');
-  return `<svg class="spark" viewBox="0 0 ${W} ${H}"><line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--grid)"/><polyline fill="none" stroke="var(--accent)" stroke-width="1.5" points="${pts}"/></svg>`;
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}"><line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--grid)"/><polyline fill="none" stroke="var(--accent)" stroke-width="1.5" points="${pts}"/><circle r="2.5" fill="var(--accent)" visibility="hidden"/></svg>`;
 };
 let gSort = { k: 'e3m', dir: -1 }, sSort = { k: 'e3m', dir: -1 }, group = null, filter = 'all';
 const sortBy = (rows, s) => [...rows].sort((a, b) => {
@@ -166,6 +170,28 @@ function drawStocks() {
 $('groups').tHead.onclick = e => { const k = e.target.closest('th')?.dataset.k; if (!k || k === 'spark') return; gSort = { k, dir: gSort.k === k ? -gSort.dir : (k === 'name' || k === 'sector' ? 1 : -1) }; drawGroups(); };
 $('stocks').tHead.onclick = e => { const k = e.target.closest('th')?.dataset.k; if (!k) return; sSort = { k, dir: sSort.k === k ? -sSort.dir : (k === 'name' || k === 'groupText' ? 1 : -1) }; drawStocks(); };
 $('groups').tBodies[0].onclick = e => { const g = e.target.closest('tr')?.dataset.g; if (!g) return; group = group === g ? null : g; drawGroups(); drawStocks(); };
+// 스파크라인 위에 마우스를 올리면 그 달과 값을 보여 준다
+const sparkY = a => { const v = a.filter(x => x != null), lo = Math.min(...v, 0), hi = Math.max(...v, 0); return x => 22 - (x - lo) / (hi - lo || 1) * 20; };
+const tip = document.body.appendChild(Object.assign(document.createElement('div'), { className: 'sparktip' }));
+let tipDot = null;
+const hideTip = () => { tip.style.display = 'none'; if (tipDot) { tipDot.setAttribute('visibility', 'hidden'); tipDot = null; } };
+$('groups').tBodies[0].addEventListener('pointermove', e => {
+  const svg = e.target.closest('svg.spark'); if (!svg) return hideTip();
+  const g = D.groups.find(x => x.name === svg.closest('tr').dataset.g); if (!g) return hideTip();
+  const a = g.spark, r = svg.getBoundingClientRect();
+  const i = Math.max(0, Math.min(a.length - 1, Math.round((e.clientX - r.left) / r.width * (a.length - 1))));
+  if (a[i] == null) return hideTip();
+  const dot = svg.querySelector('circle');
+  if (tipDot && tipDot !== dot) tipDot.setAttribute('visibility', 'hidden');
+  tipDot = dot;
+  dot.setAttribute('cx', (i / (a.length - 1) * 110).toFixed(1)); dot.setAttribute('cy', sparkY(a)(a[i]).toFixed(1)); dot.setAttribute('visibility', 'visible');
+  tip.textContent = `${D.months[i].replace('-', '년 ')}월 · ${fmt(a[i])}`;
+  tip.style.display = 'block';
+  tip.style.left = Math.max(4, Math.min(innerWidth - tip.offsetWidth - 4, e.clientX - tip.offsetWidth / 2)) + 'px';
+  tip.style.top = Math.max(4, r.top - tip.offsetHeight - 6) + 'px';
+});
+$('groups').tBodies[0].addEventListener('pointerleave', hideTip);
+addEventListener('scroll', hideTip, true);
 for (const [id, f] of [['fAll', 'all'], ['fGap', 'gap'], ['fAcc', 'acc'], ['fWeak', 'weak']])
   $(id).onclick = () => { filter = f; if (f === 'all') group = null; ['fAll', 'fGap', 'fAcc', 'fWeak'].forEach(b => $(b).classList.toggle('on', b === id)); drawGroups(); drawStocks(); };
 
