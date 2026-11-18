@@ -6,6 +6,7 @@
 <title>수출 모멘텀</title>
 <script src="export_hs.js"></script>
 <script src="export_data.js"></script>
+<script src="export_flash.js"></script>
 <style>
   :root {
     --page: #f6f7f9; --surface: #ffffff; --ink: #1a1d21; --ink-2: #4b5563;
@@ -97,6 +98,16 @@
     <button class="chipbtn" id="srcEcos">한국은행 (물량·단가 분해)</button>
   </div>
   <div class="kpis" id="cards"></div>
+
+  <div class="card" id="flashCard" style="display:none">
+    <h2>속보 <span class="dim" id="flashWhen" style="font-weight:400"></span></h2>
+    <div class="hint">관세청이 매월 1일·11일·21일에 내는 잠정치입니다. 품목 코드별 확정치(15일경)보다 2주 이상 먼저 나옵니다. 품목 행을 누르면 아래 표가 연결된 업종으로 좁혀집니다.</div>
+    <div class="row" id="flashTabs" style="margin-bottom:10px"></div>
+    <div id="flashSum" style="margin-bottom:10px;line-height:1.9;font-size:14px"></div>
+    <div class="tblwrap"><table id="flash"><thead></thead><tbody></tbody></table></div>
+    <div class="hint" id="flashEmpty" style="display:none;margin:0">월간 잠정치는 총액만 발표됩니다. 품목별 숫자는 15일경 확정치가 나오면 아래 표에 반영됩니다.</div>
+    <div class="attrib">출처: 관세청 보도자료(1~10일·1~20일·월간 수출입 현황 잠정치, 발표일 09:00). 일평균 환산 = 조업일수 차이를 뺀 증감률 — 열흘치·스무날치는 조업일수와 선적 시점에 따라 크게 흔들려서 같이 봅니다. 품목은 관세청 성질별 분류라 아래 품목군(HS 코드 묶음)과 범위가 다르고, 오른쪽 '직전 확정치'는 가장 가까운 업종·품목군의 최근 3개월 YoY 입니다. 월간 잠정치(1일)는 총액만 발표됩니다. 잠정치는 이후 정정될 수 있습니다.</div>
+  </div>
 
   <div class="card" id="sectorCard">
     <h2>업종</h2>
@@ -263,6 +274,50 @@ $('srcHs').onclick = () => load('hs'); $('srcEcos').onclick = () => load('ecos')
 if (!SRC.hs) $('srcHs').style.display = 'none';
 if (!SRC.ecos) $('srcEcos').style.display = 'none';
 if (D) load(src); else $('asof').textContent = '데이터를 불러오지 못했습니다.';
+
+// ── 속보: 관세청 1~10일·1~20일·월간 잠정치 ──
+const FLASH = window.EXPORT_FLASH;
+let flashIdx = 0;
+const flashName = r => r.kind === 'month' ? `${r.month}월 전체` : `${r.month}월 1~${r.kind}일`;
+const eok = v => Math.round(v / 100).toLocaleString() + '억$';
+function confirmed(link) {
+  const H = SRC.hs; if (!H || !link) return null;
+  const g = link.group && H.groups.find(x => x.name === link.group);
+  const t = g || (H.sectors || []).find(x => x.name === link.sector);
+  return t ? { name: t.name, e3m: t.e3m } : null;
+}
+function drawFlash() {
+  const ok = FLASH && FLASH.releases && FLASH.releases.length;
+  $('flashCard').style.display = ok ? '' : 'none';
+  if (!ok) return;
+  const R = FLASH.releases, r = R[flashIdx], bal = r.exp.usd - r.imp.usd;
+  $('flashTabs').innerHTML = R.slice(0, 6).map((x, i) => `<button class="chipbtn ${i === flashIdx ? 'on' : ''}" data-i="${i}">${flashName(x)}</button>`).join('');
+  $('flashWhen').textContent = `${flashName(r)} · ${r.released || ''} 발표 · 잠정치`;
+  $('flashSum').innerHTML = `수출 <b>${eok(r.exp.usd)}</b> <b class="${cls(r.exp.yoy)}">${fmt(r.exp.yoy)}</b>`
+    + (r.dailyYoy == null ? '' : ` · 일평균 환산 <b class="${cls(r.dailyYoy)}">${fmt(r.dailyYoy)}</b> <span class="dim">(조업일수 ${r.days[1]}일, 작년 ${r.days[0]}일)</span>`)
+    + ` · 수입 ${eok(r.imp.usd)} <span class="${cls(r.imp.yoy)}">${fmt(r.imp.yoy)}</span> · 무역수지 <span class="${cls(bal)}">${bal > 0 ? '+' : ''}${eok(bal)}</span>`
+    + ` · <a href="${r.url}" target="_blank" rel="noopener">보도자료 원문</a>`
+    + (r.countries.length ? '<br><span class="dim">국가별 수출</span> ' + r.countries.slice(0, 6).map(c => `${esc(c.name)} <span class="${cls(c.yoy)}">${fmt(c.yoy)}</span>`).join(' · ') : '');
+  const prev = R.find(x => x.kind === r.kind && x.year * 12 + x.month === r.year * 12 + r.month - 1);
+  const T = $('flash');
+  T.style.display = r.items.length ? '' : 'none';
+  $('flashEmpty').style.display = r.items.length ? 'none' : '';
+  if (!r.items.length) return;
+  T.tHead.innerHTML = `<tr><th class="l">품목</th><th>수출액(백만$)</th><th>전년 대비</th><th>일평균 환산</th><th>${prev ? flashName(prev) + ' 일평균' : '한 달 전 일평균'}</th><th class="l">연결된 업종·품목군의 직전 확정치</th></tr>`;
+  T.tBodies[0].innerHTML = r.items.map((it, i) => {
+    const p = prev && prev.items.find(x => x.name === it.name), c = confirmed(it.link);
+    return `<tr data-i="${i}" style="${it.link ? 'cursor:pointer' : ''}"><td>${esc(it.name)}</td><td>${it.usd.toLocaleString()}</td>${cell(it.yoy)}${cell(it.adj)}${p ? cell(p.adj) : '<td>–</td>'}<td class="l">${c ? `${esc(c.name)} <span class="${cls(c.e3m)}">${fmt(c.e3m)}</span>` : '<span class="dim">연결 없음</span>'}</td></tr>`;
+  }).join('');
+}
+$('flashTabs').onclick = e => { const i = e.target.closest('button')?.dataset.i; if (i == null) return; flashIdx = +i; drawFlash(); };
+$('flash').tBodies[0].onclick = e => {
+  const i = e.target.closest('tr')?.dataset.i, link = i == null ? null : FLASH.releases[flashIdx].items[i].link;
+  if (!link || !SRC.hs) return;
+  if (!isHs()) load('hs');
+  sector = link.sector; group = link.group && D.groups.some(g => g.name === link.group) ? link.group : null;
+  drawSectors(); drawGroups(); drawStocks(); $('sectorCard').scrollIntoView({ behavior: 'smooth' });
+};
+drawFlash();
 </script>
 <nav class="bottomnav">
   <a class="nav-cell" href="index.html"><span class="ni">🏠</span><span class="nl">홈</span></a>
