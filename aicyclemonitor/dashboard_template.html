@@ -70,6 +70,22 @@
   .card h3{font-size:13.5px;margin:0 0 2px;font-weight:600;}
   .card .note{display:none;} /* 2026-11 사용자 요청: 카드 설명 숨김 — 다시 보이려면 이 줄을 원래 스타일로 */
   .card .subhead{font-size:12.5px;font-weight:600;margin:14px 0 2px;}
+  .scn-bar{display:flex;height:34px;border-radius:8px;overflow:hidden;margin:10px 0 8px;gap:2px;}
+  .scn-bar div{display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;
+    min-width:0;white-space:nowrap;overflow:hidden;}
+  .scn-leg{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;color:var(--text-secondary);margin:4px 0 6px;}
+  .scn-leg b{color:var(--text-primary);font-size:16px;font-weight:600;}
+  .scn-leg .sw{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;}
+  .scn-leg .d{color:var(--text-muted);font-size:11.5px;}
+  .scn-meta{font-size:12px;color:var(--text-muted);margin:2px 0 6px;}
+  .scn-row{margin:10px 0 12px;}
+  .scn-row .top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;gap:8px;}
+  .scn-row .nm{font-weight:600;}
+  .scn-row .sc{color:var(--text-secondary);white-space:nowrap;}
+  .scn-track{height:8px;border-radius:999px;background:var(--grid);margin:5px 0 4px;overflow:hidden;}
+  .scn-track i{display:block;height:100%;border-radius:999px;}
+  .scn-row .dr{font-size:11.5px;color:var(--text-muted);line-height:1.45;}
+  #scn-tbl td:nth-child(2),#scn-tbl th:nth-child(2){text-align:left;}
   .info-btn{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
     margin-left:6px;padding:0;border-radius:50%;border:1px solid var(--baseline);background:transparent;
     color:var(--text-muted);font:600 10.5px/1 Georgia,serif;font-style:italic;cursor:pointer;vertical-align:1px;}
@@ -138,6 +154,22 @@
   </header>
 
   <div class="tiles" id="tiles"></div>
+
+  <section id="sec-scn">
+    <h2>AI 투자 시나리오 — 앞으로 12개월</h2>
+    <p class="desc">이 대시보드의 지표들을 다섯 가지 우려 경로로 묶어, 앞으로 12개월 동안 빅테크의 AI 시설 투자가 이어질지 줄어들지를 확률로 나타낸 것입니다. 미래를 맞히는 예측이 아니라 '지금 신호들이 어느 쪽을 가리키는지'를 한 숫자로 요약한 추정치입니다.</p>
+    <div class="cards">
+      <div class="card"><h3>시나리오 확률 (신호 기반 추정)</h3>
+        <p class="note">세 시나리오는 6대 하이퍼스케일러의 내년 설비투자 예상(증권가 컨센서스)이 12개월 뒤 어떻게 바뀌는지로 나눕니다. 투자 지속 = 유지 또는 상향(5% 넘게 깎이지 않음) · 지연·감속 = 5~20% 하향, 또는 실제 집행 속도가 직전 1년 합계 아래로 · 축소 = 20% 넘게 하향 또는 주요 회사의 감축 발표.
+          확률은 오른쪽 경로별 점수를 가중 평균한 종합 스트레스(0~100)에서 계산합니다. 종합 50이면 '투자 지속' 확률이 50%, 75면 '축소' 확률이 50%가 되도록 맞췄습니다. 가중치와 기준은 처음 정한 값이라, 쌓이는 기록을 실제 결과와 비교하며 고쳐 갑니다. 괄호는 직전 기록 대비 변화입니다.</p>
+        <div id="scn-bar"></div>
+        <div id="scn-hist"></div></div>
+      <div class="card"><h3>우려 경로별 스트레스 (0~100)</h3>
+        <p class="note">점수가 높을수록 그 경로의 걱정이 크다는 뜻입니다(35 미만 낮음 · 35~60 보통 · 60 이상 높음). 지표마다 '평온한 수준 = 0점, 위험한 수준 = 100점'으로 바꿔 경로별로 평균했습니다.
+          종합 점수에 들어가는 비중: 빅테크 투자 여력 30% · 네오클라우드 신용 25% · 실제 수요 20% · 신용시장·금리 15% · 정책·이벤트 10%. '정책·이벤트'는 숫자 데이터가 없어 사람이 판단해 넣은 점수(수동)입니다. 막대 아래에는 점수를 끌어올린 지표를 적었고, '지표 전체 보기'에서 모든 지표의 값과 점수를 볼 수 있습니다.</p>
+        <div id="scn-ch"></div></div>
+    </div>
+  </section>
 
   <section id="sec-supply">
     <h2>① 공급과잉 — 1999년형</h2>
@@ -464,6 +496,38 @@ function renderAll(){
   document.getElementById('tiles').innerHTML=tiles.map(t=>
     `<div class="tile"><div class="label">${t.label} ${badge(t.st)}</div>
      <div class="value">${t.value}</div><div class="delta">${t.delta}</div></div>`).join('');
+
+  // AI 투자 시나리오 — 확률 막대 + 경로별 스트레스
+  const sc=DATA.scenario, secS=document.getElementById('sec-scn');
+  if(!sc||!sc.probs){ if(secS) secS.style.display='none'; }
+  else {
+    const P=sc.probs, pv=sc.prev;
+    const segs=[['keep','투자 지속','var(--good)','#fff'],['delay','지연·감속','var(--warning)','#1a1a19'],
+                ['cut','축소','var(--critical)','#fff']];
+    const dl=k=>{ if(!pv||pv[k]==null) return ''; const d=P[k]-pv[k];
+      return `<span class="d"> (${d===0?'변화 없음':(d>0?'+':'')+d+'%p'})</span>`; };
+    document.getElementById('scn-bar').innerHTML=
+      '<div class="scn-bar">'+segs.map(s=>`<div style="flex:${Math.max(P[s[0]],0.5)} 1 0;background:${s[2]};color:${s[3]}" title="${s[1]} ${P[s[0]]}%">${P[s[0]]>=9?P[s[0]]+'%':''}</div>`).join('')+'</div>'+
+      '<div class="scn-leg">'+segs.map(s=>`<span><span class="sw" style="background:${s[2]}"></span>${s[1]} <b>${P[s[0]]}%</b>${dl(s[0])}</span>`).join('')+'</div>'+
+      `<div class="scn-meta">종합 스트레스 ${fmt(sc.stress,0)} / 100`+(pv?` · 직전 기록(${pv.date}) ${fmt(pv.stress,0)}`:' · 첫 기록')+'</div>';
+    const lvC={'낮음':'var(--good)','보통':'var(--warning)','높음':'var(--critical)'};
+    document.getElementById('scn-ch').innerHTML=sc.channels.map(c=>{
+      const d=(pv&&pv.ch&&pv.ch[c.key]!=null)?Math.round(c.score-pv.ch[c.key]):0;
+      return `<div class="scn-row"><div class="top"><span class="nm">${c.name}</span>`+
+        `<span class="sc">${fmt(c.score,0)} · ${c.level}${d?` (${d>0?'+':''}${d})`:''}</span></div>`+
+        `<div class="scn-track"><i style="width:${Math.max(c.score,1)}%;background:${lvC[c.level]}"></i></div>`+
+        `<div class="dr">${c.drivers.length?c.drivers.join(' · '):'점수를 끌어올린 지표 없음'}</div></div>`;}).join('')+
+      '<details class="tbl" id="scn-tbl"><summary>지표 전체 보기</summary><table><tr><th>경로</th><th>지표</th><th>현재 값</th><th>점수</th></tr>'+
+      sc.channels.map(c=>c.items.map((it,i)=>`<tr><td>${i?'':c.name}</td><td>${it.name}</td><td>${it.text}</td><td>${it.score}</td></tr>`).join('')).join('')+
+      '</table></details>';
+    const hh=sc.history||{};
+    if(hh.dates&&hh.dates.length>=2){
+      lineChart('scn-hist',[
+        {name:'투자 지속',dates:hh.dates,values:hh.keep,color:css('--good')},
+        {name:'지연·감속',dates:hh.dates,values:hh.delay,color:css('--warning')},
+        {name:'축소',dates:hh.dates,values:hh.cut,color:css('--critical')}],{unit:'%',h:150});
+    }
+  }
 
   // ① 공급 — 모델별 임대중 중앙값 (공통 날짜축 정렬, H100 가용 호가는 참고선)
   const g=DATA.supply.gpu_rental||{};

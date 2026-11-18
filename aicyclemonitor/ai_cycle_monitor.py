@@ -965,6 +965,7 @@ def collect_live():
     data = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "mode": "live",
+        "scenario_manual": manual.get("scenario_manual", {}),
         "supply": {
             "gpu_rental": gpu,
             "dc_reit_indexed": indexed(DC_REIT),
@@ -1239,6 +1240,7 @@ def judge(data):
             else:
                 break
         slow = k
+    m["hs_slowdown_q"] = slow
     add("수요", "Hyperscaler 평균 매출 YoY 연속 둔화 분기", slow, "개",
         f"{TH['hs_yoy_consec_slowdown']}분기 이상", slow is not None and slow >= TH["hs_yoy_consec_slowdown"])
     cy = data["demand"]["cloud_yoy"]
@@ -1333,6 +1335,182 @@ def judge(data):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# AI 투자 시나리오 확률 (신호 기반 추정)
+#   지표 → 경로별 스트레스(0 평온 ~ 100 위험) → 가중 평균 종합 점수 S → 확률
+#   시나리오 = 6사 내년 capex 컨센서스가 12개월 뒤 유지(지속) / 5~20% 하향(지연·감속) / 20% 초과 하향(축소)
+#   가중치·기준값은 처음 정한 값 — scenario_history.csv 에 쌓이는 기록과 실제 결과를 비교해 고친다.
+# ──────────────────────────────────────────────────────────────────────────────
+SCENARIO_CSV = os.path.join(BASE_DIR, "scenario_history.csv")
+POLYMARKET_JSON = os.path.join(BASE_DIR, "..", "docs", "data", "polymarket_summary.json")
+SCN_ORDER = ["hyper", "neo", "demand", "macro", "policy"]
+# 숫자 데이터가 없는 '정책·이벤트'는 수동 판단이라 가중치를 낮게 둔다
+SCN_WEIGHTS = {"hyper": 0.30, "neo": 0.25, "demand": 0.20, "macro": 0.15, "policy": 0.10}
+SCN_NAMES = {"hyper": "빅테크 투자 여력", "neo": "네오클라우드 신용", "demand": "실제 수요 (칩 주문·AI 사용량)",
+             "macro": "신용시장·금리", "policy": "정책·이벤트 (수동)"}
+# 종합 점수 → 확률: P(지연 이상) = σ((S−50)/10), P(축소) = σ((S−75)/10)
+SCN_MID_DELAY, SCN_MID_CUT, SCN_SCALE = 50.0, 75.0, 10.0
+
+
+def _scn_item(name, v, calm, bad, w, unit="", nd=0, sign=False):
+    """지표 하나 → 0(평온 calm) ~ 100(위험 bad) 점수. 값이 없으면 None(계산에서 빠짐)."""
+    if v is None:
+        return None
+    x = (float(v) - calm) / (bad - calm)
+    num = f"{float(v):+,.{nd}f}" if sign else f"{float(v):,.{nd}f}"
+    return {"name": name, "text": num + unit, "score": round(max(0.0, min(1.0, x)) * 100.0), "w": w}
+
+
+def build_scenario(data):
+    m = data.get("metrics", {}) or {}
+    lev, dem = data.get("leverage", {}) or {}, data.get("demand", {}) or {}
+    cds = (lev.get("cds") or {}).get("level") or {}
+
+    def avg(*keys):
+        vs = [m.get(k) for k in keys if m.get(k) is not None]
+        return sum(vs) / len(vs) if vs else None
+
+    # 클라우드 평균 성장률의 전 분기 대비 변화(%p) — 두 분기 모두 있는 회사만
+    cloud_d = None
+    cy = dem.get("cloud_yoy") or {}
+    qs = sorted(cy)
+    if len(qs) >= 2:
+        common = [k for k in cy[qs[-1]] if k in cy[qs[-2]]]
+        if common:
+            cloud_d = (sum(cy[qs[-1]][k] for k in common) - sum(cy[qs[-2]][k] for k in common)) / len(common)
+
+    # 코어위브: 최근 실적 분기 기준 영업이익이 이자비용의 몇 %인지(최근 4분기 합)
+    cover = None
+    cf = lev.get("crwv_fin") or {}
+    act = [i for i, lb in enumerate(cf.get("labels", [])) if not lb.endswith("E")]
+    if act and cf.get("interest") and cf["interest"][act[-1]]:
+        cover = cf["op"][act[-1]] / cf["interest"][act[-1]] * 100.0
+
+    # 하이일드 OAS 수준·90일 변화
+    hy_last = hy_d90 = None
+    hy = (lev.get("spreads") or {}).get("HY_OAS") or {}
+    if hy.get("values"):
+        hy_last = hy["values"][-1]
+        try:
+            cut = (datetime.strptime(hy["dates"][-1], "%Y-%m-%d") - timedelta(days=90)).strftime("%Y-%m-%d")
+            past = [v for dd, v in zip(hy["dates"], hy["values"]) if dd <= cut and v is not None]
+            if past and hy_last is not None:
+                hy_d90 = hy_last - past[-1]
+        except (ValueError, TypeError):
+            pass
+
+    # 폴리마켓: 다음 연준 회의의 금리 변화 기대값(bp) — 폴리마켓 워치가 4시간마다 갱신하는 요약 파일
+    fomc_bp = None
+    try:
+        with open(POLYMARKET_JSON, encoding="utf-8") as f:
+            fomc_bp = (json.load(f).get("fomc") or {}).get("mean")
+    except (OSError, ValueError):
+        pass
+
+    I = _scn_item
+    groups = {
+        "hyper": [
+            I("내년 설비투자 예상 수정폭", m.get("capex_consensus_rev"), 5, -10, 3, "%", 1, True),
+            I("내년 영업현금흐름 예상 수정폭", m.get("ocf_consensus_rev"), 5, -10, 3, "%", 1, True),
+            I("설비투자 집행 속도(직전 1년 대비)", m.get("capex_runrate_vs_ttm"), 15, -5, 3, "%", 1, True),
+            I("클라우드 성장률 변화(전 분기 대비)", cloud_d, 3, -8, 2, "%p", 1, True),
+            I("빅테크 매출 성장 연속 둔화", m.get("hs_slowdown_q"), 0, 3, 1, "분기"),
+            I("오라클 부도 보험료(CDS)", cds.get("ORCL"), 120, 320, 2, "bp"),
+            I("우량 회사채(AA) 스프레드 90일 변화", m.get("aa_chg_90d_bp"), 0, 40, 1, "bp", 0, True),
+            I("오라클 수주잔고 증가율(전 분기 대비)", m.get("orcl_rpo_qoq"), 5, -5, 1, "%", 1, True),
+            I("오라클 주가 낙폭(1년 고점 대비)", m.get("orcl_dd"), -15, -55, 1, "%", 1),
+        ],
+        "neo": [
+            I("코어위브 부도 보험료(CDS)", cds.get("CRWV"), 400, 1200, 3, "bp"),
+            I("코어위브 영업이익/이자비용", cover, 150, 30, 2, "%"),
+            I("코어위브 내년 영업이익 예상 수정폭", m.get("crwv_op_consensus_rev"), 5, -15, 2, "%", 1, True),
+            I("코어위브 설비투자 증가율(1년 전 대비)", m.get("crwv_capex_yoy"), 50, -20, 1, "%", 0, True),
+            I("네오클라우드 주가 낙폭(1년 고점 대비)", m.get("neocloud_dd_avg"), -20, -70, 2, "%", 1),
+            I("최저 등급(CCC) 스프레드 90일 변화", m.get("ccc_chg_90d_bp"), 0, 250, 2, "bp", 0, True),
+        ],
+        "demand": [
+            I("엔비디아 데이터센터 매출(전 분기 대비)", m.get("nvda_dc_qoq_last"), 12, -3, 3, "%", 1, True),
+            I("마이크론 매출 성장 연속 둔화", m.get("mu_slowdown_q"), 0, 3, 2, "분기"),
+            I("AI 토큰 지출 13주 변화", m.get("pxq_chg_13w"), 20, -10, 2, "%", 1, True),
+            I("최신 GPU(B200) 임대가 90일 변화", m.get("b200_rent_chg_90d"), 0, -30, 2, "%", 1, True),
+            I("GPU 가동률", m.get("gpu_util_pct"), 80, 55, 2, "%", 1),
+            I("데이터센터 리츠 6개월 수익률", avg("DLR_chg_180d", "EQIX_chg_180d"), 0, -20, 1, "%", 1, True),
+        ],
+        "macro": [
+            I("하이일드 스프레드 수준", hy_last, 280, 500, 3, "bp"),
+            I("하이일드 스프레드 90일 변화", hy_d90, 0, 120, 2, "bp", 0, True),
+            I("BBB 스프레드 90일 변화", m.get("bbb_chg_90d_bp"), 0, 60, 2, "bp", 0, True),
+            I("사모대출(BDC) 6개월 수익률", avg("BIZD_chg_180d", "PBDC_chg_180d"), 0, -20, 1, "%", 1, True),
+            I("다음 연준 회의 금리 변화 예상(폴리마켓)", fomc_bp, -25, 40, 2, "bp", 0, True),
+        ],
+        "policy": [
+            {"name": it.get("name", ""), "text": it.get("note", ""), "score": round(float(it["score"])), "w": 1}
+            for it in ((data.get("scenario_manual") or {}).get("items") or []) if it.get("score") is not None
+        ],
+    }
+
+    channels, tot_w, tot = [], 0.0, 0.0
+    for key in SCN_ORDER:
+        items = [x for x in groups[key] if x]
+        if not items:
+            continue
+        score = sum(x["score"] * x["w"] for x in items) / sum(x["w"] for x in items)
+        hot = sorted([x for x in items if x["score"] >= 50], key=lambda x: -x["score"] * x["w"])[:3]
+        channels.append({
+            "key": key, "name": SCN_NAMES[key], "weight": SCN_WEIGHTS[key], "score": round(score, 1),
+            "level": "낮음" if score < 35 else ("보통" if score < 60 else "높음"), "manual": key == "policy",
+            "drivers": [(f"{x['name']} {x['score']}점" if key == "policy" else f"{x['name']} {x['text']}") for x in hot],
+            "items": items})
+        tot_w += SCN_WEIGHTS[key]
+        tot += SCN_WEIGHTS[key] * score
+    if not channels:
+        return data
+    stress = tot / tot_w
+
+    def sig(x):
+        return 1.0 / (1.0 + math.exp(-x))
+    keep = round((1.0 - sig((stress - SCN_MID_DELAY) / SCN_SCALE)) * 100)
+    cut = round(sig((stress - SCN_MID_CUT) / SCN_SCALE) * 100)
+    probs = {"keep": keep, "delay": 100 - keep - cut, "cut": cut}
+
+    # 기록: 같은 날짜는 덮어쓰고, 직전 날짜 기록과 비교한다
+    fields = ["date", "stress", "keep", "delay", "cut"] + SCN_ORDER
+    today = date.today().isoformat()
+    rows = []
+    if os.path.exists(SCENARIO_CSV):
+        with open(SCENARIO_CSV, encoding="utf-8") as f:
+            rows = [r for r in csv.DictReader(f) if r.get("date")]
+    prev_row = next((r for r in reversed(rows) if r["date"] < today), None)
+    row = {"date": today, "stress": f"{stress:.1f}", **{k: probs[k] for k in ("keep", "delay", "cut")},
+           **{k: "" for k in SCN_ORDER}, **{c["key"]: c["score"] for c in channels}}
+    rows = [r for r in rows if r["date"] != today] + [row]
+    if data.get("mode") == "live":
+        with open(SCENARIO_CSV, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
+            w.writeheader()
+            w.writerows(rows)
+
+    def num(v):
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+    prev = None
+    if prev_row:
+        prev = {"date": prev_row["date"], "stress": num(prev_row.get("stress")),
+                **{k: (int(num(prev_row.get(k))) if num(prev_row.get(k)) is not None else None)
+                   for k in ("keep", "delay", "cut")},
+                "ch": {k: num(prev_row.get(k)) for k in SCN_ORDER}}
+    data["scenario"] = {
+        "horizon": "12개월", "stress": round(stress, 1), "probs": probs, "prev": prev, "channels": channels,
+        "history": {"dates": [r["date"] for r in rows],
+                    **{k: [num(r.get(k)) for r in rows] for k in ("keep", "delay", "cut")}},
+    }
+    log(f"시나리오: 종합 {stress:.1f} → 지속 {probs['keep']}% · 지연 {probs['delay']}% · 축소 {probs['cut']}% "
+        + " / ".join(f"{c['name']} {c['score']:.0f}" for c in channels))
+    return data
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # HTML 렌더링
 # ──────────────────────────────────────────────────────────────────────────────
 def render(data):
@@ -1361,6 +1539,7 @@ def main():
             log(f"필요 패키지 없음: {e}. → pip install yfinance pandas requests")
             sys.exit(1)
     data = judge(data)
+    data = build_scenario(data)
     render(data)
 
 
@@ -1430,6 +1609,22 @@ TEMPLATE = r"""<!DOCTYPE html>
   .card h3{font-size:13.5px;margin:0 0 2px;font-weight:600;}
   .card .note{display:none;} /* 2026-11 사용자 요청: 카드 설명 숨김 — 다시 보이려면 이 줄을 원래 스타일로 */
   .card .subhead{font-size:12.5px;font-weight:600;margin:14px 0 2px;}
+  .scn-bar{display:flex;height:34px;border-radius:8px;overflow:hidden;margin:10px 0 8px;gap:2px;}
+  .scn-bar div{display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;
+    min-width:0;white-space:nowrap;overflow:hidden;}
+  .scn-leg{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;color:var(--text-secondary);margin:4px 0 6px;}
+  .scn-leg b{color:var(--text-primary);font-size:16px;font-weight:600;}
+  .scn-leg .sw{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;}
+  .scn-leg .d{color:var(--text-muted);font-size:11.5px;}
+  .scn-meta{font-size:12px;color:var(--text-muted);margin:2px 0 6px;}
+  .scn-row{margin:10px 0 12px;}
+  .scn-row .top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;gap:8px;}
+  .scn-row .nm{font-weight:600;}
+  .scn-row .sc{color:var(--text-secondary);white-space:nowrap;}
+  .scn-track{height:8px;border-radius:999px;background:var(--grid);margin:5px 0 4px;overflow:hidden;}
+  .scn-track i{display:block;height:100%;border-radius:999px;}
+  .scn-row .dr{font-size:11.5px;color:var(--text-muted);line-height:1.45;}
+  #scn-tbl td:nth-child(2),#scn-tbl th:nth-child(2){text-align:left;}
   .info-btn{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
     margin-left:6px;padding:0;border-radius:50%;border:1px solid var(--baseline);background:transparent;
     color:var(--text-muted);font:600 10.5px/1 Georgia,serif;font-style:italic;cursor:pointer;vertical-align:1px;}
@@ -1473,6 +1668,22 @@ TEMPLATE = r"""<!DOCTYPE html>
   </header>
 
   <div class="tiles" id="tiles"></div>
+
+  <section id="sec-scn">
+    <h2>AI 투자 시나리오 — 앞으로 12개월</h2>
+    <p class="desc">이 대시보드의 지표들을 다섯 가지 우려 경로로 묶어, 앞으로 12개월 동안 빅테크의 AI 시설 투자가 이어질지 줄어들지를 확률로 나타낸 것입니다. 미래를 맞히는 예측이 아니라 '지금 신호들이 어느 쪽을 가리키는지'를 한 숫자로 요약한 추정치입니다.</p>
+    <div class="cards">
+      <div class="card"><h3>시나리오 확률 (신호 기반 추정)</h3>
+        <p class="note">세 시나리오는 6대 하이퍼스케일러의 내년 설비투자 예상(증권가 컨센서스)이 12개월 뒤 어떻게 바뀌는지로 나눕니다. 투자 지속 = 유지 또는 상향(5% 넘게 깎이지 않음) · 지연·감속 = 5~20% 하향, 또는 실제 집행 속도가 직전 1년 합계 아래로 · 축소 = 20% 넘게 하향 또는 주요 회사의 감축 발표.
+          확률은 오른쪽 경로별 점수를 가중 평균한 종합 스트레스(0~100)에서 계산합니다. 종합 50이면 '투자 지속' 확률이 50%, 75면 '축소' 확률이 50%가 되도록 맞췄습니다. 가중치와 기준은 처음 정한 값이라, 쌓이는 기록을 실제 결과와 비교하며 고쳐 갑니다. 괄호는 직전 기록 대비 변화입니다.</p>
+        <div id="scn-bar"></div>
+        <div id="scn-hist"></div></div>
+      <div class="card"><h3>우려 경로별 스트레스 (0~100)</h3>
+        <p class="note">점수가 높을수록 그 경로의 걱정이 크다는 뜻입니다(35 미만 낮음 · 35~60 보통 · 60 이상 높음). 지표마다 '평온한 수준 = 0점, 위험한 수준 = 100점'으로 바꿔 경로별로 평균했습니다.
+          종합 점수에 들어가는 비중: 빅테크 투자 여력 30% · 네오클라우드 신용 25% · 실제 수요 20% · 신용시장·금리 15% · 정책·이벤트 10%. '정책·이벤트'는 숫자 데이터가 없어 사람이 판단해 넣은 점수(수동)입니다. 막대 아래에는 점수를 끌어올린 지표를 적었고, '지표 전체 보기'에서 모든 지표의 값과 점수를 볼 수 있습니다.</p>
+        <div id="scn-ch"></div></div>
+    </div>
+  </section>
 
   <section id="sec-supply">
     <h2>① 공급과잉 — 1999년형</h2>
@@ -1799,6 +2010,38 @@ function renderAll(){
   document.getElementById('tiles').innerHTML=tiles.map(t=>
     `<div class="tile"><div class="label">${t.label} ${badge(t.st)}</div>
      <div class="value">${t.value}</div><div class="delta">${t.delta}</div></div>`).join('');
+
+  // AI 투자 시나리오 — 확률 막대 + 경로별 스트레스
+  const sc=DATA.scenario, secS=document.getElementById('sec-scn');
+  if(!sc||!sc.probs){ if(secS) secS.style.display='none'; }
+  else {
+    const P=sc.probs, pv=sc.prev;
+    const segs=[['keep','투자 지속','var(--good)','#fff'],['delay','지연·감속','var(--warning)','#1a1a19'],
+                ['cut','축소','var(--critical)','#fff']];
+    const dl=k=>{ if(!pv||pv[k]==null) return ''; const d=P[k]-pv[k];
+      return `<span class="d"> (${d===0?'변화 없음':(d>0?'+':'')+d+'%p'})</span>`; };
+    document.getElementById('scn-bar').innerHTML=
+      '<div class="scn-bar">'+segs.map(s=>`<div style="flex:${Math.max(P[s[0]],0.5)} 1 0;background:${s[2]};color:${s[3]}" title="${s[1]} ${P[s[0]]}%">${P[s[0]]>=9?P[s[0]]+'%':''}</div>`).join('')+'</div>'+
+      '<div class="scn-leg">'+segs.map(s=>`<span><span class="sw" style="background:${s[2]}"></span>${s[1]} <b>${P[s[0]]}%</b>${dl(s[0])}</span>`).join('')+'</div>'+
+      `<div class="scn-meta">종합 스트레스 ${fmt(sc.stress,0)} / 100`+(pv?` · 직전 기록(${pv.date}) ${fmt(pv.stress,0)}`:' · 첫 기록')+'</div>';
+    const lvC={'낮음':'var(--good)','보통':'var(--warning)','높음':'var(--critical)'};
+    document.getElementById('scn-ch').innerHTML=sc.channels.map(c=>{
+      const d=(pv&&pv.ch&&pv.ch[c.key]!=null)?Math.round(c.score-pv.ch[c.key]):0;
+      return `<div class="scn-row"><div class="top"><span class="nm">${c.name}</span>`+
+        `<span class="sc">${fmt(c.score,0)} · ${c.level}${d?` (${d>0?'+':''}${d})`:''}</span></div>`+
+        `<div class="scn-track"><i style="width:${Math.max(c.score,1)}%;background:${lvC[c.level]}"></i></div>`+
+        `<div class="dr">${c.drivers.length?c.drivers.join(' · '):'점수를 끌어올린 지표 없음'}</div></div>`;}).join('')+
+      '<details class="tbl" id="scn-tbl"><summary>지표 전체 보기</summary><table><tr><th>경로</th><th>지표</th><th>현재 값</th><th>점수</th></tr>'+
+      sc.channels.map(c=>c.items.map((it,i)=>`<tr><td>${i?'':c.name}</td><td>${it.name}</td><td>${it.text}</td><td>${it.score}</td></tr>`).join('')).join('')+
+      '</table></details>';
+    const hh=sc.history||{};
+    if(hh.dates&&hh.dates.length>=2){
+      lineChart('scn-hist',[
+        {name:'투자 지속',dates:hh.dates,values:hh.keep,color:css('--good')},
+        {name:'지연·감속',dates:hh.dates,values:hh.delay,color:css('--warning')},
+        {name:'축소',dates:hh.dates,values:hh.cut,color:css('--critical')}],{unit:'%',h:150});
+    }
+  }
 
   // ① 공급 — 모델별 임대중 중앙값 (공통 날짜축 정렬, H100 가용 호가는 참고선)
   const g=DATA.supply.gpu_rental||{};
