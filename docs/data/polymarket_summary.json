@@ -1,5 +1,5 @@
 {
- "date": "2026-11-18 08:35",
+ "date": "2026-11-18 16:45",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -12,8 +12,8 @@
    "prob": 0.935,
    "d24": 0.02
   },
-  "mean": 24.815,
-  "mean_d24": -0.111,
+  "mean": 24.789,
+  "mean_d24": -0.248,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
@@ -25,15 +25,15 @@
   "q": "November 22 · US x Iran Effective Ceasefire by November 22?",
   "pmss": 68.0,
   "band": "Interest",
-  "d24": -0.305,
-  "prob": 0.405
+  "d24": -0.31,
+  "prob": 0.4
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
   "top_pmss": 68.0
  },
- "alerts": 2,
- "n_markets": 500,
+ "alerts": 3,
+ "n_markets": 505,
  "source": "direct"
 }
