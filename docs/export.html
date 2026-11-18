@@ -258,6 +258,7 @@ function load(key) {
   if (!gCols().some(c => c[0] === gSort.k)) gSort = { k: 'e3m', dir: -1 };
   if (!sCols().some(c => c[0] === sSort.k)) sSort = { k: 'e3m', dir: -1 };
   $('srcHs').classList.toggle('on', isHs()); $('srcEcos').classList.toggle('on', !isHs());
+  $('flashCard').style.display = isHs() && window.EXPORT_FLASH && window.EXPORT_FLASH.releases.length ? '' : 'none';
   $('noteHs').style.display = isHs() ? '' : 'none'; $('noteEcos').style.display = isHs() ? 'none' : '';
   const up = D.groups.filter(g => g.e3m > 0).length, acc = D.groups.filter(g => g.accel > 0).length;
   const [y, m] = D.month.split('-').map(Number);
@@ -287,7 +288,7 @@ function confirmed(link) {
   return t ? { name: t.name, e3m: t.e3m } : null;
 }
 function drawFlash() {
-  const ok = FLASH && FLASH.releases && FLASH.releases.length;
+  const ok = FLASH && FLASH.releases && FLASH.releases.length && isHs();   // 속보는 관세청 보기에서만
   $('flashCard').style.display = ok ? '' : 'none';
   if (!ok) return;
   const R = FLASH.releases, r = R[flashIdx], bal = r.exp.usd - r.imp.usd;
