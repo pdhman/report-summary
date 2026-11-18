@@ -668,7 +668,7 @@ def render(data):
     # docs/ 배포 사본 — 그쪽에선 AI 대시보드 파일명이 aicycle.html
     if os.path.isdir(os.path.dirname(DEPLOY)):
         with open(DEPLOY, "w", encoding="utf-8") as f:
-            f.write(html.replace('href="dashboard.html"', 'href="aicycle.html"'))
+            f.write(html.replace('href="dashboard.html', 'href="aicycle.html'))
         log(f"배포 사본 저장 → {DEPLOY}")
 
 

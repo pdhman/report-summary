@@ -1609,6 +1609,10 @@ TEMPLATE = r"""<!DOCTYPE html>
   .card h3{font-size:13.5px;margin:0 0 2px;font-weight:600;}
   .card .note{display:none;} /* 2026-11 사용자 요청: 카드 설명 숨김 — 다시 보이려면 이 줄을 원래 스타일로 */
   .card .subhead{font-size:12.5px;font-weight:600;margin:14px 0 2px;}
+  /* 탭: 주소 끝이 #scenario 면 시나리오만, 아니면 나머지만 보인다 */
+  .viz-root[data-view="scn"]>.tiles,.viz-root[data-view="scn"]>section:not(#sec-scn){display:none;}
+  .viz-root:not([data-view="scn"]):not([data-view="all"])>#sec-scn{display:none;}
+  .viz-root[data-view="scn"]>#sec-scn{margin-top:22px;}
   .scn-bar{display:flex;height:34px;border-radius:8px;overflow:hidden;margin:10px 0 8px;gap:2px;}
   .scn-bar div{display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;
     min-width:0;white-space:nowrap;overflow:hidden;}
@@ -2241,7 +2245,20 @@ function renderAll(){
   document.getElementById('alertTable').innerHTML=
     `<table><tr><th>축</th><th style="text-align:left">지표</th><th>현재</th><th>경계 기준</th><th style="text-align:left">상태</th></tr>${rows}</table>`;
 }
+/* 탭 전환(#scenario) — 숨겨진 상태로 그린 차트는 폭을 못 재므로 전환할 때마다 다시 그린다 */
+function applyView(){
+  const has=!!(DATA.scenario&&DATA.scenario.probs), scn=has&&location.hash==='#scenario';
+  const root=document.querySelector('.viz-root');
+  if(scn) root.dataset.view='scn'; else delete root.dataset.view;
+  const a=document.getElementById('tab-main'), b=document.getElementById('tab-scn');
+  if(!a||!b){ root.dataset.view='all'; return; }   // 탭 줄이 없는 사본: 한 화면에 모두
+  if(!has){ b.style.display='none'; return; }
+  a.classList.toggle('active',!scn); b.classList.toggle('active',scn);
+  (scn?a:b).removeAttribute('aria-current'); (scn?b:a).setAttribute('aria-current','page');
+}
+applyView();
 renderAll();
+window.addEventListener('hashchange',()=>{applyView();renderAll();window.scrollTo(0,0);});
 let rsz;window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(renderAll,200);});
 if(window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',renderAll);
 </script>
