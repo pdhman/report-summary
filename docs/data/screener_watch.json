@@ -5,47 +5,38 @@
   {
    "name": "삼성E&A",
    "ticker": "028050",
-   "close": 63800.0,
-   "change_ratio": -0.31,
-   "rs_score": 90.9,
-   "vol_ratio": 57.0,
-   "from_high": -9.2
+   "close": 63400.0,
+   "change_ratio": -0.94,
+   "rs_score": 89.5,
+   "vol_ratio": 64.6,
+   "from_high": -9.8
   },
   {
    "name": "한진칼",
    "ticker": "180640",
-   "close": 222000.0,
-   "change_ratio": -0.22,
-   "rs_score": 89.4,
-   "vol_ratio": 46.9,
-   "from_high": -9.4
+   "close": 216000.0,
+   "change_ratio": -2.92,
+   "rs_score": 87.2,
+   "vol_ratio": 62.4,
+   "from_high": -11.8
   },
   {
    "name": "지니언스",
    "ticker": "263860",
-   "close": 37700.0,
-   "change_ratio": 4.87,
-   "rs_score": 78.8,
-   "vol_ratio": 54.1,
-   "from_high": -16.2
-  },
-  {
-   "name": "티엘비",
-   "ticker": "356860",
-   "close": 45050.0,
-   "change_ratio": 7.26,
-   "rs_score": 65.2,
-   "vol_ratio": 96.0,
-   "from_high": -33.4
+   "close": 38150.0,
+   "change_ratio": 6.12,
+   "rs_score": 80.2,
+   "vol_ratio": 57.5,
+   "from_high": -15.2
   },
   {
    "name": "KT&G",
    "ticker": "033780",
-   "close": 183300.0,
-   "change_ratio": 0.77,
-   "rs_score": 60.6,
-   "vol_ratio": 74.6,
-   "from_high": -8.8
+   "close": 182500.0,
+   "change_ratio": 0.33,
+   "rs_score": 65.1,
+   "vol_ratio": 90.7,
+   "from_high": -9.2
   }
  ]
 }
