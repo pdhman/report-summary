@@ -105,6 +105,11 @@ def _stale(mk: Market) -> bool:
 def build_event(ev: dict, group: str) -> Event | None:
     spec = C.GROUPS[group]
     mks = [m for m in event_markets(ev) if not _stale(m)]
+    # 자리표시 후보("Candidate N", "Company B" 등 거래 없는 빈 시장)는 뺀다
+    mks = [m for m in mks if not (re.fullmatch(r"(candidate|company|person|option|player|team)\s+[a-z]{1,2}", m.label.strip().lower())
+                                  and m.volume24h <= 0)]
+    if spec.get("min_prob") and len(mks) > 1 and bool(ev.get("negRisk", False)):
+        mks = [m for m in mks if m.prob >= spec["min_prob"]] or mks
     if not mks:
         return None
     slug = str(ev.get("slug", ""))
@@ -117,6 +122,8 @@ def build_event(ev: dict, group: str) -> Event | None:
     for mk in mks:
         mk.category = group
         mk.value = bucket_value(mk.label) if mk.label else bucket_value(mk.question)
+        if spec.get("min_prob"):
+            mk.value = None                       # 이름형 후보: "No Change" 를 0bp 로 읽지 않게
 
     if kind == "dist":
         # 구간 정렬(숫자값 있으면 오름차순) + 극성: 내재 평균 μ 기준 위(+)/아래(-) × ev_sign
@@ -134,6 +141,8 @@ def build_event(ev: dict, group: str) -> Event | None:
                 m.polarity = _polarity(spec, m) if spec["axis"] != "none" else 0
         if all(m.value is not None for m in mks):
             mks.sort(key=lambda m: m.value)
+        elif spec.get("min_prob"):
+            mks.sort(key=lambda m: -m.prob)       # 이름형 후보(차기 CEO 등)는 확률 높은 순
     else:
         for m in mks:
             m.polarity = _polarity(spec, m) if spec["axis"] != "none" else 0

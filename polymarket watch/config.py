@@ -38,7 +38,15 @@ TAGS = ["economy", "fed-rates", "macro-indicators", "Global-Rates", "inflation",
         # AI · 반도체 정책 (2026-11 추가): 데이터센터 규제·AI 버블·빅테크 시총
         "ai", "ai-regulation", "compute", "ai-bubble", "big-tech"]
 EVENTS_PER_TAG = 100
-MANUAL_EVENTS: list[str] = []     # 자동선별이 놓친 이벤트 slug 를 직접 등록
+# 자동선별(태그)이 놓친 이벤트 slug 를 직접 등록
+MANUAL_EVENTS: list[str] = [
+    # 엔비디아 리더십 (2026-11-19 추가) — 젠슨 황 사임(11/12) 이후
+    "jensen-huang-rejoins-nvidia-byptptpt",
+    "next-ceo-of-nvidia",
+    "new-nvidia-ceo-named-by-december-31-2026",
+    "next-nvidia-ceo-internal-or-external",
+    "jensen-huang-publicly-testifies-before-congress-byptptpt",
+]
 
 # 어떤 그룹이든 무조건 제외 (스포츠·연예·기업가치·주택 등 비매크로)
 GLOBAL_EXCLUDE = (r"parlay|combo|temperature|emmy|oscar|nobel|net-worth|2nd-largest|3rd-largest|largest-ipo|"
@@ -128,6 +136,18 @@ GROUPS = {
         # 분포형: 엔비디아 시총이 클수록 리스크↓(−1). GPU 임대료·최대 기업은 표시만(0)
         "ev_sign": [(r"nvidias-market-cap", -1), (r".", 0)],
     },
+    "NVDA_LEAD": {
+        "title": "엔비디아 리더십", "icon": "👔", "axis": "none", "importance": 6,
+        "desc": "젠슨 황 사임(2026-11-12) 이후 — 황 복귀(고문·이사 등 공식 직책 포함) · 차기 CEO · 정식 선임 · 의회 증언. 레짐 계산에는 넣지 않고 표시만",
+        "include": [r"^jensen-huang-rejoins-nvidia", r"^next-ceo-of-nvidia", r"^new-nvidia-ceo-named",
+                    r"^next-nvidia-ceo-internal-or-external", r"^jensen-huang-publicly-testifies"],
+        "exclude": [r"before-divorce"],
+        "max_events": 6,
+        "pin": [r"jensen-huang|nvidia-ceo|ceo-of-nvidia"],
+        "min_prob": 0.01,          # 분포형 후보 중 1% 미만은 화면에서 생략 + 확률순 정렬
+        "polarity": [],
+        "ev_sign": [(r".", 0)],
+    },
     "TRADE": {
         "title": "관세 · 무역", "icon": "🚢", "axis": "risk", "importance": 7,
         "desc": "관세 부과·완화, 무역합의, 수출통제 — 확률↑ 가 리스크↑ 인지(+) 리스크↓ 인지(−) 극성 표시",
@@ -190,6 +210,8 @@ KEY_SERIES = [
     (r"^ai-bubble-burst", r"december", "AI 버블 붕괴(연내)"),
     (r"^will-any-state-enact-a-data-center-moratorium", r".", "주 데이터센터 모라토리엄(연내)"),
     (r"^largest-company-end-of-december", r"^nvidia", "엔비디아 세계 시총 1위(연말)"),
+    (r"^jensen-huang-rejoins-nvidia", r"december 31, 2026", "젠슨 황 복귀(연내)"),
+    (r"^jensen-huang-rejoins-nvidia", r"december 31, 2027", "젠슨 황 복귀(2027년 말까지)"),
 ]
 
 # ─────────────────────────────────────────────

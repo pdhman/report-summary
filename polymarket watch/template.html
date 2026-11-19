@@ -370,7 +370,7 @@ function moratoriumTable(events){
 }
 function renderGroups(){
   const host=document.getElementById('groups'); host.innerHTML='';
-  const order=['FED','INFLATION','GROWTH','AI_POLICY','GEOPOLITICS','TRADE','FISCAL','ENERGY','RATES','GLOBAL_CB'];
+  const order=['FED','INFLATION','GROWTH','AI_POLICY','NVDA_LEAD','GEOPOLITICS','TRADE','FISCAL','ENERGY','RATES','GLOBAL_CB'];
   const gs=DATA.groups.slice().sort((a,b)=>order.indexOf(a.key)-order.indexOf(b.key));
   let n=0;
   for(const g of gs){
@@ -501,6 +501,7 @@ function renderTrend(){
     {title:'지정학 — 이란·호르무즈',note:'정상화·핵합의·침공 확률(%)',series:byName(/호르무즈|핵합의|이란/)},
     {title:'지정학 — 대만·우크라이나',note:'확률(%)',series:byName(/대만|러-우/)},
     {title:'AI · 빅테크',note:'AI 버블 붕괴 · 주 데이터센터 모라토리엄 · 엔비디아 시총 1위 확률(%)',series:byName(/AI 버블|모라토리엄|엔비디아/)},
+    {title:'엔비디아 — 젠슨 황 복귀',note:'공식 직책(CEO·이사·고문 등) 복귀 확률(%) — 2026-11-12 사임 이후',series:byName(/젠슨 황/)},
   ].filter(c=>c.series.length);
   cards.forEach((c,i)=>{host.insertAdjacentHTML('beforeend',`<div class="card"><h3>${esc(c.title)}</h3><p class="meta">${esc(c.note)}</p><div id="tr-${i}"></div></div>`);});
   cards.forEach((c,i)=>lineChart(`tr-${i}`,c.series,{unit:'%',dec:0,tdec:1,h:210,ymin:0}));
