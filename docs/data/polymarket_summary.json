@@ -1,5 +1,5 @@
 {
- "date": "2026-11-19 14:45",
+ "date": "2026-11-19 14:47",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -12,8 +12,8 @@
    "prob": 0.915,
    "d24": -0.02
   },
-  "mean": 25.722,
-  "mean_d24": 0.957,
+  "mean": 25.709,
+  "mean_d24": 0.944,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
@@ -35,5 +35,5 @@
  },
  "alerts": 5,
  "n_markets": 517,
- "source": "proxy(r.jina.ai)"
+ "source": "direct"
 }
