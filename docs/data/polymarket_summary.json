@@ -1,5 +1,5 @@
 {
- "date": "2026-11-19 14:47",
+ "date": "2026-11-19 22:36",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -10,30 +10,30 @@
   "top": {
    "label": "25 bps increase",
    "prob": 0.915,
-   "d24": -0.02
+   "d24": -0.01
   },
-  "mean": 25.709,
-  "mean_d24": 0.944,
+  "mean": 25.745,
+  "mean_d24": 0.572,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
-  "prob": 0.0225,
-  "d24": -0.001,
+  "prob": 0.0235,
+  "d24": 0.001,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "June 30, 2027 · Russia x Ukraine ceasefire agreement by June 30, 2027?",
-  "pmss": 82.9,
-  "band": "Strong Signal",
-  "d24": 0.06,
-  "prob": 0.595
+  "q": "May 31, 2027 · Russia x Ukraine ceasefire agreement by May 31, 2027?",
+  "pmss": 65.2,
+  "band": "Interest",
+  "d24": 0.025,
+  "prob": 0.57
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 82.9
+  "top_pmss": 65.2
  },
- "alerts": 5,
- "n_markets": 517,
+ "alerts": 0,
+ "n_markets": 502,
  "source": "direct"
 }
