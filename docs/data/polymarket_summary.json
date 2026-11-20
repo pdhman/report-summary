@@ -1,19 +1,21 @@
 {
- "date": "2026-11-20 08:08",
- "regime_icon": "⚪",
- "regime_name": "Neutral / Mixed (근사)",
+ "date": "2026-11-20 16:32",
+ "regime_icon": "🟣",
+ "regime_name": "Risk-Off (급락·공포)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
- "risk_off": [],
+ "risk_off": [
+  "나스닥 선물 -5.1% (기준 -3%)"
+ ],
  "regime_base": "Neutral / Mixed (근사)",
  "fomc": {
   "title": "Fed Decision in December?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.915,
-   "d24": 0.0
+   "prob": 0.925,
+   "d24": 0.01
   },
-  "mean": 25.437,
-  "mean_d24": -0.258,
+  "mean": 24.938,
+  "mean_d24": -0.832,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
@@ -25,15 +27,15 @@
   "q": "December 31 · US announces end of Iranian blockade by December 31, 2026?",
   "pmss": 78.0,
   "band": "Tactical Signal",
-  "d24": -0.0455,
-  "prob": 0.127
+  "d24": -0.0555,
+  "prob": 0.114
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
   "top_pmss": 78.0
  },
- "alerts": 2,
- "n_markets": 514,
+ "alerts": 3,
+ "n_markets": 510,
  "source": "direct"
 }
