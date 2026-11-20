@@ -1,6 +1,7 @@
 # 알파노트 자가 점검 — 조치 설명서(RUNBOOK)
 
-자가 점검 에이전트(Claude 예약 작업 `site-health-check`, 평일 10:00·18:00)가 따르는 절차다.
+자가 점검 에이전트(Claude 예약 작업 `site-health-check` 평일 10:00 · `site-health-check-pm` 평일 17:30)가 따르는 절차다.
+주간 보고(`site-health-weekly`, 토 10:00)는 `history.jsonl`(점검 기록·발송 원문)과 그 주 '자가 점검:' 커밋으로 한 주를 정리한다.
 `site_check.py` 가 '눈'(문제 목록만 냄), 에이전트가 '손'(원인 확인 → 안전한 조치 → 재확인 → 보고).
 2026-11-20 사용자 결정: 하루 2번 · **안전한 것만 자동 조치**(재생성·재게시·예약 작업 재실행) · 코드 수정이 필요하면 원인만 보고 · **문제 있을 때만** 텔레그램 dm · 홈 카드+주요 페이지+예약 작업+git 점검.
 
@@ -8,8 +9,10 @@
 
 ```
 cd "C:/Users/SAMSUNG/Desktop/클로드코드"
-python -X utf8 site-health/site_check.py --json
+python -X utf8 site-health/site_check.py --json --log first
 ```
+- `--log` 는 주간 보고 재료(history.jsonl)를 남긴다. 처음 점검은 `--log first`, 조치 후 재확인은 `--log final`.
+- 17:30 실행은 레버리지·블로그(17:30)·한국 사이클(17:45)이 도는 중일 수 있다 → 1절대로 기다린 뒤 판단.
 - 종료 3(휴장일) 또는 0(이상 없음) → **아무것도 하지 않고 끝낸다**(텔레그램 없음). 보고는 한 줄.
 - 종료 1 → 아래 표대로 문제마다 원인 확인·조치. 같은 원인을 공유하는 문제는 한 번에 처리한다.
 
@@ -63,7 +66,7 @@ git push origin main
 - 사용자가 직접 해야 하는 일(시황 올리기·블로그 글 쓰기)을 대신 만들어 넣기.
 
 ## 4. 마무리 — 재확인과 보고
-1. `python -X utf8 site-health/site_check.py` 를 다시 돌려 남은 문제를 확인한다.
+1. `python -X utf8 site-health/site_check.py --log final` 을 다시 돌려 남은 문제를 확인한다(조치를 하나도 안 했으면 생략).
 2. 메시지를 `site-health/last_msg.txt` 에 Write 로 쓴다(텔레그램 한 통, 15줄 이내, 쉬운 말):
    ```
    🩺 알파노트 자가 점검 (11/20 저녁)
@@ -77,3 +80,24 @@ git push origin main
 3. 보낸다: `python -X utf8 site-health/notify.py --file site-health/last_msg.txt --key "<am|pm>:<남은 ⚠️ 문제 제목들, 없으면 해결한 문제 제목들>"`
    - 종료 4 = 오늘 같은 내용 이미 발송 → 그대로 끝(재발송 금지).
 4. 끝에 한국어 2~3줄 보고(발견·조치·남은 문제).
+
+## 5. 주간 보고(토 10:00, `site-health-weekly`)
+1. `site-health/history.jsonl` 에서 최근 7일 기록을 읽는다(`phase` first=처음 점검, final=조치 후, sent=보낸 메시지 원문, status ok/issues/holiday).
+2. `git log --since="7 days ago" --oneline --grep="자가 점검"` 으로 에이전트가 직접 한 커밋을 본다.
+3. 텔레그램 한 통(20줄 이내, 쉬운 말)으로 쓴다:
+   ```
+   🗓 알파노트 주간 점검 보고 (11/16~11/20)
+   점검 10회 · 이상 없음 7회 · 문제 발견 3회
+
+   🔧 고친 것
+   · 11/18 저녁 수급 동향 카드 날짜 → 수급 작업 재실행으로 해결
+
+   ⚠️ 남은 것 / 확인 필요
+   · 없음
+
+   🔁 반복된 문제
+   · '오늘의 뉴스' 날짜 2회 — 근본 원인 점검 권장(시황올리기 게시 단계)
+   ```
+   - 점검 기록이 하나도 없으면(앱이 꺼져 있어 안 돈 경우 포함) "이번 주 점검 기록 없음 — 앱이 꺼져 있었는지 확인" 이라고 쓴다.
+   - 같은 문제가 2일 이상 나오면 '반복된 문제'에 넣고, 근본 원인을 고칠 곳(파일·작업)을 한 줄로 제안한다. 직접 고치지는 않는다.
+4. `site-health/last_msg.txt` 에 쓰고 `python -X utf8 site-health/notify.py --file site-health/last_msg.txt --key "weekly:<그 주 월요일 날짜>"` 로 보낸다. 주간 보고는 문제가 0건이어도 보낸다.

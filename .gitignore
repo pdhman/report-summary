@@ -86,3 +86,4 @@ docs/thesis/private/
 # 자가 점검 에이전트 상태·임시 메시지
 site-health/state.json
 site-health/last_msg.txt
+site-health/history.jsonl

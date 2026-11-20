@@ -50,6 +50,10 @@ def main():
     state = {k: v for k, v in state.items() if k >= (dt.date.fromisoformat(today) - dt.timedelta(days=14)).isoformat()}
     state.setdefault(today, []).append(a.key)
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
+    if not a.key.startswith("weekly:"):        # 주간 보고 재료: 에이전트가 보낸 '발견→조치→결과' 원문
+        with (Path(__file__).resolve().parent / "history.jsonl").open("a", encoding="utf-8") as f:
+            f.write(json.dumps({"at": dt.datetime.now(KST).strftime("%Y-%m-%d %H:%M"), "phase": "sent",
+                                "key": a.key, "msg": msg}, ensure_ascii=False) + "\n")
     print("발송 완료")
     return 0
 

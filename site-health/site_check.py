@@ -130,9 +130,9 @@ def origin_has(path: str) -> bool:
 
 
 def git(*args):
-    r = subprocess.run(["git", "-C", str(BASE), *args], capture_output=True, text=True,
+    r = subprocess.run(["git", "-c", "core.quotepath=false", "-C", str(BASE), *args], capture_output=True, text=True,
                        encoding="utf-8", errors="replace")
-    return r.returncode, r.stdout.strip()
+    return r.returncode, r.stdout.rstrip()   # 앞 공백 유지(status --porcelain 첫 줄 " M 파일")
 
 
 def task_failures(today: dt.date):
@@ -161,10 +161,24 @@ def task_failures(today: dt.date):
     return out
 
 
+HISTORY = Path(__file__).resolve().parent / "history.jsonl"   # git 제외 · 주간 보고 재료
+
+
+def log_history(phase, now, slot, status, issues):
+    if not phase:
+        return
+    rec = {"at": now.strftime("%Y-%m-%d %H:%M"), "phase": phase, "slot": slot, "status": status,
+           "issues": [{"kind": x["kind"], "what": x["what"], "detail": x.get("detail", "")} for x in issues]}
+    with HISTORY.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--slot", choices=["am", "pm"])
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--log", choices=["first", "final"],
+                    help="점검 결과를 history.jsonl 에 남긴다(주간 보고용). 에이전트는 처음=first, 조치 후=final")
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -180,6 +194,7 @@ def main():
         issues.append({"kind": "env", "what": "거래일 조회 실패(네이버)", "detail": str(e)[:200]})
     if tdays and today not in tdays:
         res = {"slot": slot, "status": "holiday", "issues": []}
+        log_history(a.log, now, slot, "holiday", [])
         print(json.dumps(res, ensure_ascii=False) if a.json else f"{today} 휴장일 — 점검 생략")
         return 3
     past = [d for d in tdays if d < today]
@@ -258,13 +273,14 @@ def main():
         issues.append({"kind": "git", "what": f"푸시 안 된 커밋 {ahead}개"})
     _, dirty = git("status", "--porcelain", "--untracked-files=no")
     if dirty:
-        files = [ln[3:] for ln in dirty.splitlines()]
+        files = [ln[3:] for ln in dirty.splitlines() if ln.strip()]
         issues.append({"kind": "git", "what": f"추적 파일 미커밋 수정 {len(files)}개",
                        "detail": ", ".join(files[:8]), "files": files})
 
     res = {"checked_at": now.strftime("%Y-%m-%d %H:%M"), "slot": slot, "today": d,
            "prev_trading_day": prev.isoformat(), "status": "issues" if issues else "ok",
            "cards": cards, "issues": issues}
+    log_history(a.log, now, slot, res["status"], issues)
     if a.json:
         print(json.dumps(res, ensure_ascii=False, indent=1))
     else:
