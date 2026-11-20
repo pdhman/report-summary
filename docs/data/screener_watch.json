@@ -1,42 +1,42 @@
 {
- "date": "2026-11-19",
+ "date": "2026-11-20",
  "high_52w_ratio": 0.65,
  "items": [
   {
    "name": "삼성E&A",
    "ticker": "028050",
-   "close": 63400.0,
-   "change_ratio": -0.94,
-   "rs_score": 89.5,
-   "vol_ratio": 64.6,
-   "from_high": -9.8
+   "close": 60300.0,
+   "change_ratio": -4.89,
+   "rs_score": 90.0,
+   "vol_ratio": 77.2,
+   "from_high": -14.2
   },
   {
-   "name": "한진칼",
-   "ticker": "180640",
-   "close": 216000.0,
-   "change_ratio": -2.92,
-   "rs_score": 87.2,
-   "vol_ratio": 62.4,
-   "from_high": -11.8
+   "name": "안랩",
+   "ticker": "053800",
+   "close": 111100.0,
+   "change_ratio": -4.88,
+   "rs_score": 86.2,
+   "vol_ratio": 73.3,
+   "from_high": -19.1
   },
   {
    "name": "지니언스",
    "ticker": "263860",
-   "close": 38150.0,
-   "change_ratio": 6.12,
-   "rs_score": 80.2,
-   "vol_ratio": 57.5,
-   "from_high": -15.2
+   "close": 36400.0,
+   "change_ratio": -5.58,
+   "rs_score": 81.2,
+   "vol_ratio": 48.9,
+   "from_high": -19.1
   },
   {
-   "name": "KT&G",
-   "ticker": "033780",
-   "close": 182500.0,
-   "change_ratio": 0.33,
-   "rs_score": 65.1,
-   "vol_ratio": 90.7,
-   "from_high": -9.2
+   "name": "대한항공",
+   "ticker": "003490",
+   "close": 31400.0,
+   "change_ratio": -3.83,
+   "rs_score": 75.0,
+   "vol_ratio": 88.8,
+   "from_high": -4.7
   }
  ]
 }
