@@ -4,7 +4,7 @@
 자가 점검 에이전트(Claude 예약 작업 site-health-check, 평일 10:00·18:00)가 이 스크립트를 먼저 돌리고,
 문제가 있을 때만 RUNBOOK.md 대로 조치한다. 정상이면 에이전트는 조용히 끝난다.
 
-  python -X utf8 site-health/site_check.py            # 지금 시각 기준 자동(am: 15시 전, pm: 15시 후)
+  python -X utf8 site-health/site_check.py            # 지금 시각 기준 자동(am: 17시 전, pm: 17시 후)
   python -X utf8 site-health/site_check.py --slot pm  # 저녁 기준으로 강제
   python -X utf8 site-health/site_check.py --json     # 기계용 JSON
 
@@ -170,7 +170,7 @@ def main():
 
     now = now_kst()
     today = now.date()
-    slot = a.slot or ("am" if now.hour < 15 else "pm")
+    slot = a.slot or ("am" if now.hour < 17 else "pm")   # 저녁 기준은 장 마감 작업이 다 끝난 17시 이후
     issues = []
 
     try:
