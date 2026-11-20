@@ -82,3 +82,7 @@ thesis-lab/__pycache__/
 
 # 종목 리서치 가격 레벨(목표가·진입가·손절)은 PC 전용 — 공개 사이트에 올리지 않는다
 docs/thesis/private/
+
+# 자가 점검 에이전트 상태·임시 메시지
+site-health/state.json
+site-health/last_msg.txt
