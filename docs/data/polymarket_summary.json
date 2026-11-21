@@ -1,39 +1,41 @@
 {
- "date": "2026-11-21 10:37",
- "regime_icon": "🟢",
- "regime_name": "Goldilocks (근사)",
+ "date": "2026-11-21 21:51",
+ "regime_icon": "🟣",
+ "regime_name": "Risk-Off (급락·공포)",
  "arrows": "Easing ↑ / Recession → / Inflation → / Risk →",
- "risk_off": [],
+ "risk_off": [
+  "나스닥 선물 -5.2% (기준 -3%)"
+ ],
  "regime_base": "Goldilocks (근사)",
  "fomc": {
   "title": "Fed Decision in December?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.895,
-   "d24": -0.03
+   "prob": 0.885,
+   "d24": -0.04
   },
-  "mean": 23.014,
-  "mean_d24": -2.221,
+  "mean": 22.865,
+  "mean_d24": -1.936,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
-  "prob": 0.04,
-  "d24": 0.0175,
+  "prob": 0.0315,
+  "d24": 0.008,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "No change · Will there be no change in Fed interest rates after the December 2026 meeting?",
+  "q": "No change · Will there be no change in Fed interest rates after the January 2027 meeting?",
   "pmss": 80.0,
   "band": "Strong Signal",
-  "d24": 0.05,
-  "prob": 0.0795
+  "d24": 0.11,
+  "prob": 0.485
  },
  "exposure": {
   "base": 0.5,
-  "suggested": 0.7,
+  "suggested": 0.5,
   "top_pmss": 80.0
  },
- "alerts": 5,
- "n_markets": 525,
+ "alerts": 6,
+ "n_markets": 523,
  "source": "direct"
 }
