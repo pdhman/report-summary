@@ -1,5 +1,5 @@
 {
- "date": "2026-11-22 16:09",
+ "date": "2026-11-23 01:29",
  "regime_icon": "🟣",
  "regime_name": "Risk-Off (급락·공포)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -12,30 +12,30 @@
   "top": {
    "label": "25 bps increase",
    "prob": 0.895,
-   "d24": 0.0
+   "d24": 0.01
   },
-  "mean": 23.093,
-  "mean_d24": 0.22,
+  "mean": 23.264,
+  "mean_d24": 0.259,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
-  "prob": 0.0305,
-  "d24": -0.015,
+  "prob": 0.0275,
+  "d24": -0.003,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "2.0–2.5% · Will US GDP growth in 2026 be between 2.0% and 2.5%?",
-  "pmss": 59.0,
+  "q": "No change · Will there be no change in Fed interest rates after the March 2027 meeting?",
+  "pmss": 55.5,
   "band": "Interest",
-  "d24": 0.25,
-  "prob": 0.67
+  "d24": 0.035,
+  "prob": 0.465
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 59.0
+  "top_pmss": 55.5
  },
  "alerts": 0,
- "n_markets": 521,
+ "n_markets": 536,
  "source": "direct"
 }
