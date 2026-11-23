@@ -22,6 +22,7 @@ import site_nav
 XLSX = "리포트서머리.xlsx"
 OUT_DIR = "docs"
 TOP_GAP = 5      # 괴리율 TOP N
+NEWS_BADGE = '<span class="nbadge" title="네이버·한경 컨센서스에 없어 뉴스 기사(목표가 보도)에서 보충한 리포트">뉴스</span>'
 TOP_RET = 10     # 실제 상승률 TOP N
 GAP_MAX = 300    # 이 이상은 원본 데이터 오류로 보고 제외 (%, 2026-09-18 한화투자증권 +999% 사고)
 
@@ -120,13 +121,17 @@ def build():
     gen_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     # ---- (1) 괴리율 행 ----
+    # 2026-11-23: 뉴스 보충 리포트(요약에 '뉴스 보충')는 종목명 옆에 '뉴스' 표시
+    def nb(r):
+        return NEWS_BADGE if "뉴스 보충" in str(r.get("요약", "")) else ""
+
     gap_rows = []
     for i, r in gap_top.iterrows():
         gap = r["괴리율"]
         gap_rows.append(f"""
       <tr>
         <td class="rank">{i+1}</td>
-        <td class="name"><span class="nm">{esc(r['name'])}</span><span class="code">{esc(r['code'])}</span></td>
+        <td class="name"><span class="nm">{esc(r['name'])}</span>{nb(r)}<span class="code">{esc(r['code'])}</span></td>
         <td class="num">{fmt_int(r['전일수정주가'])}</td>
         <td class="num strong">{fmt_int(r['목표주가'])}</td>
         <td class="num up">+{gap:.1f}%</td>
@@ -143,7 +148,7 @@ def build():
         ret_rows.append(f"""
       <tr>
         <td class="rank">{i+1}</td>
-        <td class="name"><span class="nm">{esc(r['name'])}</span><span class="code">{esc(r['code'])}</span></td>
+        <td class="name"><span class="nm">{esc(r['name'])}</span>{nb(r)}<span class="code">{esc(r['code'])}</span></td>
         <td class="num muted-c">{ed}</td>
         <td class="num">{fmt_int(r['전일수정주가'])}</td>
         <td class="num">{fmt_int(r['현재가'])}</td>
@@ -238,6 +243,8 @@ def build():
   .rank {{ color:var(--muted); width:28px; }}
   .name .nm {{ font-weight:600; }}
   .name .code {{ display:block; color:var(--muted); font-size:12px; }}
+  .nbadge {{ display:inline-block; margin-left:6px; padding:0 6px; border-radius:8px; font-size:10.5px; font-weight:600;
+            line-height:17px; vertical-align:1px; color:var(--accent); border:1px solid var(--accent); cursor:help; }}
   .strong {{ font-weight:700; }}
   .up {{ color:var(--up); font-weight:600; }}
   .down {{ color:var(--down); font-weight:600; }}

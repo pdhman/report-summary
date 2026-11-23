@@ -139,7 +139,9 @@ def card_upside():
     d = (d.sort_values("upside", ascending=False)
            .drop_duplicates(subset=["_key"], keep="first"))
     top = d.head(3)
-    rows = [(_clean_name(r["기업명"]), float(r["upside"])) for _, r in top.iterrows()]
+    # 뉴스 보충 리포트(2026-11-23~)는 이름 옆에 '뉴스' 표시 — 세 번째 값
+    rows = [(_clean_name(r["기업명"]), float(r["upside"]), "뉴스 보충" in str(r.get("요약", "")))
+            for _, r in top.iterrows()]
     return {"date": f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:]}", "rows": rows}
 
 
@@ -538,9 +540,10 @@ def build():
         print(f"[요약] 상승여력 카드 실패: {e}")
     if c:
         rows = "".join(
-            f'<div class="krow"><span class="k-name">{esc(nm)}</span>'
-            f'<span class="k-val up">+{v:.1f}%</span></div>'
-            for nm, v in c["rows"])
+            f'<div class="krow"><span class="k-name">{esc(nm)}'
+            + (' <small style="color:var(--accent);font-size:10.5px;font-weight:600" title="뉴스 기사에서 보충한 리포트">뉴스</small>' if nw else '')
+            + f'</span><span class="k-val up">+{v:.1f}%</span></div>'
+            for nm, v, nw in c["rows"])
         cards.append(_card("insights.html", "🚀", "상승여력 TOP 3", c["date"], rows))
 
     c = None
