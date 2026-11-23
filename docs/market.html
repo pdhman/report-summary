@@ -759,7 +759,7 @@ function renderVol(){
     var pv = sl((isAmt ? P.put_amt : P.put) || []), cv = sl((isAmt ? P.call_amt : P.call) || []);
     var legend = '<b style="color:var(--dn)">풋</b> · <b style="color:var(--up)">콜</b> · <b style="color:var(--violet)">┊</b> 옵션 만기일(둘째 목요일)';
     if(el('pcvol-cd')) el('pcvol-cd').innerHTML = isAmt
-      ? '억 원 · 로그 눈금 · ' + legend + ' — 실제 오간 돈(옵션 가격 × 25만 원 × 계약 수)'
+      ? '억 원 · 로그 눈금 · ' + legend + ' — 장내 거래만(기관 간 블록 거래 제외) · 실제 오간 돈(옵션 가격 × 25만 원 × 계약 수)'
       : '만 계약 · 로그 눈금 · ' + legend + ' — 만기로 갈수록 거래가 늘었다 급감';
     if(el('tab-pcvol')) el('tab-pcvol').querySelectorAll('.chip').forEach(function(c){
       c.classList.toggle('active', c.dataset.pv === (isAmt ? 'amt' : 'vol')); });

@@ -975,8 +975,8 @@ def write_outputs(d: pd.DataFrame, comp: pd.DataFrame, scores: dict,
         "pc_vol": {"put": _round(recent.get("put_vol", pd.Series(index=recent.index)) / 1e4, 2),
                    "call": _round(recent.get("call_vol", pd.Series(index=recent.index)) / 1e4, 2),
                    # 거래대금(억원)
-                   "put_amt": _round(recent.get("put_amt", pd.Series(index=recent.index)), 0),
-                   "call_amt": _round(recent.get("call_amt", pd.Series(index=recent.index)), 0)},
+                   "put_amt": _round(recent.get("put_amt_ex", pd.Series(index=recent.index)), 0),     # 장내만(블록 제외)
+                   "call_amt": _round(recent.get("call_amt_ex", pd.Series(index=recent.index)), 0)},
         # 코스피 거래대금(조원, KRX 공식) + 20일 평균 — 투기 열기 섹션 차트
         "trdval": {"v": _round(recent.get("kospi_trdval", pd.Series(index=recent.index)), 2),
                    "prov": _round(recent.get("kospi_trdval_prov", pd.Series(index=recent.index)), 0),
@@ -1132,16 +1132,19 @@ def main():
                      len(pv), pv.index[-1].date(), pv.iloc[-1], cv.iloc[-1])
             # 거래대금(억원, 2026-11-11): 계약 수는 만기 주간에 싼 옵션이 대량 거래돼 부풀므로
             # 실제 오간 돈은 금액으로 본다(1만 계약당 금액이 날마다 31억~756억으로 다름).
+            # 2026-11-23: 장내 거래만(블록 = 종가 없는 종목 제외) — 깊은 내가격 블록 한 건이 하루 풋 금액을
+            # 절반 넘게 부풀렸다(11/19). 열 이름을 *_ex 로 바꿔 캐시(cache/krx/option)에서 전 기간 다시 계산.
             _oa = {}
 
             def _opt_amt(day, k):
                 if day not in _oa:
-                    _oa[day] = krx_api.option_volumes(day, by="value")
+                    _oa[day] = krx_api.option_volumes(day, by="value", exchange_only=True)
                 return None if _oa[day] is None else _oa[day][k] / 1e8
-            pa = fetch_krx_series(hist, "put_amt", lambda day: _opt_amt(day, 0))
-            ca = fetch_krx_series(hist, "call_amt", lambda day: _opt_amt(day, 1))
-            hist = apply_series(hist, pa, "put_amt")
-            hist = apply_series(hist, ca, "call_amt")
+            pa = fetch_krx_series(hist, "put_amt_ex", lambda day: _opt_amt(day, 0))
+            ca = fetch_krx_series(hist, "call_amt_ex", lambda day: _opt_amt(day, 1))
+            hist = apply_series(hist, pa, "put_amt_ex")
+            hist = apply_series(hist, ca, "call_amt_ex")
+            hist = hist.drop(columns=[c for c in ("put_amt", "call_amt") if c in hist.columns])
             log.info("풋·콜 거래대금(KRX) %d일 갱신 (최근 %s = 풋 %.0f / 콜 %.0f 억원)",
                      len(pa), pa.index[-1].date(), pa.iloc[-1], ca.iloc[-1])
         except Exception as e:

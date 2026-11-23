@@ -152,12 +152,16 @@ def vkospi(bas_dd) -> float | None:
     return None
 
 
-def option_volumes(bas_dd, by: str = "volume") -> tuple[float, float] | None:
+def option_volumes(bas_dd, by: str = "volume", exchange_only: bool = False) -> tuple[float, float] | None:
     """코스피200옵션 (풋, 콜) 합계. by='volume'(거래량·계약), 'oi'(미결제약정·계약), 'value'(거래대금·원).
 
     옵션 일별매매정보는 미니·위클리·코스닥150 옵션까지 한 목록에 오므로
     PROD_NM 이 정확히 '코스피200 옵션'(공백 유무 무관)인 행만 쓴다.
     휴장·미게시(해당 행 없음)는 None.
+
+    exchange_only=True(2026-11-23): 종가(TDD_CLSPRC)가 빈 종목 = 장내 호가 체결 없이 협의대량매매(블록)로만
+    거래된 종목을 뺀다. 깊은 내가격 블록 한 건(예: 11/19 P 2703 1,550 600계약 = 1,150억)이 하루 풋 거래대금을
+    절반 넘게 부풀려 시장 분위기를 왜곡했다. 종가가 있는 종목 안에 섞인 블록은 분리할 수 없어 근사다.
     """
     col = {"volume": "ACC_TRDVOL", "oi": "ACC_OPNINT_QTY", "value": "ACC_TRDVAL"}[by]
     call = put = 0.0
@@ -167,6 +171,8 @@ def option_volumes(bas_dd, by: str = "volume") -> tuple[float, float] | None:
         if prod != "코스피200옵션":
             continue
         seen = True
+        if exchange_only and not str(row.get("TDD_CLSPRC") or "").strip():
+            continue
         v = num(row.get(col)) or 0.0
         side = str(row.get("RGHT_TP_NM", "")).upper()
         if side.startswith("C") or side == "콜":
