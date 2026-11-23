@@ -1,21 +1,21 @@
 {
- "date": "2026-11-23 01:29",
+ "date": "2026-11-23 09:59",
  "regime_icon": "🟣",
  "regime_name": "Risk-Off (급락·공포)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
  "risk_off": [
-  "나스닥 선물 -5.2% (기준 -3%)"
+  "VIX +38.4% (기준 +30%)"
  ],
  "regime_base": "Neutral / Mixed (근사)",
  "fomc": {
   "title": "Fed Decision in December?",
   "top": {
    "label": "25 bps increase",
-   "prob": 0.895,
+   "prob": 0.905,
    "d24": 0.01
   },
-  "mean": 23.264,
-  "mean_d24": 0.259,
+  "mean": 23.629,
+  "mean_d24": 0.33,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
@@ -25,17 +25,17 @@
  },
  "top_signal": {
   "q": "No change · Will there be no change in Fed interest rates after the March 2027 meeting?",
-  "pmss": 55.5,
+  "pmss": 63.5,
   "band": "Interest",
-  "d24": 0.035,
-  "prob": 0.465
+  "d24": 0.04,
+  "prob": 0.47
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 55.5
+  "top_pmss": 63.5
  },
  "alerts": 0,
- "n_markets": 536,
+ "n_markets": 523,
  "source": "direct"
 }
