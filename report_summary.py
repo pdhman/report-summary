@@ -237,6 +237,257 @@ def merge_hankyung(df, today):
 
 
 # ----------------------------------------------------------------------------
+# 1c. 뉴스 보충 (2026-11-23 추가)
+# ----------------------------------------------------------------------------
+# 한국투자·NH·KB·삼성 등 대형사는 네이버 리서치·한경 컨센서스에 리포트를 거의 올리지 않는다
+# (10월 이후 한투 1건, NH·KB 0건). 하나증권 소형주 노트도 빠진다(11/18 디케이티).
+# 그 대신 언론이 '목표가' 기사로 거의 다 보도한다 — 구글 뉴스 RSS 로 헤드라인을 모아
+# (종목, 증권사, 목표가, 의견)을 뽑고, 기존 목록·최근 시트에 없는 것만 '뉴스 보충'으로 더한다.
+# 정밀도 우선: 종목 1개·증권사 1개로 확정되는 헤드라인만 쓴다(뉴스핌 [리포트 브리핑]은 정형 파싱).
+NEWS_RSS = "https://news.google.com/rss/search"
+NEWS_QUERIES = ["리포트 브리핑", "모닝 리포트", "목표가", "목표주가", "목표가 상향", "목표가 하향",
+                "한국투자증권 목표가", "NH투자증권 목표가", "KB증권 목표가", "삼성증권 목표가",
+                "하나증권 목표가", "한투증권 목표가"]
+BROKERS = {   # 정식 이름(기존 요약의 [증권사] 표기와 같게) → 헤드라인 표기
+    "한국투자증권": ["한국투자증권", "한국투자證", "한투증권", "한투證", "한국투자"],
+    "NH투자증권": ["NH투자증권", "NH證", "NH투자"],
+    "KB증권": ["KB증권", "KB證"],
+    "삼성증권": ["삼성증권", "삼성證"],
+    "하나증권": ["하나증권", "하나證"],
+    "신한투자증권": ["신한투자증권", "신한證", "신한투자"],
+    "키움증권": ["키움증권", "키움證"],
+    "대신증권": ["대신증권", "대신證"],
+    "미래에셋증권": ["미래에셋증권", "미래에셋證", "미래에셋"],
+    "한화투자증권": ["한화투자증권", "한화증권", "한화투자證"],
+    "iM증권": ["iM증권", "iM證"],
+    "IBK투자증권": ["IBK투자증권", "IBK證", "IBK투자"],
+    "SK증권": ["SK증권", "SK證"],
+    "DB증권": ["DB증권", "DB금융투자", "DB證"],
+    "유진투자증권": ["유진투자증권", "유진證", "유진투자"],
+    "유안타증권": ["유안타증권", "유안타證", "유안타"],
+    "메리츠증권": ["메리츠증권", "메리츠證"],
+    "교보증권": ["교보증권", "교보證"],
+    "LS증권": ["LS증권", "LS證"],
+    "다올투자증권": ["다올투자증권", "다올證", "다올투자"],
+    "BNK투자증권": ["BNK투자증권", "BNK證"],
+    "흥국증권": ["흥국증권", "흥국證"],
+    "현대차증권": ["현대차증권", "현대차證"],
+    "DS투자증권": ["DS투자증권", "DS證"],
+    "상상인증권": ["상상인증권", "상상인證"],
+    "신영증권": ["신영증권", "신영證"],
+    "부국증권": ["부국증권", "부국證"],
+    "케이프투자증권": ["케이프투자증권", "케이프證"],
+    "한양증권": ["한양증권", "한양證"],
+    "골드만삭스": ["골드만삭스"], "모건스탠리": ["모건스탠리"], "JP모건": ["JP모건"],
+    "씨티그룹": ["씨티그룹", "씨티"], "맥쿼리": ["맥쿼리"], "UBS": ["UBS"], "CLSA": ["CLSA"],
+    "노무라": ["노무라"], "HSBC": ["HSBC"], "BofA": ["뱅크오브아메리카", "BofA"], "제프리스": ["제프리스"],
+}
+_SHORT_SUFFIX = {"NH": "NH투자증권", "KB": "KB증권", "삼성": "삼성증권", "하나": "하나증권", "신한": "신한투자증권",
+                 "키움": "키움증권", "대신": "대신증권", "미래에셋": "미래에셋증권", "한화": "한화투자증권",
+                 "한투": "한국투자증권", "한국투자": "한국투자증권", "IBK": "IBK투자증권", "SK": "SK증권",
+                 "유진": "유진투자증권", "유안타": "유안타증권", "메리츠": "메리츠증권", "교보": "교보증권",
+                 "iM": "iM증권", "DB": "DB증권", "다올": "다올투자증권", "LS": "LS증권", "현대차": "현대차증권"}
+_JOSA = set("은는이가을를의에도와과로,·…\"'”’)]} ")
+# 뉴스핌이 업종(산업) 리포트를 종목별로 자동 분할한 글은 제목이 일반어이고 목표가가 엉뚱한 경우가 있다
+# (11/23 '2027년 전망' OCI홀딩스 목표가 550,000 vs 주가 147,200). 종목 리포트가 아니므로 뺀다.
+_GENERIC_TITLES = re.compile(r"^(\d{4}년\s*전망|실적 추이 및 전망|NDR 후기|\d{4}년 하반기 전망|산업 전망)$")
+TP_RATIO_RANGE = (0.4, 2.5)   # 목표가/현재가가 이 범위 밖이면 오탐(단위·종목 혼동)으로 보고 뺀다
+_NEWSPIM_RE = re.compile(r"\[리포트 브리핑\]\s*(.+?),\s*'(.+?)'\s*(목표가\s*([\d,]+)원|Not Rated)\s*-\s*(\S+?)\s*-")
+
+
+def _krx_names():
+    """docs/data/krx.js 의 [코드, 종목명, 시장] → {종목명: 코드}. 두 글자 미만 이름은 오탐이 많아 뺀다."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs", "data", "krx.js")
+    txt = open(path, encoding="utf-8").read()
+    return {n: c for c, n, _m in re.findall(r'\["(\d{6})","([^"]+)","(K[SQ])"\]', txt) if len(n) >= 2}
+
+
+def _parse_krw(s):
+    """'4만원'·'3만2천원'·'2만5000원'·'25,000원'·'105만원' → 정수(원). 못 읽으면 None."""
+    m = re.match(r"\s*([\d,]+(?:\.\d+)?)\s*만\s*(?:([\d,]+)\s*(천)?)?\s*원", s)
+    if m:
+        v = float(m.group(1).replace(",", "")) * 10000
+        if m.group(2):
+            v += float(m.group(2).replace(",", "")) * (1000 if m.group(3) else 1)
+        return int(v)
+    m = re.match(r"\s*([\d,]{3,})\s*원", s)
+    return int(m.group(1).replace(",", "")) if m else None
+
+
+def _target_in(title):
+    m = re.search(r"목표(?:주)?가[^0-9]{0,12}([\d,.]+\s*만?\s*(?:[\d,]+\s*천?)?\s*원)", title)
+    return _parse_krw(m.group(1)) if m else None
+
+
+def _stocks_in(title, names):
+    """헤드라인 안의 종목명(앞뒤가 글자 경계인 것). 다른 매치에 포함된 짧은 이름은 버린다."""
+    found = []
+    for n in names:
+        i = title.find(n)
+        while i >= 0:
+            before = title[i - 1] if i > 0 else " "
+            after = title[i + len(n)] if i + len(n) < len(title) else " "
+            ok_b = not (before.isalnum())
+            ok_a = (not after.isalnum()) or after in _JOSA
+            if ok_b and ok_a:
+                found.append((i, i + len(n), n))
+                break
+            i = title.find(n, i + 1)
+    found = [f for f in found if not any(g != f and g[0] <= f[0] and f[1] <= g[1] for g in found)]
+    return found
+
+
+def _brokers_in(title, skip_spans):
+    def masked(t):
+        for a, b, _ in skip_spans:
+            t = t[:a] + " " * (b - a) + t[b:]
+        return t
+    t = masked(title)
+    hit = set()
+    for canon, aliases in BROKERS.items():
+        if any(al in t for al in aliases):
+            hit.add(canon)
+    m = re.search(r"[\"”’']\s*-\s*([A-Za-z가-힣]+)\s*(?:-|$)", t)      # 머니투데이식 "…목표가↓"-NH
+    if m and m.group(1) in _SHORT_SUFFIX:
+        hit.add(_SHORT_SUFFIX[m.group(1)])
+    m = re.search(r"\[(NH투자증권|KB증권|삼성증권|하나증권|한국투자증권|[가-힣A-Za-z]+증권)\]", t)
+    if m and m.group(1) in BROKERS:
+        hit.add(m.group(1))
+    return hit
+
+
+def _prev_weekday_1600(now):
+    d = now - datetime.timedelta(days=1)
+    while d.weekday() >= 5:
+        d -= datetime.timedelta(days=1)
+    return d.replace(hour=16, minute=0, second=0, microsecond=0)
+
+
+def scrape_news(now):
+    """구글 뉴스 RSS 헤드라인 → [{code,name,broker,target,opinion,title,press,pub}] (직전 평일 16:00 이후)."""
+    import email.utils
+    import xml.etree.ElementTree as ET
+    names = _krx_names()
+    since = _prev_weekday_1600(now)
+    seen_titles, out = set(), []
+    for q in NEWS_QUERIES:
+        items = None
+        for attempt in range(3):     # 연속 호출 시 가끔 XML 이 아닌 응답(일시 제한) — 쉬었다 재시도
+            try:
+                r = _rq.get(NEWS_RSS, params={"q": f"{q} when:2d", "hl": "ko", "gl": "KR", "ceid": "KR:ko"},
+                            headers=UA, timeout=20)
+                items = ET.fromstring(r.content).findall(".//item")
+                break
+            except Exception as e:
+                err = e
+                time.sleep(3 * (attempt + 1))
+        if items is None:
+            print(f"뉴스 보충: '{q}' 조회 실패 {err}")
+            continue
+        for it in items:
+            full = (it.findtext("title") or "").strip()
+            if full in seen_titles:
+                continue
+            seen_titles.add(full)
+            try:
+                pub = email.utils.parsedate_to_datetime(it.findtext("pubDate")).astimezone(now.tzinfo)
+            except Exception:
+                continue
+            if pub < since or pub > now:
+                continue
+            press = (it.findtext("source") or "").strip()
+            title = full[: -len(press) - 3].strip() if press and full.endswith(" - " + press) else full
+            m = _NEWSPIM_RE.search(full)
+            if m:                                  # 정형: [리포트 브리핑]종목, '제목' 목표가 N원 - 증권사 - 뉴스핌
+                name = m.group(1).strip()
+                broker = next((c for c, al in BROKERS.items() if m.group(5) in al or m.group(5) == c), m.group(5))
+                if name in names and not _GENERIC_TITLES.match(m.group(2).strip()):
+                    out.append({"code": names[name], "name": name, "broker": broker,
+                                "target": int(m.group(4).replace(",", "")) if m.group(4) else None,
+                                "opinion": "Not Rated" if m.group(3) == "Not Rated" else "",
+                                "title": m.group(2).strip(), "press": press or "뉴스핌", "pub": pub})
+                continue
+            if "목표" not in title and "투자의견" not in title:
+                continue
+            stocks = _stocks_in(title, names)
+            stocks = [s for s in stocks if s[2] not in BROKERS or len(stocks) == 1]
+            brokers = _brokers_in(title, stocks)
+            # 종목이 증권사 자체인 경우(예: 'NH투자증권 목표가…-iM')는 종목명 자리를 가리고 남은 증권사를 쓴다
+            if len(stocks) != 1 or len(brokers) != 1:
+                continue
+            name = stocks[0][2]
+            broker = next(iter(brokers))
+            if broker == name:
+                continue
+            opinion = "매수" if re.search(r"매수|Buy|BUY", title) else ("중립" if "중립" in title else "")
+            out.append({"code": names[name], "name": name, "broker": broker, "target": _target_in(title),
+                        "opinion": opinion, "title": title, "press": press, "pub": pub})
+        time.sleep(0.5)
+    return out
+
+
+def merge_news(df, today, existing):
+    """네이버+한경 결과(df)에 뉴스 보충 리포트를 더한다. 오늘 목록·최근 5개 시트에 같은 (종목, 증권사)가 있으면 뺀다."""
+    try:
+        news = scrape_news(today)
+    except Exception as e:
+        print(f"뉴스 보충 실패(건너뜀): {e}")
+        return df
+
+    def keys_of(d):
+        ks = set()
+        for _, r in d.iterrows():
+            m = re.search(r"\((\d{6})\)", str(r.get("기업명", "")))
+            b = re.match(r"\[([^\]]+)\]", str(r.get("요약", "")))
+            if m:
+                ks.add((m.group(1), b.group(1) if b else ""))
+        return ks
+    def norm(t):
+        return re.sub(r"\s+", "", str(t))
+    seen = keys_of(df)
+    for name in list(existing)[:5]:
+        if name != f"dt_{today:%Y%m%d}":
+            seen |= keys_of(existing[name])
+    # 옛 리포트 재게재 방지: 과거 전 시트의 (종목코드, 제목) — 뉴스핌 제목은 리포트 제목 그대로다
+    old_titles = set()
+    for name, d in existing.items():
+        if name == f"dt_{today:%Y%m%d}" or "제목" not in d:
+            continue
+        for _, r in d.iterrows():
+            m = re.search(r"\((\d{6})\)", str(r.get("기업명", "")))
+            if m:
+                old_titles.add((m.group(1), norm(r.get("제목"))))
+    # 같은 리포트를 다룬 기사 여러 개 → 뉴스핌(리포트 제목) > 목표가 있는 기사 > 먼저 나온 기사 순으로 하나만
+    news = sorted(news, key=lambda x: (x["press"] != "뉴스핌", x["target"] is None, x["pub"]))
+    added, close_cache = [], {}
+    for n in news:
+        key = (n["code"], n["broker"])
+        if key in seen or (n["code"], norm(n["title"])) in old_titles:
+            continue
+        if n["code"] not in close_cache:
+            close_cache[n["code"]] = _prev_close(n["code"])
+            time.sleep(0.2)
+        px = close_cache[n["code"]]
+        if n["target"] and px and not (TP_RATIO_RANGE[0] <= n["target"] / px <= TP_RATIO_RANGE[1]):
+            print(f"뉴스 보충 제외(목표가/주가 {n['target'] / px:.2f}배): {n['name']} {n['broker']} {n['title'][:30]}")
+            continue
+        seen.add(key)
+        added.append({
+            "기업명": f"{n['name']} ({n['code']})",
+            "투자의견": n["opinion"],
+            "목표주가": float(n["target"]) if n["target"] else None,
+            "전일수정주가": close_cache[n["code"]],
+            "제목": n["title"],
+            "요약": f"[{n['broker']}] (뉴스 보충 · {n['press']} {n['pub']:%m/%d %H:%M}) {n['title']}",
+            "수집일자": today.strftime("%Y-%m-%d"),
+        })
+    print(f"뉴스 보충: 헤드라인 {len(news)}건 해석 → 신규 {len(added)}건 추가")
+    if not added:
+        return df
+    return pd.concat([df, pd.DataFrame(added)], ignore_index=True)[df.columns]
+
+
+# ----------------------------------------------------------------------------
 # 2. 상승여력 Top 5 (노트북 cell-4) - 로그 출력용
 # ----------------------------------------------------------------------------
 def print_top5(final_df):
@@ -295,6 +546,10 @@ def save_to_drive(final_df):
         if prev.astype(str).equals(cur.astype(str)):
             print(f"⏭️ {latest_name} 시트와 내용 동일 — 새 리포트 없음(휴장일), 저장 건너뜀")
             return
+
+    # 뉴스 보충은 휴장일 가드(1·2)를 통과한 뒤에 — 뉴스는 휴일에도 나와 가드를 무력화할 수 있다
+    kst = pytz.timezone("Asia/Seoul")
+    final_df = merge_news(final_df, datetime.datetime.now(kst), existing)
 
     # 새 시트를 맨 앞에, 같은 이름 시트는 덮어쓰기 (노트북과 동일한 규칙)
     ordered = OrderedDict()
