@@ -1,8 +1,8 @@
 {
- "date": "2026-11-24 11:58",
+ "date": "2026-11-25 00:02",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
- "arrows": "Easing → / Recession → / Inflation → / Risk ↓",
+ "arrows": "Easing → / Recession → / Inflation → / Risk →",
  "risk_off": [],
  "regime_base": "Neutral / Mixed (근사)",
  "fomc": {
@@ -10,30 +10,30 @@
   "top": {
    "label": "25 bps increase",
    "prob": 0.935,
-   "d24": 0.03
+   "d24": -0.01
   },
-  "mean": 24.826,
-  "mean_d24": 1.422,
+  "mean": 24.586,
+  "mean_d24": 0.146,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
-  "prob": 0.0205,
-  "d24": -0.007,
+  "prob": 0.0215,
+  "d24": -0.002,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "December 31, 2026 · AI bubble burst in 2026?",
-  "pmss": 72.0,
-  "band": "Tactical Signal",
-  "d24": -0.3955,
-  "prob": 0.1125
+  "q": "April 30, 2027 · Russia x Ukraine ceasefire agreement by April 30, 2027?",
+  "pmss": 68.0,
+  "band": "Interest",
+  "d24": -0.09,
+  "prob": 0.315
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 72.0
+  "top_pmss": 68.0
  },
- "alerts": 1,
- "n_markets": 503,
+ "alerts": 3,
+ "n_markets": 531,
  "source": "direct"
 }
