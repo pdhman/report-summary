@@ -1,8 +1,8 @@
 {
  "date": "2026-11-24",
- "btc_price": 61191.0,
- "btc_chg_24h": -0.04,
- "rsi14": 26.5,
+ "btc_price": 61101.0,
+ "btc_chg_24h": 0.4,
+ "rsi14": 26.35,
  "mvrv": 1.1484,
  "etf_last_date": "2026-11-20",
  "etf_last_flow": -669.2,
