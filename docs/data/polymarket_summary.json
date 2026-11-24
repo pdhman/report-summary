@@ -1,5 +1,5 @@
 {
- "date": "2026-11-24 10:15",
+ "date": "2026-11-24 11:58",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk ↓",
@@ -12,8 +12,8 @@
    "prob": 0.935,
    "d24": 0.03
   },
-  "mean": 24.95,
-  "mean_d24": 1.486,
+  "mean": 24.826,
+  "mean_d24": 1.422,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
@@ -23,17 +23,17 @@
  },
  "top_signal": {
   "q": "December 31, 2026 · AI bubble burst in 2026?",
-  "pmss": 67.0,
-  "band": "Interest",
-  "d24": -0.404,
-  "prob": 0.1115
+  "pmss": 72.0,
+  "band": "Tactical Signal",
+  "d24": -0.3955,
+  "prob": 0.1125
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 67.0
+  "top_pmss": 72.0
  },
  "alerts": 1,
- "n_markets": 505,
+ "n_markets": 503,
  "source": "direct"
 }
