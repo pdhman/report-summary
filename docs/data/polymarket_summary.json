@@ -1,11 +1,9 @@
 {
- "date": "2026-11-25 23:42",
- "regime_icon": "🟣",
- "regime_name": "Risk-Off (급락·공포)",
+ "date": "2026-11-26 09:33",
+ "regime_icon": "⚪",
+ "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
- "risk_off": [
-  "나스닥 선물 -4.3% (기준 -3%)"
- ],
+ "risk_off": [],
  "regime_base": "Neutral / Mixed (근사)",
  "fomc": {
   "title": "Fed Decision in December?",
@@ -14,28 +12,28 @@
    "prob": 0.935,
    "d24": 0.0
   },
-  "mean": 24.686,
-  "mean_d24": 0.1,
+  "mean": 24.279,
+  "mean_d24": -0.086,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
-  "prob": 0.0265,
+  "prob": 0.0315,
   "d24": 0.005,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "December 31, 2026 · AI bubble burst in 2026?",
-  "pmss": 65.6,
+  "q": "May 31, 2027 · Russia x Ukraine ceasefire agreement by May 31, 2027?",
+  "pmss": 65.2,
   "band": "Interest",
-  "d24": 0.252,
-  "prob": 0.3935
+  "d24": -0.03,
+  "prob": 0.515
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 65.6
+  "top_pmss": 65.2
  },
- "alerts": 0,
- "n_markets": 506,
+ "alerts": 1,
+ "n_markets": 504,
  "source": "direct"
 }
