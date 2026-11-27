@@ -1,5 +1,5 @@
 {
- "date": "2026-11-26 23:05",
+ "date": "2026-11-27 09:42",
  "regime_icon": "⚪",
  "regime_name": "Neutral / Mixed (근사)",
  "arrows": "Easing → / Recession → / Inflation → / Risk →",
@@ -12,28 +12,28 @@
    "prob": 0.935,
    "d24": 0.0
   },
-  "mean": 24.262,
-  "mean_d24": -0.301,
+  "mean": 24.349,
+  "mean_d24": 0.045,
   "url": "https://polymarket.com/event/fed-decision-in-december-20260729232808632"
  },
  "recession": {
-  "prob": 0.0265,
-  "d24": 0.0,
+  "prob": 0.034,
+  "d24": 0.003,
   "url": "https://polymarket.com/event/us-recession-by-end-of-2026"
  },
  "top_signal": {
-  "q": "No change · Will there be no change in Fed interest rates after the March 2027 meeting?",
-  "pmss": 62.0,
+  "q": "December 31 · Bab el-Mandeb Strait effectively closed by December 31?",
+  "pmss": 57.4,
   "band": "Interest",
-  "d24": 0.045,
-  "prob": 0.445
+  "d24": -0.0275,
+  "prob": 0.0375
  },
  "exposure": {
   "base": 0.5,
   "suggested": 0.5,
-  "top_pmss": 62.0
+  "top_pmss": 57.4
  },
- "alerts": 0,
- "n_markets": 520,
+ "alerts": 1,
+ "n_markets": 543,
  "source": "direct"
 }
