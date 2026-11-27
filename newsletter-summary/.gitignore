@@ -1,0 +1,7 @@
+# 메일 본문(남의 저작물)과 요약은 공개 저장소에 올리지 않는다
+raw/
+out/
+# 네이버 로그인 정보·발송 기록 (루트의 *.json 규칙으로도 제외되지만 한 번 더 막는다)
+naver_login.json
+sent.json
+telegram_bot.json
